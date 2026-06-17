@@ -45,8 +45,8 @@ export function TerminalView({
       fontSize: 12.5,
       fontWeight: 400,
       fontWeightBold: 600,
-      lineHeight: 1.45,
-      letterSpacing: 0.2,
+      lineHeight: 1.25,
+      letterSpacing: 0,
       cursorBlink: true,
       cursorStyle: 'bar',
       theme: {
