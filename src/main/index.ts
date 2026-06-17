@@ -21,6 +21,7 @@ import {
   writeFileText,
 } from './fs/fs-service';
 import { readSettings, writeSettings } from './settings/settings-service';
+import { getGitChanges } from './git/git-service';
 import {
   createTerminal,
   writeTerminal,
@@ -84,6 +85,9 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.gitBranch, (_e, rootPath: string) =>
     toResult(() => readGitBranch(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.gitChanges, (_e, rootPath: string) =>
+    toResult(() => getGitChanges(rootPath)),
   );
   ipcMain.handle(IpcChannels.rename, (_e, oldPath: string, newPath: string) =>
     toResult(() => renameEntry(oldPath, newPath)),

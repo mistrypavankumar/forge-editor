@@ -15,6 +15,7 @@ export const api: ForgeApi = {
   writeFile: (path, content) => ipcRenderer.invoke(IpcChannels.writeFile, path, content),
   listFiles: (rootPath) => ipcRenderer.invoke(IpcChannels.listFiles, rootPath),
   gitBranch: (rootPath) => ipcRenderer.invoke(IpcChannels.gitBranch, rootPath),
+  gitChangedFiles: (rootPath) => ipcRenderer.invoke(IpcChannels.gitChanges, rootPath),
   rename: (oldPath, newPath) => ipcRenderer.invoke(IpcChannels.rename, oldPath, newPath),
   remove: (path) => ipcRenderer.invoke(IpcChannels.remove, path),
   copyEntry: (src, destDir) => ipcRenderer.invoke(IpcChannels.copyEntry, src, destDir),

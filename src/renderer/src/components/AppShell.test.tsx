@@ -15,6 +15,7 @@ beforeAll(() => {
     openFileDialog: async () => ({ ok: true, data: null }),
     listFiles: async () => ({ ok: true, data: [] }),
     gitBranch: async () => ({ ok: true, data: null }),
+    gitChangedFiles: async () => ({ ok: true, data: [] }),
   };
 });
 

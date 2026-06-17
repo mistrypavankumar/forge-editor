@@ -9,6 +9,7 @@ export const IpcChannels = {
   writeFile: 'forge:fs:writeFile',
   listFiles: 'forge:fs:listFiles',
   gitBranch: 'forge:fs:gitBranch',
+  gitChanges: 'forge:git:changes',
   rename: 'forge:fs:rename',
   remove: 'forge:fs:remove',
   copyEntry: 'forge:fs:copyEntry',
@@ -46,6 +47,12 @@ export interface OpenedFile {
   path: string;
   name: string;
   content: string;
+}
+
+export interface GitChange {
+  path: string;
+  name: string;
+  status: 'M' | 'A' | 'D' | 'R' | 'U';
 }
 
 export interface RecentEntry {
@@ -89,6 +96,7 @@ export interface ForgeApi {
   writeFile: (path: string, content: string) => Promise<Result<void>>;
   listFiles: (rootPath: string) => Promise<Result<FileItem[]>>;
   gitBranch: (rootPath: string) => Promise<Result<string | null>>;
+  gitChangedFiles: (rootPath: string) => Promise<Result<GitChange[]>>;
   rename: (oldPath: string, newPath: string) => Promise<Result<void>>;
   remove: (path: string) => Promise<Result<void>>;
   copyEntry: (src: string, destDir: string) => Promise<Result<void>>;
