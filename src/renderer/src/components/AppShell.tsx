@@ -103,10 +103,11 @@ export function AppShell(): React.JSX.Element {
     </Allotment.Pane>
   ) : null;
 
-  const panes =
+  const panes = (
     sidebarSide === 'left'
       ? [navigatorPane, centerPane, assistantPane]
-      : [assistantPane, centerPane, navigatorPane];
+      : [assistantPane, centerPane, navigatorPane]
+  ).filter(Boolean);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-bg text-fg">
@@ -114,7 +115,9 @@ export function AppShell(): React.JSX.Element {
       <div className="flex min-h-0 flex-1">
         {sidebarSide === 'left' ? <ActivitySidebar onContextMenu={onSidebarContextMenu} /> : null}
         <div className="min-w-0 flex-1">
-          <Allotment proportionalLayout={false}>{panes}</Allotment>
+          <Allotment key={sidebarSide} proportionalLayout={false}>
+            {panes}
+          </Allotment>
         </div>
         {sidebarSide === 'right' ? <ActivitySidebar onContextMenu={onSidebarContextMenu} /> : null}
       </div>
