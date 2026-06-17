@@ -13,6 +13,11 @@ import { useSettingsPersistence } from '../settings/use-settings-persistence';
 import { TopBar } from './TopBar';
 import { ActivitySidebar } from './ActivitySidebar';
 import { ProjectNavigator } from './ProjectNavigator';
+import { SearchPanel } from './SearchPanel';
+import { SourceControlPanel } from './SourceControlPanel';
+import { RunPanel } from './RunPanel';
+import { PlaceholderPanel } from './PlaceholderPanel';
+import { Database, Blocks } from 'lucide-react';
 import { EditorTabs } from './EditorTabs';
 import { Breadcrumbs } from './Breadcrumbs';
 import { CodeEditor } from './CodeEditor';
@@ -28,6 +33,7 @@ export function AppShell(): React.JSX.Element {
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
   const rightVisible = useLayoutStore((s) => s.rightVisible);
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
+  const activity = useLayoutStore((s) => s.activity);
   const sidebarSide = useLayoutStore((s) => s.sidebarSide);
   const setSidebarSide = useLayoutStore((s) => s.setSidebarSide);
   const themeId = useThemeStore((s) => s.currentId);
@@ -78,10 +84,29 @@ export function AppShell(): React.JSX.Element {
     );
   }
 
+  const sidePanel =
+    activity === 'search' ? (
+      <SearchPanel />
+    ) : activity === 'git' ? (
+      <SourceControlPanel />
+    ) : activity === 'run' ? (
+      <RunPanel />
+    ) : activity === 'database' ? (
+      <PlaceholderPanel
+        title="Database / API"
+        icon={Database}
+        hint="Connect a database or API to browse it here."
+      />
+    ) : activity === 'extensions' ? (
+      <PlaceholderPanel title="Extensions" icon={Blocks} hint="A plugin system is on the roadmap." />
+    ) : (
+      <ProjectNavigator />
+    );
+
   const navigatorPane = sidebarVisible ? (
     <Allotment.Pane key="nav" preferredSize={300} minSize={248} maxSize={460} snap>
       <div data-testid="sidebar-region" className="h-full border-x border-line bg-surface">
-        <ProjectNavigator />
+        {sidePanel}
       </div>
     </Allotment.Pane>
   ) : null;

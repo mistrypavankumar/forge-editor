@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { basename } from 'node:path';
-import type { GitChange } from '@shared/ipc-contract';
+import type { GitChange, SearchMatch } from '@shared/ipc-contract';
 
 const run = promisify(execFile);
 
@@ -25,6 +25,39 @@ export async function getGitChanges(rootPath: string): Promise<GitChange[]> {
     }
     return changes;
   } catch {
+    return [];
+  }
+}
+
+export async function gitCommit(rootPath: string, message: string): Promise<void> {
+  await run('git', ['-C', rootPath, 'add', '-A']);
+  await run('git', ['-C', rootPath, 'commit', '-m', message]);
+}
+
+const MAX_MATCHES = 300;
+
+export async function searchInFiles(rootPath: string, query: string): Promise<SearchMatch[]> {
+  if (!query.trim()) return [];
+  try {
+    const { stdout } = await run(
+      'git',
+      ['-C', rootPath, 'grep', '-n', '-I', '-F', '-i', '--no-color', '--', query],
+      { maxBuffer: 8 * 1024 * 1024 },
+    );
+    const matches: SearchMatch[] = [];
+    for (const line of stdout.split('\n')) {
+      if (matches.length >= MAX_MATCHES) break;
+      const i1 = line.indexOf(':');
+      const i2 = line.indexOf(':', i1 + 1);
+      if (i1 < 0 || i2 < 0) continue;
+      const path = line.slice(0, i1);
+      const ln = Number(line.slice(i1 + 1, i2));
+      if (!Number.isFinite(ln)) continue;
+      matches.push({ path, name: basename(path), line: ln, preview: line.slice(i2 + 1).slice(0, 200) });
+    }
+    return matches;
+  } catch {
+    // git grep exits non-zero when there are no matches (or not a repo).
     return [];
   }
 }

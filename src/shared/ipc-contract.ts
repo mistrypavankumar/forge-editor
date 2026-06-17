@@ -10,6 +10,8 @@ export const IpcChannels = {
   listFiles: 'forge:fs:listFiles',
   gitBranch: 'forge:fs:gitBranch',
   gitChanges: 'forge:git:changes',
+  gitCommit: 'forge:git:commit',
+  search: 'forge:search',
   rename: 'forge:fs:rename',
   remove: 'forge:fs:remove',
   copyEntry: 'forge:fs:copyEntry',
@@ -55,6 +57,13 @@ export interface GitChange {
   status: 'M' | 'A' | 'D' | 'R' | 'U';
 }
 
+export interface SearchMatch {
+  path: string;
+  name: string;
+  line: number;
+  preview: string;
+}
+
 export interface RecentEntry {
   type: 'folder' | 'file';
   path: string;
@@ -97,6 +106,8 @@ export interface ForgeApi {
   listFiles: (rootPath: string) => Promise<Result<FileItem[]>>;
   gitBranch: (rootPath: string) => Promise<Result<string | null>>;
   gitChangedFiles: (rootPath: string) => Promise<Result<GitChange[]>>;
+  gitCommit: (rootPath: string, message: string) => Promise<Result<void>>;
+  search: (rootPath: string, query: string) => Promise<Result<SearchMatch[]>>;
   rename: (oldPath: string, newPath: string) => Promise<Result<void>>;
   remove: (path: string) => Promise<Result<void>>;
   copyEntry: (src: string, destDir: string) => Promise<Result<void>>;
