@@ -7,10 +7,12 @@ export interface WorkspaceState {
   childrenByPath: Record<string, DirEntry[]>;
   expandedPaths: Record<string, boolean>;
   scopedPath: string | null;
+  branch: string | null;
   setWorkspace: (rootPath: string, entries: DirEntry[]) => void;
   setChildren: (path: string, entries: DirEntry[]) => void;
   toggleExpanded: (path: string) => void;
   setScope: (path: string | null) => void;
+  setBranch: (branch: string | null) => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
@@ -19,11 +21,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   childrenByPath: {},
   expandedPaths: {},
   scopedPath: null,
+  branch: null,
   setWorkspace: (rootPath, entries) =>
-    set({ rootPath, rootEntries: entries, childrenByPath: {}, expandedPaths: {}, scopedPath: null }),
+    set({
+      rootPath,
+      rootEntries: entries,
+      childrenByPath: {},
+      expandedPaths: {},
+      scopedPath: null,
+      branch: null,
+    }),
   setChildren: (path, entries) =>
     set((s) => ({ childrenByPath: { ...s.childrenByPath, [path]: entries } })),
   toggleExpanded: (path) =>
     set((s) => ({ expandedPaths: { ...s.expandedPaths, [path]: !s.expandedPaths[path] } })),
   setScope: (path) => set({ scopedPath: path }),
+  setBranch: (branch) => set({ branch }),
 }));

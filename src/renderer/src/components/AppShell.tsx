@@ -46,9 +46,13 @@ export function AppShell(): React.JSX.Element {
     if (theme) applyCssVariables(theme);
   }, [themeId]);
 
-  // Warm the quick-open file list as soon as a folder opens.
+  // Warm the quick-open file list + resolve the git branch when a folder opens.
   useEffect(() => {
-    if (rootPath) void loadFiles(rootPath);
+    if (!rootPath) return;
+    void loadFiles(rootPath);
+    void window.forge.gitBranch(rootPath).then((res) => {
+      useWorkspaceStore.getState().setBranch(res.ok ? res.data : null);
+    });
   }, [rootPath]);
 
   const showLanding = !rootPath && tabCount === 0;

@@ -1,4 +1,4 @@
-import { CircleX, TriangleAlert, Sparkles, FolderGit2 } from 'lucide-react';
+import { CircleX, TriangleAlert, Sparkles, GitBranch } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useWorkbenchStatusStore, markerCounts } from '../stores/workbench-status-store';
@@ -37,6 +37,7 @@ export function StatusBar(): React.JSX.Element {
   const cursor = useWorkbenchStatusStore((s) => s.cursor);
   const language = useWorkbenchStatusStore((s) => s.language);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const branch = useWorkspaceStore((s) => s.branch);
   const setBottomTab = useLayoutStore((s) => s.setBottomTab);
   const setPanelVisible = useLayoutStore((s) => s.setPanelVisible);
   const counts = markerCounts(markers);
@@ -54,8 +55,8 @@ export function StatusBar(): React.JSX.Element {
       <div className="flex h-full items-center">
         {rootPath ? (
           <Segment className="text-accent">
-            <FolderGit2 size={12} />
-            {basename(rootPath)}
+            <GitBranch size={12} />
+            {branch ?? basename(rootPath)}
           </Segment>
         ) : null}
         <Segment onClick={openProblems}>
