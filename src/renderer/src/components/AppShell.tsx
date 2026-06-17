@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 import { Allotment } from 'allotment';
 import { useLayoutStore } from '../stores/layout-store';
 import { useThemeStore } from '../stores/theme-store';
+import { useWorkspaceStore } from '../stores/workspace-store';
 import { applyCssVariables } from '../theme/theme-service';
 import { builtInThemes } from '../theme/themes';
+import { loadFiles } from '../lib/quickopen-cache';
 import { useKeybindings } from '../keybindings/use-keybindings';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
 import { TopBar } from './TopBar';
@@ -22,6 +24,7 @@ export function AppShell(): React.JSX.Element {
   const rightVisible = useLayoutStore((s) => s.rightVisible);
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
   const themeId = useThemeStore((s) => s.currentId);
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
 
   useKeybindings();
   useSettingsPersistence();
@@ -30,6 +33,11 @@ export function AppShell(): React.JSX.Element {
     const theme = builtInThemes[themeId];
     if (theme) applyCssVariables(theme);
   }, [themeId]);
+
+  // Warm the quick-open file list as soon as a folder opens.
+  useEffect(() => {
+    if (rootPath) void loadFiles(rootPath);
+  }, [rootPath]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-bg text-fg">

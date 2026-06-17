@@ -35,6 +35,7 @@ export function CodeEditor(): React.JSX.Element {
   const tabs = useEditorStore((s) => s.tabs);
   const activePath = useEditorStore((s) => s.activePath);
   const updateContent = useEditorStore((s) => s.updateContent);
+  const reveal = useEditorStore((s) => s.reveal);
   const themeId = useThemeStore((s) => s.currentId);
 
   useEffect(() => {
@@ -139,6 +140,19 @@ export function CodeEditor(): React.JSX.Element {
     const theme = builtInThemes[themeId];
     getMonaco().editor.setTheme(theme?.type === 'light' ? 'forge-light' : 'forge-dark');
   }, [themeId]);
+
+  // Reveal a requested line/column (e.g. from a terminal path:line:col link).
+  useEffect(() => {
+    const instance = editorRef.current;
+    if (!instance || !reveal) return;
+    const model = instance.getModel();
+    if (model && model.uri.path === reveal.path) {
+      instance.revealLineInCenter(reveal.line);
+      instance.setPosition({ lineNumber: reveal.line, column: reveal.col });
+      instance.focus();
+      useEditorStore.getState().consumeReveal();
+    }
+  }, [reveal, activePath, tabs]);
 
   const hasTabs = tabs.length > 0;
 

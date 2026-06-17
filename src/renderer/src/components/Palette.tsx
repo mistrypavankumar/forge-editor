@@ -6,13 +6,11 @@ import { usePaletteStore } from '../stores/palette-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { ModernFileIcon } from './ModernFileIcon';
+import { loadFiles } from '../lib/quickopen-cache';
 import { cn } from '../lib/cn';
 import type { FileItem } from '@shared/ipc-contract';
 
 const MAX_ROWS = 50;
-
-// File list is expensive to walk — cache it per workspace and reuse across opens.
-let fileCache: { key: string; files: FileItem[] } | null = null;
 
 interface Row {
   id: string;
@@ -53,19 +51,10 @@ export function Palette(): React.JSX.Element | null {
     }
   }, [open, mode]);
 
-  // Load (and cache) the workspace file list for quick-open.
+  // Load (cached) the workspace file list for quick-open.
   useEffect(() => {
     if (!open || mode !== 'files' || !rootPath) return;
-    if (fileCache && fileCache.key === rootPath) {
-      setFiles(fileCache.files);
-      return;
-    }
-    void window.forge.listFiles(rootPath).then((res) => {
-      if (res.ok) {
-        fileCache = { key: rootPath, files: res.data };
-        setFiles(res.data);
-      }
-    });
+    void loadFiles(rootPath).then(setFiles);
   }, [open, mode, rootPath]);
 
   const rows: Row[] = useMemo(() => {

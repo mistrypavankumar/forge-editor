@@ -93,10 +93,14 @@ export function TerminalPanel(): React.JSX.Element {
     const openPathLink = (token: string): void => {
       const lc = /:(\d+)(?::(\d+))?$/.exec(token);
       const path = lc ? token.slice(0, lc.index) : token;
+      const line = lc ? Number(lc[1]) : 0;
+      const col = lc && lc[2] ? Number(lc[2]) : 1;
       void window.forge.readFile(path).then((res) => {
         if (res.ok) {
           const name = path.slice(path.lastIndexOf('/') + 1);
-          useEditorStore.getState().openFile({ path, name, content: res.data });
+          const store = useEditorStore.getState();
+          store.openFile({ path, name, content: res.data });
+          if (line > 0) store.requestReveal({ path, line, col });
           return;
         }
         void window.forge.readDirectory(path).then((dr) => {
