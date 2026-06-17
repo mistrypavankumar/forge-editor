@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { IpcChannels, pongOf, type ForgeSettings, type TerminalRunArgs } from '@shared/ipc-contract';
 import { ok, toResult } from '@shared/result';
 import {
@@ -66,6 +66,9 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.terminalKill, (_e, id: string) =>
     toResult(async () => killCommand(id)),
+  );
+  ipcMain.handle(IpcChannels.openExternal, (_e, url: string) =>
+    toResult(() => shell.openExternal(url)),
   );
   createWindow();
   app.on('activate', () => {

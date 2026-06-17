@@ -17,6 +17,7 @@ export const api: ForgeApi = {
   saveSettings: (settings) => ipcRenderer.invoke(IpcChannels.saveSettings, settings),
   runCommand: (args) => ipcRenderer.invoke(IpcChannels.terminalRun, args),
   killCommand: (id) => ipcRenderer.invoke(IpcChannels.terminalKill, id),
+  openExternal: (url) => ipcRenderer.invoke(IpcChannels.openExternal, url),
   onTerminalData: (cb) => {
     const listener = (_e: unknown, payload: TerminalDataEvent): void => cb(payload);
     ipcRenderer.on(IpcChannels.terminalData, listener);

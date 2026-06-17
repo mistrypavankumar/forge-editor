@@ -2,7 +2,10 @@ import { useEffect, useRef } from 'react';
 import { Play, TerminalSquare } from 'lucide-react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { useEditorStore } from '../stores/editor-store';
+import { useNavigatorStore } from '../stores/navigator-store';
 
 const QUICK_TASKS = [
   { id: 'dev', label: 'Dev', command: 'npm run dev' },
@@ -74,6 +77,61 @@ export function TerminalPanel(): React.JSX.Element {
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
+
+    // URLs: Cmd/Ctrl+click opens in the external browser.
+    term.loadAddon(
+      new WebLinksAddon((event, uri) => {
+        if (event.metaKey || event.ctrlKey) void window.forge.openExternal(uri);
+      }),
+    );
+
+    // File paths: Cmd/Ctrl+click opens the file (or scopes the folder) in-editor.
+    const openPathLink = (token: string): void => {
+      const lc = /:(\d+)(?::(\d+))?$/.exec(token);
+      const path = lc ? token.slice(0, lc.index) : token;
+      void window.forge.readFile(path).then((res) => {
+        if (res.ok) {
+          const name = path.slice(path.lastIndexOf('/') + 1);
+          useEditorStore.getState().openFile({ path, name, content: res.data });
+          return;
+        }
+        void window.forge.readDirectory(path).then((dr) => {
+          if (dr.ok) {
+            const ws = useWorkspaceStore.getState();
+            ws.setChildren(path, dr.data);
+            ws.setScope(path);
+            useNavigatorStore.getState().setTab('structure');
+          }
+        });
+      });
+    };
+
+    term.registerLinkProvider({
+      provideLinks(y, callback) {
+        const bufferLine = term.buffer.active.getLine(y - 1);
+        if (!bufferLine) {
+          callback(undefined);
+          return;
+        }
+        const text = bufferLine.translateToString(true);
+        const re = /(?<![\w:/])(\/[^\s:'"()[\]]+)(?::\d+)?(?::\d+)?/g;
+        const links = [];
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(text)) !== null) {
+          const full = m[0];
+          const startX = m.index + 1;
+          links.push({
+            text: full,
+            range: { start: { x: startX, y }, end: { x: startX + full.length - 1, y } },
+            activate: (event: MouseEvent) => {
+              if (event.metaKey || event.ctrlKey) openPathLink(full);
+            },
+          });
+        }
+        callback(links.length > 0 ? links : undefined);
+      },
+    });
+
     term.open(el);
     fit.fit();
     termRef.current = term;

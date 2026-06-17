@@ -13,6 +13,7 @@ export const IpcChannels = {
   terminalKill: 'forge:terminal:kill',
   terminalData: 'forge:terminal:data',
   terminalExit: 'forge:terminal:exit',
+  openExternal: 'forge:shell:openExternal',
 } as const;
 
 export interface DirEntry {
@@ -65,6 +66,7 @@ export interface ForgeApi {
   saveSettings: (settings: ForgeSettings) => Promise<Result<void>>;
   runCommand: (args: TerminalRunArgs) => Promise<Result<void>>;
   killCommand: (id: string) => Promise<Result<void>>;
+  openExternal: (url: string) => Promise<Result<void>>;
   onTerminalData: (cb: (e: TerminalDataEvent) => void) => () => void;
   onTerminalExit: (cb: (e: TerminalExitEvent) => void) => () => void;
 }
