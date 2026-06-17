@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import {
   IpcChannels,
   pongOf,
@@ -69,6 +69,17 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // Custom native menu WITHOUT a File submenu (Forge has its own in-window File menu).
+  // Keep Edit/View/Window so copy-paste, zoom, and window shortcuts still work.
+  const isMac = process.platform === 'darwin';
+  const template: Electron.MenuItemConstructorOptions[] = [
+    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    { role: 'editMenu' },
+    { role: 'viewMenu' },
+    { role: 'windowMenu' },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+
   ipcMain.handle(IpcChannels.ping, (_event, msg: string) => pongOf(msg));
   ipcMain.handle(IpcChannels.openFolder, async () => {
     const res = await dialog.showOpenDialog({ properties: ['openDirectory'] });
