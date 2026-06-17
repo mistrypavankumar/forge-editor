@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Play } from 'lucide-react';
+import { Play, TerminalSquare } from 'lucide-react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { useWorkspaceStore } from '../stores/workspace-store';
@@ -12,7 +12,20 @@ const QUICK_TASKS = [
 ];
 
 const TERM_ID = 'main';
-const PROMPT = '\x1b[38;5;111m❯\x1b[0m ';
+
+// Truecolor ANSI helpers (match the app accent / semantic palette).
+const ACCENT = '\x1b[38;2;124;130;245m';
+const MUTED = '\x1b[38;2;124;124;135m';
+const GREEN = '\x1b[38;2;61;220;151m';
+const RED = '\x1b[38;2;248;113;113m';
+const RESET = '\x1b[0m';
+const BOLD = '\x1b[1m';
+
+function basename(p: string | null): string {
+  if (!p) return 'forge';
+  const parts = p.split('/').filter(Boolean);
+  return parts[parts.length - 1] ?? 'forge';
+}
 
 export function TerminalPanel(): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -31,16 +44,32 @@ export function TerminalPanel(): React.JSX.Element {
     const term = new Terminal({
       fontFamily: "'Fira Code', 'SF Mono', Menlo, monospace",
       fontSize: 12,
-      lineHeight: 1.3,
+      lineHeight: 1.35,
       cursorBlink: true,
+      cursorStyle: 'bar',
       convertEol: true,
       theme: {
-        background: '#141417',
+        background: '#0d0d11',
         foreground: '#e7e7ea',
-        cursor: '#7079f5',
-        selectionBackground: '#7079f540',
-        black: '#141417',
-        brightBlack: '#7c7c87',
+        cursor: '#7c82f5',
+        cursorAccent: '#0d0d11',
+        selectionBackground: '#7c82f540',
+        black: '#1c1c21',
+        red: '#f87171',
+        green: '#3ddc97',
+        yellow: '#f5c451',
+        blue: '#5b9df0',
+        magenta: '#c792ea',
+        cyan: '#22d3ee',
+        white: '#cdcdd4',
+        brightBlack: '#5c5c66',
+        brightRed: '#fca5a5',
+        brightGreen: '#86efac',
+        brightYellow: '#fde68a',
+        brightBlue: '#93c5fd',
+        brightMagenta: '#d8b4fe',
+        brightCyan: '#67e8f9',
+        brightWhite: '#ffffff',
       },
     });
     const fit = new FitAddon();
@@ -48,8 +77,16 @@ export function TerminalPanel(): React.JSX.Element {
     term.open(el);
     fit.fit();
     termRef.current = term;
-    term.writeln('\x1b[90mForge terminal — runs commands in the open folder.\x1b[0m');
-    term.write(PROMPT);
+
+    const writePrompt = (): void => {
+      const folder = basename(rootRef.current);
+      term.write(`\r\n${ACCENT}╭─${RESET} ${BOLD}${folder}${RESET}\r\n${ACCENT}╰─❯${RESET} `);
+    };
+
+    // Banner
+    term.writeln(`${ACCENT}▌${RESET} ${BOLD}Forge${RESET} ${MUTED}terminal${RESET}`);
+    term.writeln(`${MUTED}  commands run in the open folder · Ctrl+C to cancel${RESET}`);
+    writePrompt();
 
     const exec = (command: string): void => {
       runningRef.current = true;
@@ -57,15 +94,16 @@ export function TerminalPanel(): React.JSX.Element {
     };
     execRef.current = (command) => {
       if (runningRef.current) return;
-      term.write(`${command}\r\n`);
+      term.write(command + '\r\n');
       exec(command);
     };
 
     const offData = window.forge.onTerminalData(({ chunk }) => term.write(chunk));
     const offExit = window.forge.onTerminalExit(({ code }) => {
       runningRef.current = false;
-      term.write(`\r\n\x1b[90m[process exited with code ${code}]\x1b[0m\r\n`);
-      term.write(PROMPT);
+      const dot = code === 0 ? `${GREEN}●${RESET}` : `${RED}●${RESET}`;
+      term.write(`\r\n${dot} ${MUTED}exited ${code}${RESET}\r\n`);
+      writePrompt();
     });
 
     const dataSub = term.onData((d) => {
@@ -73,12 +111,25 @@ export function TerminalPanel(): React.JSX.Element {
         if (d === '\x03') window.forge.killCommand(TERM_ID); // Ctrl+C
         return;
       }
+      if (d === '\x0c') {
+        // Ctrl+L — clear
+        term.clear();
+        lineRef.current = '';
+        writePrompt();
+        return;
+      }
       if (d === '\r') {
         const cmd = lineRef.current.trim();
         lineRef.current = '';
         term.write('\r\n');
-        if (cmd) exec(cmd);
-        else term.write(PROMPT);
+        if (cmd === 'clear' || cmd === 'cls') {
+          term.clear();
+          writePrompt();
+        } else if (cmd) {
+          exec(cmd);
+        } else {
+          writePrompt();
+        }
       } else if (d === '\x7f') {
         if (lineRef.current.length > 0) {
           lineRef.current = lineRef.current.slice(0, -1);
@@ -104,9 +155,12 @@ export function TerminalPanel(): React.JSX.Element {
   }, []);
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-1.5 border-b border-line-soft px-3 py-1.5">
-        <span className="mr-1 text-[11px] text-faint">Tasks</span>
+    <div className="flex h-full flex-col bg-[#0d0d11]">
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-line-soft bg-surface px-3 py-1.5">
+        <TerminalSquare size={13} className="text-accent" />
+        <span className="mr-1.5 text-[11px] font-medium text-muted">zsh</span>
+        <span className="h-3 w-px bg-line" />
+        <span className="mx-1 text-[11px] text-faint">Tasks</span>
         {QUICK_TASKS.map((t) => (
           <button
             key={t.id}
@@ -120,7 +174,10 @@ export function TerminalPanel(): React.JSX.Element {
           </button>
         ))}
       </div>
-      <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden px-2 py-1" />
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-accent/60 via-accent/20 to-transparent" />
+        <div ref={containerRef} className="h-full px-3 py-2" />
+      </div>
     </div>
   );
 }
