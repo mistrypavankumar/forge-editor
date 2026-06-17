@@ -5,7 +5,7 @@ describe('layout-store', () => {
   beforeEach(() => {
     useLayoutStore.setState({
       sidebarVisible: true,
-      rightVisible: true,
+      rightVisible: false,
       bottomVisible: true,
       activity: 'explorer',
       rightTab: 'assistant',
@@ -13,10 +13,10 @@ describe('layout-store', () => {
     });
   });
 
-  it('defaults to all panels visible with explorer active', () => {
+  it('defaults with sidebar + bottom visible, assistant hidden, explorer active', () => {
     const s = useLayoutStore.getState();
     expect(s.sidebarVisible).toBe(true);
-    expect(s.rightVisible).toBe(true);
+    expect(s.rightVisible).toBe(false);
     expect(s.bottomVisible).toBe(true);
     expect(s.activity).toBe('explorer');
   });
