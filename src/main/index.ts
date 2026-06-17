@@ -21,7 +21,7 @@ function createWindow(): void {
     show: false,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 14, y: 14 },
-    backgroundColor: '#1b1b1f',
+    backgroundColor: '#0a0a0c',
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),
       contextIsolation: true,
@@ -30,7 +30,10 @@ function createWindow(): void {
     },
   });
 
-  win.on('ready-to-show', () => win.show());
+  win.on('ready-to-show', () => {
+    win.maximize();
+    win.show();
+  });
 
   if (process.env.ELECTRON_RENDERER_URL) {
     void win.loadURL(process.env.ELECTRON_RENDERER_URL);
