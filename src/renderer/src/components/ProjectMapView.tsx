@@ -43,14 +43,20 @@ export function ProjectMapView(): React.JSX.Element {
 
   const groups = deriveProjectMap(rootEntries, tabs, markers);
 
-  const onEntry = (name: string, path: string, isFolder: boolean): void => {
+  const onEntry = async (name: string, path: string, isFolder: boolean): Promise<void> => {
     if (isFolder) {
+      // Reveal the folder in Structure: load its children and expand it.
+      const ws = useWorkspaceStore.getState();
+      if (ws.childrenByPath[path] === undefined) {
+        const res = await window.forge.readDirectory(path);
+        if (res.ok) ws.setChildren(path, res.data);
+      }
+      if (!ws.expandedPaths[path]) ws.toggleExpanded(path);
       setTab('structure');
       return;
     }
-    void window.forge.readFile(path).then((res) => {
-      if (res.ok) openFile({ path, name, content: res.data });
-    });
+    const res = await window.forge.readFile(path);
+    if (res.ok) openFile({ path, name, content: res.data });
   };
 
   const badgeFor = (e: {
@@ -63,7 +69,7 @@ export function ProjectMapView(): React.JSX.Element {
   };
 
   return (
-    <div className="space-y-2.5 overflow-auto px-2.5 py-3">
+    <div className="h-full space-y-2.5 overflow-auto px-2.5 py-3">
       {groups.map((group) => {
         const entries = group.entries.filter((e) => entryMatchesFilter(e, filter));
         if (entries.length === 0) return null;
@@ -104,7 +110,7 @@ export function ProjectMapView(): React.JSX.Element {
                     }
                     name={entry.name}
                     badge={badgeFor(entry)}
-                    onClick={() => onEntry(entry.name, entry.path, entry.isFolder)}
+                    onClick={() => void onEntry(entry.name, entry.path, entry.isFolder)}
                   />
                 ))}
               </div>

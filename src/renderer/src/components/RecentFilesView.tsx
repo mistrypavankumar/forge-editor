@@ -23,7 +23,7 @@ export function RecentFilesView(): React.JSX.Element {
   const recent = [...tabs].reverse();
 
   return (
-    <div className="overflow-auto p-2">
+    <div className="h-full overflow-auto p-2">
       {recent.map((t) => (
         <ProjectRow
           key={t.path}

@@ -26,7 +26,7 @@ export function FocusView(): React.JSX.Element {
   }
 
   return (
-    <div className="overflow-auto px-2 pb-4">
+    <div className="h-full overflow-auto px-2 pb-4">
       <div className="mx-2 mb-2 mt-3 flex items-center gap-2 rounded-lg bg-accent/10 px-3 py-2">
         <Target size={14} className="text-accent" />
         <span className="text-[11px] text-faint">Focus</span>
