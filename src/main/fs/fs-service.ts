@@ -10,13 +10,18 @@ export function sortDirEntries(entries: DirEntry[]): DirEntry[] {
   });
 }
 
+// VCS internals and OS cruft — hidden from the tree like VS Code's default excludes.
+const HIDDEN_ENTRIES = new Set(['.git', '.svn', '.hg', '.DS_Store', 'Thumbs.db']);
+
 export async function readDirectoryEntries(dirPath: string): Promise<DirEntry[]> {
   const dirents = await fs.readdir(dirPath, { withFileTypes: true });
-  const entries: DirEntry[] = dirents.map((d) => ({
-    name: d.name,
-    path: join(dirPath, d.name),
-    isDirectory: d.isDirectory(),
-  }));
+  const entries: DirEntry[] = dirents
+    .filter((d) => !HIDDEN_ENTRIES.has(d.name))
+    .map((d) => ({
+      name: d.name,
+      path: join(dirPath, d.name),
+      isDirectory: d.isDirectory(),
+    }));
   const ignored = await getIgnoredNames(dirPath, entries.map((e) => e.name));
   for (const e of entries) {
     if (ignored.has(e.name)) e.ignored = true;
