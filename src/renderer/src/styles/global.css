@@ -1,0 +1,122 @@
+@import 'tailwindcss';
+
+/* Map Tailwind color utilities to runtime CSS variables so theme switching
+   (handled by theme-service.applyCssVariables) updates every utility live. */
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Fira Code', 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+}
+
+/* Dark defaults — overridden at runtime by the theme store. */
+:root {
+  --bg: #0a0a0c;
+  --surface: #141417;
+  --surface-2: #1c1c21;
+  --surface-3: #272730;
+  --line: #2c2c34;
+  --line-soft: #1f1f25;
+  --fg: #ededf0;
+  --muted: #b2b2bb;
+  --faint: #7c7c87;
+  --accent: #7079f5;
+  --accent-fg: #ffffff;
+  --success: #3ddc97;
+  --warning: #f5c451;
+  --danger: #f87171;
+  --info: #60a5fa;
+
+  --separator-border: var(--line);
+  --focus-border: var(--accent);
+}
+
+* {
+  border-color: var(--line);
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+.drag {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Calm, slim scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--faint) 40%, transparent);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--faint) 65%, transparent);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Allotment resizer color */
+.split-view-view {
+  min-width: 0;
+}
+
+/* Inline AI suggestion widget rendered inside Monaco */
+.forge-inline-suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.forge-inline-suggestion kbd {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+}
