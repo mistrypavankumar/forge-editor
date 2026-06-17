@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Play, Plus, SplitSquareHorizontal, X, TerminalSquare, Settings2 } from 'lucide-react';
 import { useTerminalStore } from '../stores/terminal-store';
-import { useTasksStore, TASKS, commandFor } from '../stores/tasks-store';
+import { useTasksStore, runnableTasks } from '../stores/tasks-store';
 import { runInTerminal } from '../lib/terminal-exec';
 import { TerminalView } from './TerminalView';
 import { TaskConfig } from './TaskConfig';
@@ -10,6 +10,8 @@ import { cn } from '../lib/cn';
 export function TerminalPanel(): React.JSX.Element {
   const pm = useTasksStore((s) => s.pm);
   const overrides = useTasksStore((s) => s.overrides);
+  const custom = useTasksStore((s) => s.custom);
+  const tasks = runnableTasks(pm, overrides, custom);
   const [configOpen, setConfigOpen] = useState(false);
   const sessions = useTerminalStore((s) => s.sessions);
   const groups = useTerminalStore((s) => s.groups);
@@ -29,21 +31,18 @@ export function TerminalPanel(): React.JSX.Element {
       <div className="flex shrink-0 items-center gap-1.5 border-b border-line-soft bg-surface px-3 py-1.5">
         <TerminalSquare size={13} className="text-accent" />
         <span className="mr-1 text-[11px] text-faint">Tasks</span>
-        {TASKS.map((t) => {
-          const command = commandFor(pm, overrides, t.id);
-          return (
-            <button
-              key={t.id}
-              type="button"
-              title={`${command} (in active terminal)`}
-              onClick={() => runInTerminal(activeSessionId, command)}
-              className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-fg"
-            >
-              <Play size={10} className="fill-current text-accent" />
-              {t.label}
-            </button>
-          );
-        })}
+        {tasks.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            title={`${t.command} (in active terminal)`}
+            onClick={() => runInTerminal(activeSessionId, t.command)}
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-fg"
+          >
+            <Play size={10} className="fill-current text-accent" />
+            {t.label}
+          </button>
+        ))}
         <button
           type="button"
           aria-label="Configure tasks"

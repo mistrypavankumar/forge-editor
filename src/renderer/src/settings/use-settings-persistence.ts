@@ -12,6 +12,7 @@ export function useSettingsPersistence(): void {
   const sidebarSide = useLayoutStore((s) => s.sidebarSide);
   const recents = useRecentsStore((s) => s.recents);
   const taskCommands = useTasksStore((s) => s.overrides);
+  const customTasks = useTasksStore((s) => s.custom);
   const autoSave = useEditorStore((s) => s.autoSave);
 
   // Hydrate once on mount.
@@ -27,6 +28,7 @@ export function useSettingsPersistence(): void {
         if (res.data.taskCommands) {
           useTasksStore.getState().setOverrides(res.data.taskCommands as Partial<Record<TaskId, string>>);
         }
+        if (res.data.customTasks) useTasksStore.getState().setCustom(res.data.customTasks);
         if (typeof res.data.autoSave === 'boolean') {
           useEditorStore.getState().setAutoSave(res.data.autoSave);
         }
@@ -44,7 +46,8 @@ export function useSettingsPersistence(): void {
       sidebarSide,
       recents,
       taskCommands,
+      customTasks,
       autoSave,
     });
-  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, autoSave]);
+  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave]);
 }

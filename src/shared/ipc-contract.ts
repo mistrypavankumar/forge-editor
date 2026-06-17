@@ -88,6 +88,7 @@ export interface ForgeSettings {
   keybindings?: Record<string, string>;
   recents?: RecentEntry[];
   taskCommands?: Record<string, string>;
+  customTasks?: { id: string; label: string; command: string }[];
   autoSave?: boolean;
 }
 
