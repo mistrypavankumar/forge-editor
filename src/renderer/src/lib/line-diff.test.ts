@@ -10,29 +10,29 @@ describe('computeDiff', () => {
 
   it('detects a modified line', () => {
     const hunks = computeDiff(lines('a\nb\nc'), lines('a\nB\nc'));
-    expect(hunks).toEqual([{ type: 'mod', modStart: 1, modEnd: 2, origLines: ['b'] }]);
+    expect(hunks).toEqual([{ type: 'mod', modStart: 1, modEnd: 2, origStart: 1, origLines: ['b'] }]);
   });
 
   it('detects added lines', () => {
     const hunks = computeDiff(lines('a\nc'), lines('a\nb\nc'));
-    expect(hunks).toEqual([{ type: 'add', modStart: 1, modEnd: 2, origLines: [] }]);
+    expect(hunks).toEqual([{ type: 'add', modStart: 1, modEnd: 2, origStart: 1, origLines: [] }]);
   });
 
   it('detects deleted lines', () => {
     const hunks = computeDiff(lines('a\nb\nc'), lines('a\nc'));
-    expect(hunks).toEqual([{ type: 'del', modStart: 1, modEnd: 1, origLines: ['b'] }]);
+    expect(hunks).toEqual([{ type: 'del', modStart: 1, modEnd: 1, origStart: 1, origLines: ['b'] }]);
   });
 
   it('detects a deletion at the top of the file', () => {
     const hunks = computeDiff(lines('a\nb\nc'), lines('b\nc'));
-    expect(hunks).toEqual([{ type: 'del', modStart: 0, modEnd: 0, origLines: ['a'] }]);
+    expect(hunks).toEqual([{ type: 'del', modStart: 0, modEnd: 0, origStart: 0, origLines: ['a'] }]);
   });
 
   it('separates two independent change regions', () => {
     const hunks = computeDiff(lines('a\nb\nc\nd\ne'), lines('a\nB\nc\nd\nE'));
     expect(hunks).toEqual([
-      { type: 'mod', modStart: 1, modEnd: 2, origLines: ['b'] },
-      { type: 'mod', modStart: 4, modEnd: 5, origLines: ['e'] },
+      { type: 'mod', modStart: 1, modEnd: 2, origStart: 1, origLines: ['b'] },
+      { type: 'mod', modStart: 4, modEnd: 5, origStart: 4, origLines: ['e'] },
     ]);
   });
 

@@ -237,6 +237,104 @@ body {
   border-top: 6px solid var(--danger);
 }
 
+/* Inline git diff peek (opened by clicking a change in the gutter) */
+.forge-peek {
+  width: 100%;
+  background: var(--surface);
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  overflow: hidden;
+}
+.forge-peek-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 8px 0 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.forge-peek-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  font-family: var(--font-sans);
+}
+.forge-peek-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+}
+.forge-peek-sub {
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.forge-peek-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.forge-peek-actions button {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.forge-peek-actions button:hover {
+  background: var(--surface-3);
+  color: var(--fg);
+}
+.forge-peek-actions button[data-act='revert']:hover {
+  color: var(--accent);
+}
+.forge-peek-body {
+  overflow: auto;
+}
+.forge-peek-row {
+  display: flex;
+  align-items: center;
+  white-space: pre;
+  font-size: 12.5px;
+}
+.forge-peek-ln {
+  flex-shrink: 0;
+  width: 52px;
+  padding-right: 12px;
+  text-align: right;
+  color: var(--faint);
+  user-select: none;
+}
+.forge-peek-code {
+  white-space: pre;
+}
+.forge-peek-del {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+}
+.forge-peek-del .forge-peek-ln {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+}
+.forge-peek-add {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+}
+.forge-peek-add .forge-peek-ln {
+  background: color-mix(in srgb, var(--success) 20%, transparent);
+}
+
 /* Inline AI suggestion widget rendered inside Monaco */
 .forge-inline-suggestion {
   display: inline-flex;

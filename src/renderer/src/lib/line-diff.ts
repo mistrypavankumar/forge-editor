@@ -8,6 +8,8 @@ export interface DiffHunk {
   modStart: number;
   /** One past the last current-line index (0-based, half-open). For 'del' this equals modStart. */
   modEnd: number;
+  /** First original (HEAD) line index this hunk replaced (0-based). */
+  origStart: number;
   /** The original (HEAD) lines this hunk replaced — used to restore on revert. */
   origLines: string[];
 }
@@ -94,6 +96,7 @@ export function computeDiff(orig: string[], mod: string[]): DiffHunk[] {
     type: h.type,
     modStart: prefix + h.mStart,
     modEnd: prefix + h.mEnd,
+    origStart: prefix + h.oStart,
     origLines: oMid.slice(h.oStart, h.oEnd),
   }));
 }

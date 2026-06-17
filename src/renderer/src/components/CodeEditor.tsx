@@ -3,6 +3,7 @@ import { FolderOpen } from 'lucide-react';
 import type { editor, IDisposable } from 'monaco-editor';
 import { getMonaco } from '../editor/monaco-setup';
 import { hunkAtLine, hunkToDecoration, revertHunk } from '../editor/git-gutter';
+import { DiffPeek } from '../editor/diff-peek';
 import { computeDiff, type DiffHunk } from '../lib/line-diff';
 import { useEditorStore } from '../stores/editor-store';
 import { useThemeStore } from '../stores/theme-store';
@@ -35,6 +36,7 @@ export function CodeEditor(): React.JSX.Element {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const modelsRef = useRef<Map<string, editor.ITextModel>>(new Map());
   const decoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+  const peekRef = useRef<DiffPeek | null>(null);
   const hunksRef = useRef<DiffHunk[]>([]);
   const originalRef = useRef<Map<string, string | null>>(new Map());
   const diffTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -92,6 +94,22 @@ export function CodeEditor(): React.JSX.Element {
     });
     editorRef.current = instance;
     decoRef.current = instance.createDecorationsCollection();
+    peekRef.current = new DiffPeek(instance, monaco, {
+      getHunks: () => hunksRef.current,
+      fileName: () => {
+        const s = useEditorStore.getState();
+        return s.tabs.find((t) => t.path === s.activePath)?.name ?? '';
+      },
+      languageId: () => {
+        const s = useEditorStore.getState();
+        const t = s.tabs.find((tab) => tab.path === s.activePath);
+        return t ? languageFor(t.name) : 'plaintext';
+      },
+      onRevert: (h) => {
+        revertHunk(instance, h, monaco);
+        recomputeDiff();
+      },
+    });
 
     // Re-measure once the Fira Code webfont is ready so glyphs align precisely.
     void document.fonts?.ready.then(() => monaco.editor.remeasureFonts());
@@ -108,7 +126,7 @@ export function CodeEditor(): React.JSX.Element {
       }),
     );
 
-    // Click the change gutter (colored bar / deletion marker) to revert that hunk.
+    // Click the change gutter (colored bar / deletion marker) to open the diff peek.
     disposables.push(
       instance.onMouseDown((e) => {
         const { GUTTER_LINE_DECORATIONS, GUTTER_GLYPH_MARGIN } = monaco.editor.MouseTargetType;
@@ -116,12 +134,9 @@ export function CodeEditor(): React.JSX.Element {
           return;
         }
         const line = e.target.position?.lineNumber;
-        if (!line) return;
-        const hunk = hunksRef.current.find((h) => hunkAtLine(h, line));
-        if (!hunk) return;
+        if (!line || !hunksRef.current.some((h) => hunkAtLine(h, line))) return;
         e.event.preventDefault();
-        revertHunk(instance, hunk, monaco);
-        recomputeDiff();
+        peekRef.current?.openAt(line);
       }),
     );
     disposables.push(
@@ -152,6 +167,7 @@ export function CodeEditor(): React.JSX.Element {
 
     return () => {
       clearTimeout(diffTimer.current);
+      peekRef.current?.dispose();
       disposables.forEach((d) => d.dispose());
       instance.dispose();
     };
@@ -161,6 +177,7 @@ export function CodeEditor(): React.JSX.Element {
   useEffect(() => {
     const instance = editorRef.current;
     if (!instance) return;
+    peekRef.current?.close();
     if (!activePath) {
       instance.setModel(null);
       return;
