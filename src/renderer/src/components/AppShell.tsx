@@ -7,6 +7,7 @@ import { TitleBar } from './TitleBar';
 import { ActivityBar } from './ActivityBar';
 import { FileExplorer } from './FileExplorer';
 import { EditorPane } from './EditorPane';
+import { Palette } from './Palette';
 
 export function AppShell(): React.JSX.Element {
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
@@ -50,6 +51,7 @@ export function AppShell(): React.JSX.Element {
           <span className="statusbar-item">Forge</span>
         </div>
       </div>
+      <Palette />
     </div>
   );
 }
