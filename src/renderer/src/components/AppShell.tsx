@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Allotment } from 'allotment';
 import { useLayoutStore } from '../stores/layout-store';
 import { useThemeStore } from '../stores/theme-store';
@@ -25,6 +25,8 @@ export function AppShell(): React.JSX.Element {
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
   const themeId = useThemeStore((s) => s.currentId);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const setWorkspace = useWorkspaceStore((s) => s.setWorkspace);
+  const promptedRef = useRef(false);
 
   useKeybindings();
   useSettingsPersistence();
@@ -38,6 +40,16 @@ export function AppShell(): React.JSX.Element {
   useEffect(() => {
     if (rootPath) void loadFiles(rootPath);
   }, [rootPath]);
+
+  // On launch with no workspace, prompt to pick a folder (once). Cancelling
+  // leaves the welcome screen.
+  useEffect(() => {
+    if (promptedRef.current || rootPath) return;
+    promptedRef.current = true;
+    void window.forge.openFolder().then((res) => {
+      if (res.ok && res.data) setWorkspace(res.data.rootPath, res.data.tree);
+    });
+  }, [rootPath, setWorkspace]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-bg text-fg">

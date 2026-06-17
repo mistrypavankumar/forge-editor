@@ -17,6 +17,7 @@ export function eventToKeystroke(e: KeyEventLike, isMac: boolean): string {
 
 export const defaultKeybindings: Record<string, string> = {
   'mod+s': 'file.save',
+  'mod+o': 'file.openFolder',
   'mod+b': 'view.toggleSidebar',
   'mod+j': 'view.toggleBottomPanel',
   'mod+shift+p': 'workbench.commandPalette',

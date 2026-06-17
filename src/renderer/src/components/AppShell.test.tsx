@@ -9,6 +9,7 @@ beforeAll(() => {
     ping: async (m: string) => `pong: ${m}`,
     loadSettings: async () => ({ ok: true, data: {} }),
     saveSettings: async () => ({ ok: true, data: undefined }),
+    openFolder: async () => ({ ok: true, data: null }),
   };
 });
 
