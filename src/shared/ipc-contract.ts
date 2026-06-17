@@ -43,6 +43,8 @@ export interface DirEntry {
   name: string;
   path: string;
   isDirectory: boolean;
+  /** True when the entry matches a .gitignore rule (dimmed in the tree). */
+  ignored?: boolean;
 }
 
 export interface WorkspaceData {

@@ -87,6 +87,23 @@ export async function gitCommit(rootPath: string, message: string): Promise<void
   await run('git', ['-C', rootPath, 'commit', '-m', message]);
 }
 
+/**
+ * Of the given entry names (relative to `dirPath`), the subset matched by a
+ * .gitignore rule. Empty when `dirPath` isn't in a git repo.
+ */
+export async function getIgnoredNames(dirPath: string, names: string[]): Promise<Set<string>> {
+  if (names.length === 0) return new Set();
+  try {
+    const { stdout } = await run('git', ['-C', dirPath, 'check-ignore', '-z', '--', ...names], {
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    return new Set(stdout.split('\0').filter(Boolean));
+  } catch {
+    // exit 1 = none ignored; exit 128 = not a repo. Either way: nothing to dim.
+    return new Set();
+  }
+}
+
 const MAX_MATCHES = 300;
 
 export async function searchInFiles(rootPath: string, query: string): Promise<SearchMatch[]> {

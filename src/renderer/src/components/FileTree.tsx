@@ -115,6 +115,7 @@ function TreeNode({
           className={cn(
             'group flex h-[22px] w-full items-center gap-1.5 pr-2 text-[13px] transition-colors',
             isActive ? 'bg-active text-fg' : 'text-muted hover:bg-surface-2 hover:text-fg',
+            !isActive && entry.ignored && 'opacity-45',
           )}
         >
           <span className="flex w-3.5 shrink-0 justify-center text-faint">

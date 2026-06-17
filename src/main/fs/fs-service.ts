@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
 import type { DirEntry, FileItem } from '@shared/ipc-contract';
+import { getIgnoredNames } from '../git/git-service';
 
 export function sortDirEntries(entries: DirEntry[]): DirEntry[] {
   return [...entries].sort((a, b) => {
@@ -16,6 +17,10 @@ export async function readDirectoryEntries(dirPath: string): Promise<DirEntry[]>
     path: join(dirPath, d.name),
     isDirectory: d.isDirectory(),
   }));
+  const ignored = await getIgnoredNames(dirPath, entries.map((e) => e.name));
+  for (const e of entries) {
+    if (ignored.has(e.name)) e.ignored = true;
+  }
   return sortDirEntries(entries);
 }
 
