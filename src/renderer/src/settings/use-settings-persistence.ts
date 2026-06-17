@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useThemeStore } from '../stores/theme-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { useRecentsStore } from '../stores/recents-store';
+import { useTasksStore, type TaskId } from '../stores/tasks-store';
 
 export function useSettingsPersistence(): void {
   const hydrated = useRef(false);
@@ -9,6 +10,7 @@ export function useSettingsPersistence(): void {
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
   const sidebarSide = useLayoutStore((s) => s.sidebarSide);
   const recents = useRecentsStore((s) => s.recents);
+  const taskCommands = useTasksStore((s) => s.overrides);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -20,6 +22,9 @@ export function useSettingsPersistence(): void {
         }
         if (res.data.sidebarSide) useLayoutStore.getState().setSidebarSide(res.data.sidebarSide);
         if (res.data.recents) useRecentsStore.getState().setRecents(res.data.recents);
+        if (res.data.taskCommands) {
+          useTasksStore.getState().setOverrides(res.data.taskCommands as Partial<Record<TaskId, string>>);
+        }
       }
       hydrated.current = true;
     });
@@ -28,6 +33,6 @@ export function useSettingsPersistence(): void {
   // Persist on change (after hydration, to avoid clobbering stored values on first render).
   useEffect(() => {
     if (!hydrated.current) return;
-    void window.forge.saveSettings({ themeId, sidebarVisible, sidebarSide, recents });
-  }, [themeId, sidebarVisible, sidebarSide, recents]);
+    void window.forge.saveSettings({ themeId, sidebarVisible, sidebarSide, recents, taskCommands });
+  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands]);
 }

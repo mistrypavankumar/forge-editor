@@ -6,6 +6,8 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 import { applyCssVariables } from '../theme/theme-service';
 import { builtInThemes } from '../theme/themes';
 import { loadFiles } from '../lib/quickopen-cache';
+import { detectPackageManager } from '../lib/detect-pm';
+import { useTasksStore } from '../stores/tasks-store';
 import { useKeybindings } from '../keybindings/use-keybindings';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
 import { TopBar } from './TopBar';
@@ -30,6 +32,7 @@ export function AppShell(): React.JSX.Element {
   const setSidebarSide = useLayoutStore((s) => s.setSidebarSide);
   const themeId = useThemeStore((s) => s.currentId);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const rootEntries = useWorkspaceStore((s) => s.rootEntries);
   const tabCount = useEditorStore((s) => s.tabs.length);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -54,6 +57,13 @@ export function AppShell(): React.JSX.Element {
       useWorkspaceStore.getState().setBranch(res.ok ? res.data : null);
     });
   }, [rootPath]);
+
+  // Auto-detect the package manager from the project's lockfile.
+  useEffect(() => {
+    if (rootEntries.length > 0) {
+      useTasksStore.getState().setPm(detectPackageManager(rootEntries.map((e) => e.name)));
+    }
+  }, [rootEntries]);
 
   const showLanding = !rootPath && tabCount === 0;
 

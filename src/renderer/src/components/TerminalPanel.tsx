@@ -1,17 +1,16 @@
-import { Play, Plus, SplitSquareHorizontal, X, TerminalSquare } from 'lucide-react';
+import { useState } from 'react';
+import { Play, Plus, SplitSquareHorizontal, X, TerminalSquare, Settings2 } from 'lucide-react';
 import { useTerminalStore } from '../stores/terminal-store';
+import { useTasksStore, TASKS, commandFor } from '../stores/tasks-store';
 import { runInTerminal } from '../lib/terminal-exec';
 import { TerminalView } from './TerminalView';
+import { TaskConfig } from './TaskConfig';
 import { cn } from '../lib/cn';
 
-const QUICK_TASKS = [
-  { id: 'dev', label: 'Dev', command: 'npm run dev' },
-  { id: 'test', label: 'Test', command: 'npm run test' },
-  { id: 'build', label: 'Build', command: 'npm run build' },
-  { id: 'lint', label: 'Lint', command: 'npm run lint' },
-];
-
 export function TerminalPanel(): React.JSX.Element {
+  const pm = useTasksStore((s) => s.pm);
+  const overrides = useTasksStore((s) => s.overrides);
+  const [configOpen, setConfigOpen] = useState(false);
   const sessions = useTerminalStore((s) => s.sessions);
   const groups = useTerminalStore((s) => s.groups);
   const activeGroupId = useTerminalStore((s) => s.activeGroupId);
@@ -30,18 +29,30 @@ export function TerminalPanel(): React.JSX.Element {
       <div className="flex shrink-0 items-center gap-1.5 border-b border-line-soft bg-surface px-3 py-1.5">
         <TerminalSquare size={13} className="text-accent" />
         <span className="mr-1 text-[11px] text-faint">Tasks</span>
-        {QUICK_TASKS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            title={`${t.command} (in active terminal)`}
-            onClick={() => runInTerminal(activeSessionId, t.command)}
-            className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-fg"
-          >
-            <Play size={10} className="fill-current text-accent" />
-            {t.label}
-          </button>
-        ))}
+        {TASKS.map((t) => {
+          const command = commandFor(pm, overrides, t.id);
+          return (
+            <button
+              key={t.id}
+              type="button"
+              title={`${command} (in active terminal)`}
+              onClick={() => runInTerminal(activeSessionId, command)}
+              className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-fg"
+            >
+              <Play size={10} className="fill-current text-accent" />
+              {t.label}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          aria-label="Configure tasks"
+          title="Configure tasks"
+          onClick={() => setConfigOpen(true)}
+          className="flex h-5 w-5 items-center justify-center rounded text-faint hover:bg-surface-3 hover:text-fg"
+        >
+          <Settings2 size={13} />
+        </button>
       </div>
 
       <div className="flex min-h-0 flex-1">
@@ -132,6 +143,7 @@ export function TerminalPanel(): React.JSX.Element {
           </div>
         </aside>
       </div>
+      {configOpen ? <TaskConfig onClose={() => setConfigOpen(false)} /> : null}
     </div>
   );
 }

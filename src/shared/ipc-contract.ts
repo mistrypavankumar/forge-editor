@@ -60,6 +60,7 @@ export interface ForgeSettings {
   sidebarSide?: 'left' | 'right';
   keybindings?: Record<string, string>;
   recents?: RecentEntry[];
+  taskCommands?: Record<string, string>;
 }
 
 export interface TerminalCreateArgs {
