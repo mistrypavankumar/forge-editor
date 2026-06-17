@@ -9,6 +9,10 @@ export const IpcChannels = {
   writeFile: 'forge:fs:writeFile',
   listFiles: 'forge:fs:listFiles',
   gitBranch: 'forge:fs:gitBranch',
+  rename: 'forge:fs:rename',
+  remove: 'forge:fs:remove',
+  copyEntry: 'forge:fs:copyEntry',
+  moveEntry: 'forge:fs:moveEntry',
   loadSettings: 'forge:settings:load',
   saveSettings: 'forge:settings:save',
   terminalRun: 'forge:terminal:run',
@@ -80,6 +84,10 @@ export interface ForgeApi {
   writeFile: (path: string, content: string) => Promise<Result<void>>;
   listFiles: (rootPath: string) => Promise<Result<FileItem[]>>;
   gitBranch: (rootPath: string) => Promise<Result<string | null>>;
+  rename: (oldPath: string, newPath: string) => Promise<Result<void>>;
+  remove: (path: string) => Promise<Result<void>>;
+  copyEntry: (src: string, destDir: string) => Promise<Result<void>>;
+  moveEntry: (src: string, destDir: string) => Promise<Result<void>>;
   loadSettings: () => Promise<Result<ForgeSettings>>;
   saveSettings: (settings: ForgeSettings) => Promise<Result<void>>;
   runCommand: (args: TerminalRunArgs) => Promise<Result<void>>;

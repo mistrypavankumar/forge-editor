@@ -4,10 +4,14 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { IpcChannels, pongOf, type ForgeSettings, type TerminalRunArgs } from '@shared/ipc-contract';
 import { ok, toResult } from '@shared/result';
 import {
+  copyEntry,
+  deleteEntry,
   listFilesRecursive,
+  moveEntry,
   readDirectoryEntries,
   readFileText,
   readGitBranch,
+  renameEntry,
   writeFileText,
 } from './fs/fs-service';
 import { readSettings, writeSettings } from './settings/settings-service';
@@ -69,6 +73,16 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.gitBranch, (_e, rootPath: string) =>
     toResult(() => readGitBranch(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.rename, (_e, oldPath: string, newPath: string) =>
+    toResult(() => renameEntry(oldPath, newPath)),
+  );
+  ipcMain.handle(IpcChannels.remove, (_e, path: string) => toResult(() => deleteEntry(path)));
+  ipcMain.handle(IpcChannels.copyEntry, (_e, src: string, destDir: string) =>
+    toResult(() => copyEntry(src, destDir)),
+  );
+  ipcMain.handle(IpcChannels.moveEntry, (_e, src: string, destDir: string) =>
+    toResult(() => moveEntry(src, destDir)),
   );
   ipcMain.handle(IpcChannels.loadSettings, () => toResult(() => readSettings(SETTINGS_PATH)));
   ipcMain.handle(IpcChannels.saveSettings, (_e, settings: ForgeSettings) =>

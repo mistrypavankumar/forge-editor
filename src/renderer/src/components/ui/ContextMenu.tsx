@@ -6,6 +6,7 @@ import { cn } from '../../lib/cn';
 export interface MenuItem {
   label: string;
   checked?: boolean;
+  dividerAfter?: boolean;
   onSelect: () => void;
 }
 
@@ -60,20 +61,22 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps): React.J
       onContextMenu={(e) => e.preventDefault()}
     >
       {items.map((item) => (
-        <button
-          key={item.label}
-          type="button"
-          onClick={() => {
-            item.onSelect();
-            onClose();
-          }}
-          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] text-fg hover:bg-accent/15"
-        >
-          <span className="flex w-3.5 justify-center text-accent">
-            {item.checked ? <Check size={13} /> : null}
-          </span>
-          <span className={cn(item.checked && 'text-accent')}>{item.label}</span>
-        </button>
+        <div key={item.label}>
+          <button
+            type="button"
+            onClick={() => {
+              item.onSelect();
+              onClose();
+            }}
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] text-fg hover:bg-accent/15"
+          >
+            <span className="flex w-3.5 justify-center text-accent">
+              {item.checked ? <Check size={13} /> : null}
+            </span>
+            <span className={cn(item.checked && 'text-accent')}>{item.label}</span>
+          </button>
+          {item.dividerAfter ? <div className="my-1 h-px bg-line" /> : null}
+        </div>
       ))}
     </div>,
     document.body,

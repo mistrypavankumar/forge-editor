@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { basename, join, relative, resolve } from 'node:path';
 import type { DirEntry, FileItem } from '@shared/ipc-contract';
 
 export function sortDirEntries(entries: DirEntry[]): DirEntry[] {
@@ -45,6 +45,22 @@ export async function listFilesRecursive(rootPath: string): Promise<FileItem[]> 
   }
   await walk(rootPath);
   return results;
+}
+
+export async function renameEntry(oldPath: string, newPath: string): Promise<void> {
+  await fs.rename(oldPath, newPath);
+}
+
+export async function deleteEntry(path: string): Promise<void> {
+  await fs.rm(path, { recursive: true, force: true });
+}
+
+export async function copyEntry(src: string, destDir: string): Promise<void> {
+  await fs.cp(src, join(destDir, basename(src)), { recursive: true });
+}
+
+export async function moveEntry(src: string, destDir: string): Promise<void> {
+  await fs.rename(src, join(destDir, basename(src)));
 }
 
 /** Read the current git branch (or short SHA if detached) from .git/HEAD; null if not a repo. */
