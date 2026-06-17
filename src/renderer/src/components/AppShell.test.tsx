@@ -5,8 +5,10 @@ import { AppShell } from './AppShell';
 vi.mock('./EditorPane', () => ({ EditorPane: () => null }));
 
 beforeAll(() => {
-  (window as unknown as { forge: { ping: (m: string) => Promise<string> } }).forge = {
-    ping: async (m) => `pong: ${m}`,
+  (window as unknown as { forge: Record<string, unknown> }).forge = {
+    ping: async (m: string) => `pong: ${m}`,
+    loadSettings: async () => ({ ok: true, data: {} }),
+    saveSettings: async () => ({ ok: true, data: undefined }),
   };
 });
 

@@ -7,6 +7,7 @@ import { useThemeStore } from '../stores/theme-store';
 import { applyCssVariables } from '../theme/theme-service';
 import { builtInThemes } from '../theme/themes';
 import { useKeybindings } from '../keybindings/use-keybindings';
+import { useSettingsPersistence } from '../settings/use-settings-persistence';
 import { TitleBar } from './TitleBar';
 import { ActivityBar } from './ActivityBar';
 import { FileExplorer } from './FileExplorer';
@@ -21,6 +22,7 @@ export function AppShell(): React.JSX.Element {
   const themeId = useThemeStore((s) => s.currentId);
 
   useKeybindings();
+  useSettingsPersistence();
 
   useEffect(() => {
     const theme = builtInThemes[themeId];

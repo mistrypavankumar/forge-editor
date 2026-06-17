@@ -1,6 +1,7 @@
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
-import { IpcChannels, pongOf } from '@shared/ipc-contract';
+import { IpcChannels, pongOf, type ForgeSettings } from '@shared/ipc-contract';
 import { ok, toResult } from '@shared/result';
 import {
   listFilesRecursive,
@@ -8,6 +9,9 @@ import {
   readFileText,
   writeFileText,
 } from './fs/fs-service';
+import { readSettings, writeSettings } from './settings/settings-service';
+
+const SETTINGS_PATH = join(homedir(), '.forge', 'settings.json');
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -51,6 +55,10 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.listFiles, (_e, rootPath: string) =>
     toResult(() => listFilesRecursive(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.loadSettings, () => toResult(() => readSettings(SETTINGS_PATH)));
+  ipcMain.handle(IpcChannels.saveSettings, (_e, settings: ForgeSettings) =>
+    toResult(() => writeSettings(SETTINGS_PATH, settings)),
   );
   createWindow();
   app.on('activate', () => {
