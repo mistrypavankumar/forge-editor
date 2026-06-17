@@ -113,7 +113,7 @@ export function TerminalPanel(): React.JSX.Element {
                 visible && split && s.id === activeId && 'ring-1 ring-inset ring-accent/30',
               )}
             >
-              <TerminalView sessionId={s.id} />
+              <TerminalView sessionId={s.id} visible={visible} />
             </div>
           );
         })}

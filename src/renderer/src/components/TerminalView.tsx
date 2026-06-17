@@ -20,11 +20,31 @@ function basename(p: string | null): string {
   return parts[parts.length - 1] ?? 'forge';
 }
 
-export function TerminalView({ sessionId }: { sessionId: string }): React.JSX.Element {
+export function TerminalView({
+  sessionId,
+  visible,
+}: {
+  sessionId: string;
+  visible: boolean;
+}): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<Terminal | null>(null);
+  const fitRef = useRef<FitAddon | null>(null);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const rootRef = useRef(rootPath);
   rootRef.current = rootPath;
+
+  // A terminal opened in a hidden (display:none) pane never paints; refit +
+  // repaint whenever this pane becomes visible (tab switch / split).
+  useEffect(() => {
+    if (!visible) return;
+    const raf = requestAnimationFrame(() => {
+      fitRef.current?.fit();
+      const t = termRef.current;
+      if (t) t.refresh(0, Math.max(t.rows - 1, 0));
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [visible]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -68,6 +88,8 @@ export function TerminalView({ sessionId }: { sessionId: string }): React.JSX.El
     term.loadAddon(fit);
     term.open(el);
     fit.fit();
+    termRef.current = term;
+    fitRef.current = fit;
 
     term.loadAddon(
       new WebLinksAddon((event, uri) => {
@@ -227,6 +249,8 @@ export function TerminalView({ sessionId }: { sessionId: string }): React.JSX.El
       resizeObs.disconnect();
       window.forge.killCommand(sessionId);
       term.dispose();
+      termRef.current = null;
+      fitRef.current = null;
     };
   }, [sessionId]);
 
