@@ -30,9 +30,13 @@ export function createTerminal(sender: WebContents, args: TerminalCreateArgs): v
     if (!sender.isDestroyed()) sender.send(IpcChannels.terminalData, { id: args.id, chunk });
   });
   proc.onExit(({ exitCode }) => {
-    sessions.delete(args.id);
-    if (!sender.isDestroyed()) {
-      sender.send(IpcChannels.terminalExit, { id: args.id, code: exitCode });
+    // Only clear the map if this is still the active pty for the id — a fast
+    // re-create (e.g. React StrictMode remount) may have replaced it already.
+    if (sessions.get(args.id) === proc) {
+      sessions.delete(args.id);
+      if (!sender.isDestroyed()) {
+        sender.send(IpcChannels.terminalExit, { id: args.id, code: exitCode });
+      }
     }
   });
 }
