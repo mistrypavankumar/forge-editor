@@ -1,0 +1,25 @@
+import { create } from 'zustand';
+import type { DirEntry } from '@shared/ipc-contract';
+
+export interface WorkspaceState {
+  rootPath: string | null;
+  rootEntries: DirEntry[];
+  childrenByPath: Record<string, DirEntry[]>;
+  expandedPaths: Record<string, boolean>;
+  setWorkspace: (rootPath: string, entries: DirEntry[]) => void;
+  setChildren: (path: string, entries: DirEntry[]) => void;
+  toggleExpanded: (path: string) => void;
+}
+
+export const useWorkspaceStore = create<WorkspaceState>((set) => ({
+  rootPath: null,
+  rootEntries: [],
+  childrenByPath: {},
+  expandedPaths: {},
+  setWorkspace: (rootPath, entries) =>
+    set({ rootPath, rootEntries: entries, childrenByPath: {}, expandedPaths: {} }),
+  setChildren: (path, entries) =>
+    set((s) => ({ childrenByPath: { ...s.childrenByPath, [path]: entries } })),
+  toggleExpanded: (path) =>
+    set((s) => ({ expandedPaths: { ...s.expandedPaths, [path]: !s.expandedPaths[path] } })),
+}));
