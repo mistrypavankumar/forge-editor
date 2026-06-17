@@ -101,17 +101,41 @@ export function FileExplorer(): React.JSX.Element {
   return (
     <div className="flex h-full flex-col">
       {scoped ? (
-        <button
-          type="button"
-          onClick={() => setScope(null)}
-          className="flex h-8 shrink-0 items-center gap-1 px-2 text-[11px] text-faint hover:text-fg"
-        >
-          <ChevronLeft size={13} />
-          <span className="font-semibold uppercase tracking-wider text-muted">
-            {basename(scopedPath)}
-          </span>
-          <span className="ml-auto pr-1 text-faint">Show all</span>
-        </button>
+        <div className="flex h-8 shrink-0 items-center pl-2 pr-1.5">
+          <button
+            type="button"
+            onClick={() => setScope(null)}
+            title="Back to full tree"
+            className="flex min-w-0 items-center gap-1 text-[11px] text-faint hover:text-fg"
+          >
+            <ChevronLeft size={13} />
+            <span className="truncate font-semibold uppercase tracking-wider text-muted">
+              {basename(scopedPath)}
+            </span>
+          </button>
+          <div className="ml-auto flex shrink-0 items-center gap-0.5">
+            <IconButton label="New File" className="h-6 w-6" onClick={() => void newFile(targetDir)}>
+              <FilePlus size={14} />
+            </IconButton>
+            <IconButton
+              label="New Folder"
+              className="h-6 w-6"
+              onClick={() => void newFolder(targetDir)}
+            >
+              <FolderPlus size={14} />
+            </IconButton>
+            <IconButton
+              label="Refresh"
+              className="h-6 w-6"
+              onClick={() => void refreshDir(scopedPath)}
+            >
+              <RefreshCw size={13} />
+            </IconButton>
+            <IconButton label="Collapse All" className="h-6 w-6" onClick={collapseAll}>
+              <ChevronsDownUp size={14} />
+            </IconButton>
+          </div>
+        </div>
       ) : (
         <div className="flex h-8 shrink-0 items-center justify-between pl-3 pr-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint">
           <span className="truncate">{basename(rootPath)}</span>
