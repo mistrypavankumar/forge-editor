@@ -52,6 +52,7 @@ export function TerminalView({
 
     const runningRef = { current: false };
     const lineRef = { current: '' };
+    const posRef = { current: 0 };
 
     const term = new Terminal({
       fontFamily: "'Fira Code', 'SF Mono', Menlo, monospace",
@@ -177,20 +178,43 @@ export function TerminalView({
       writePrompt();
     });
 
-    const erase = (n: number): void => {
-      if (n > 0) term.write('\b \b'.repeat(n));
+    const resetLine = (): void => {
+      lineRef.current = '';
+      posRef.current = 0;
+    };
+    const insertStr = (str: string): void => {
+      const line = lineRef.current;
+      const pos = posRef.current;
+      const newLine = line.slice(0, pos) + str + line.slice(pos);
+      lineRef.current = newLine;
+      const tail = newLine.slice(pos + str.length);
+      term.write(str + tail + '\x1b[D'.repeat(tail.length));
+      posRef.current = pos + str.length;
+    };
+    const backspaceAt = (): void => {
+      const line = lineRef.current;
+      const pos = posRef.current;
+      if (pos === 0) return;
+      const newLine = line.slice(0, pos - 1) + line.slice(pos);
+      lineRef.current = newLine;
+      const tail = newLine.slice(pos - 1);
+      term.write('\b' + tail + ' ' + '\x1b[D'.repeat(tail.length + 1));
+      posRef.current = pos - 1;
     };
     const deleteWord = (): void => {
       const line = lineRef.current;
-      let i = line.length;
+      let i = posRef.current;
       while (i > 0 && line[i - 1] === ' ') i--;
       while (i > 0 && line[i - 1] !== ' ') i--;
-      erase(line.length - i);
-      lineRef.current = line.slice(0, i);
+      const count = posRef.current - i;
+      for (let k = 0; k < count; k++) backspaceAt();
     };
     const deleteLine = (): void => {
-      erase(lineRef.current.length);
-      lineRef.current = '';
+      const line = lineRef.current;
+      const fwd = line.length - posRef.current;
+      if (fwd > 0) term.write('\x1b[C'.repeat(fwd));
+      term.write('\b \b'.repeat(line.length));
+      resetLine();
     };
 
     term.attachCustomKeyEventHandler((e) => {
@@ -209,32 +233,59 @@ export function TerminalView({
         if (d === '\x03') window.forge.killCommand(sessionId);
         return;
       }
-      if (d === '\x0c') {
-        term.clear();
-        lineRef.current = '';
-        writePrompt();
-        return;
-      }
-      if (d === '\r') {
-        const cmd = lineRef.current.trim();
-        lineRef.current = '';
-        term.write('\r\n');
-        if (cmd === 'clear' || cmd === 'cls') {
+      switch (d) {
+        case '\r': {
+          const cmd = lineRef.current.trim();
+          resetLine();
+          term.write('\r\n');
+          if (cmd === 'clear' || cmd === 'cls') {
+            term.clear();
+            writePrompt();
+          } else if (cmd) {
+            exec(cmd);
+          } else {
+            writePrompt();
+          }
+          return;
+        }
+        case '\x7f':
+          backspaceAt();
+          return;
+        case '\x0c':
           term.clear();
+          resetLine();
           writePrompt();
-        } else if (cmd) {
-          exec(cmd);
-        } else {
-          writePrompt();
+          return;
+        case '\x1b[D': // left
+          if (posRef.current > 0) {
+            posRef.current -= 1;
+            term.write('\x1b[D');
+          }
+          return;
+        case '\x1b[C': // right
+          if (posRef.current < lineRef.current.length) {
+            posRef.current += 1;
+            term.write('\x1b[C');
+          }
+          return;
+        case '\x1b[H':
+        case '\x1b[1~': // home
+          if (posRef.current > 0) term.write('\x1b[D'.repeat(posRef.current));
+          posRef.current = 0;
+          return;
+        case '\x1b[F':
+        case '\x1b[4~': {
+          // end
+          const fwd = lineRef.current.length - posRef.current;
+          if (fwd > 0) term.write('\x1b[C'.repeat(fwd));
+          posRef.current = lineRef.current.length;
+          return;
         }
-      } else if (d === '\x7f') {
-        if (lineRef.current.length > 0) {
-          lineRef.current = lineRef.current.slice(0, -1);
-          term.write('\b \b');
-        }
-      } else if (d >= ' ') {
-        lineRef.current += d;
-        term.write(d);
+        case '\x1b[A':
+        case '\x1b[B': // up/down — no history yet
+          return;
+        default:
+          if (d >= ' ' && !d.startsWith('\x1b')) insertStr(d);
       }
     });
 
