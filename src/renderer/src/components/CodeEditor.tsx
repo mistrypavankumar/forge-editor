@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { FolderOpen } from 'lucide-react';
 import type { editor, IDisposable } from 'monaco-editor';
 import { getMonaco } from '../editor/monaco-setup';
+import { languageFor } from '../editor/language';
 import { hunkAtLine, hunkToDecoration, revertHunk } from '../editor/git-gutter';
 import { DiffPeek } from '../editor/diff-peek';
 import { computeDiff, type DiffHunk } from '../lib/line-diff';
@@ -14,16 +15,6 @@ import {
   type MarkerInfo,
   type MarkerSeverity,
 } from '../stores/workbench-status-store';
-
-function languageFor(name: string): string {
-  const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
-  const map: Record<string, string> = {
-    ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
-    json: 'json', css: 'css', scss: 'scss', less: 'less', html: 'html',
-    md: 'markdown', py: 'python', go: 'go', rs: 'rust', sh: 'shell', yml: 'yaml', yaml: 'yaml',
-  };
-  return map[ext] ?? 'plaintext';
-}
 
 function severityName(level: number): MarkerSeverity {
   if (level >= 8) return 'error';

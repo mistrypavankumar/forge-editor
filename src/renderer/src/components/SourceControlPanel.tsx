@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, GitCommitVertical, Plus, Minus, Undo2, FileSymlink } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
-import { openFilePath, openGitIndexFile } from '../lib/workspace-actions';
+import { openFilePath, openGitStagedDiff } from '../lib/workspace-actions';
 import { deleteEntry } from '../lib/fs-actions';
 import { PanelHeader } from './ui/Panel';
 import { ModernFileIcon } from './ModernFileIcon';
@@ -177,7 +177,7 @@ export function SourceControlPanel(): React.JSX.Element {
               <ChangeRow
                 key={`s-${c.path}`}
                 change={c}
-                onOpen={() => void openGitIndexFile(root, c.path)}
+                onOpen={() => void openGitStagedDiff(root, c.path)}
                 actions={[
                   {
                     icon: FileSymlink,

@@ -25,6 +25,7 @@ import { EditorTabs } from './EditorTabs';
 import { Breadcrumbs } from './Breadcrumbs';
 import { CodeEditor } from './CodeEditor';
 import { MarkdownPreview } from './MarkdownPreview';
+import { DiffView } from './DiffView';
 import { Landing } from './Landing';
 import { useEditorStore } from '../stores/editor-store';
 import { RightPanel } from './RightPanel';
@@ -60,7 +61,9 @@ export function AppShell(): React.JSX.Element {
   const activePath = useEditorStore((s) => s.activePath);
   const mdPreview = useEditorStore((s) => s.mdPreview);
   const activeTab = tabs.find((t) => t.path === activePath);
-  const showPreview = mdPreview && !!activeTab && /\.mdx?$/i.test(activeTab.name);
+  const showDiff = !!activeTab && activeTab.original !== undefined;
+  const showPreview =
+    mdPreview && !showDiff && !!activeTab && /\.mdx?$/i.test(activeTab.name);
 
   // Native (mac) File-menu actions → run the matching command.
   useEffect(() => {
@@ -176,6 +179,13 @@ export function AppShell(): React.JSX.Element {
             <div className="relative min-h-0 flex-1">
               <CodeEditor />
               {showPreview && activeTab ? <MarkdownPreview content={activeTab.content} /> : null}
+              {showDiff && activeTab ? (
+                <DiffView
+                  original={activeTab.original ?? ''}
+                  modified={activeTab.content}
+                  name={activeTab.name}
+                />
+              ) : null}
             </div>
           </div>
         </Allotment.Pane>

@@ -9,6 +9,8 @@ export interface OpenFile {
   readOnly?: boolean;
   /** Real on-disk path backing the tab; differs from `path` for synthetic views. */
   filePath?: string;
+  /** When set, the tab renders as a side-by-side diff: `original` (left) vs `content` (right). */
+  original?: string;
 }
 
 export interface RevealTarget {
@@ -30,6 +32,7 @@ export interface EditorState {
     content: string;
     readOnly?: boolean;
     filePath?: string;
+    original?: string;
   }) => void;
   closeFile: (path: string) => void;
   setActive: (path: string) => void;

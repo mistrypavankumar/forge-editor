@@ -4,6 +4,7 @@ import { AppShell } from './AppShell';
 import { useWorkspaceStore } from '../stores/workspace-store';
 
 vi.mock('./CodeEditor', () => ({ CodeEditor: () => null }));
+vi.mock('./DiffView', () => ({ DiffView: () => null }));
 vi.mock('./BottomPanel', () => ({ BottomPanel: () => null }));
 
 beforeAll(() => {
