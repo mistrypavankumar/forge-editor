@@ -66,7 +66,11 @@ export function AppShell(): React.JSX.Element {
 
   const navigatorPane = sidebarVisible ? (
     <Allotment.Pane key="nav" preferredSize={300} minSize={248} maxSize={460} snap>
-      <div data-testid="sidebar-region" className="h-full border-x border-line bg-surface">
+      <div
+        data-testid="sidebar-region"
+        onContextMenu={onSidebarContextMenu}
+        className="h-full border-x border-line bg-surface"
+      >
         <ProjectNavigator />
       </div>
     </Allotment.Pane>
