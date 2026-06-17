@@ -82,6 +82,10 @@ app.whenReady().then(() => {
     const path = res.filePaths[0];
     return toResult(async () => ({ path, name: basename(path), content: await readFileText(path) }));
   });
+  ipcMain.handle(IpcChannels.saveDialog, async (_e, defaultName: string) => {
+    const res = await dialog.showSaveDialog({ defaultPath: defaultName });
+    return ok(res.canceled || !res.filePath ? null : res.filePath);
+  });
   ipcMain.handle(IpcChannels.readDirectory, (_e, path: string) =>
     toResult(() => readDirectoryEntries(path)),
   );

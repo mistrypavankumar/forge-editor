@@ -27,6 +27,7 @@ export interface WorkspaceState {
   collapseAll: () => void;
   bumpSync: () => void;
   setChangeCount: (n: number) => void;
+  closeWorkspace: () => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
@@ -69,4 +70,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   collapseAll: () => set({ expandedPaths: {} }),
   bumpSync: () => set((s) => ({ syncTick: s.syncTick + 1 })),
   setChangeCount: (n) => set({ changeCount: n }),
+  closeWorkspace: () =>
+    set({
+      rootPath: null,
+      rootEntries: [],
+      childrenByPath: {},
+      expandedPaths: {},
+      scopedPath: null,
+      branch: null,
+      selectedDir: null,
+      changeCount: 0,
+    }),
 }));

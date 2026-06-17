@@ -36,6 +36,7 @@ export function CodeEditor(): React.JSX.Element {
   const activePath = useEditorStore((s) => s.activePath);
   const updateContent = useEditorStore((s) => s.updateContent);
   const reveal = useEditorStore((s) => s.reveal);
+  const pendingRevert = useEditorStore((s) => s.pendingRevert);
   const themeId = useThemeStore((s) => s.currentId);
 
   useEffect(() => {
@@ -153,6 +154,17 @@ export function CodeEditor(): React.JSX.Element {
       useEditorStore.getState().consumeReveal();
     }
   }, [reveal, activePath, tabs]);
+
+  // Revert: replace the model's content with the on-disk version, then clear dirty.
+  useEffect(() => {
+    if (!pendingRevert) return;
+    const model = modelsRef.current.get(pendingRevert.path);
+    if (model) {
+      model.setValue(pendingRevert.content);
+      useEditorStore.getState().markSaved(pendingRevert.path);
+    }
+    useEditorStore.getState().consumeRevert();
+  }, [pendingRevert]);
 
   const hasTabs = tabs.length > 0;
 

@@ -11,6 +11,7 @@ import { detectPackageManager } from '../lib/detect-pm';
 import { useTasksStore } from '../stores/tasks-store';
 import { useKeybindings } from '../keybindings/use-keybindings';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
+import { useAutoSave } from '../settings/use-auto-save';
 import { TopBar } from './TopBar';
 import { ActivitySidebar } from './ActivitySidebar';
 import { ProjectNavigator } from './ProjectNavigator';
@@ -50,6 +51,7 @@ export function AppShell(): React.JSX.Element {
 
   useKeybindings();
   useSettingsPersistence();
+  useAutoSave();
 
   useEffect(() => {
     const theme = builtInThemes[themeId];

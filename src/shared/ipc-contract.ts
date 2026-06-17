@@ -4,6 +4,7 @@ export const IpcChannels = {
   ping: 'forge:ping',
   openFolder: 'forge:fs:openFolder',
   openFileDialog: 'forge:fs:openFileDialog',
+  saveDialog: 'forge:fs:saveDialog',
   readDirectory: 'forge:fs:readDirectory',
   readFile: 'forge:fs:readFile',
   writeFile: 'forge:fs:writeFile',
@@ -85,6 +86,7 @@ export interface ForgeSettings {
   keybindings?: Record<string, string>;
   recents?: RecentEntry[];
   taskCommands?: Record<string, string>;
+  autoSave?: boolean;
 }
 
 export interface TerminalCreateArgs {
@@ -108,6 +110,7 @@ export interface ForgeApi {
   ping: (msg: string) => Promise<string>;
   openFolder: () => Promise<Result<WorkspaceData | null>>;
   openFileDialog: () => Promise<Result<OpenedFile | null>>;
+  saveDialog: (defaultName: string) => Promise<Result<string | null>>;
   readDirectory: (path: string) => Promise<Result<DirEntry[]>>;
   readFile: (path: string) => Promise<Result<string>>;
   writeFile: (path: string, content: string) => Promise<Result<void>>;

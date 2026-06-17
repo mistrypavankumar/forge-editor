@@ -3,6 +3,7 @@ import { useThemeStore } from '../stores/theme-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { useRecentsStore } from '../stores/recents-store';
 import { useTasksStore, type TaskId } from '../stores/tasks-store';
+import { useEditorStore } from '../stores/editor-store';
 
 export function useSettingsPersistence(): void {
   const hydrated = useRef(false);
@@ -11,6 +12,7 @@ export function useSettingsPersistence(): void {
   const sidebarSide = useLayoutStore((s) => s.sidebarSide);
   const recents = useRecentsStore((s) => s.recents);
   const taskCommands = useTasksStore((s) => s.overrides);
+  const autoSave = useEditorStore((s) => s.autoSave);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -25,6 +27,9 @@ export function useSettingsPersistence(): void {
         if (res.data.taskCommands) {
           useTasksStore.getState().setOverrides(res.data.taskCommands as Partial<Record<TaskId, string>>);
         }
+        if (typeof res.data.autoSave === 'boolean') {
+          useEditorStore.getState().setAutoSave(res.data.autoSave);
+        }
       }
       hydrated.current = true;
     });
@@ -33,6 +38,13 @@ export function useSettingsPersistence(): void {
   // Persist on change (after hydration, to avoid clobbering stored values on first render).
   useEffect(() => {
     if (!hydrated.current) return;
-    void window.forge.saveSettings({ themeId, sidebarVisible, sidebarSide, recents, taskCommands });
-  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands]);
+    void window.forge.saveSettings({
+      themeId,
+      sidebarVisible,
+      sidebarSide,
+      recents,
+      taskCommands,
+      autoSave,
+    });
+  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, autoSave]);
 }

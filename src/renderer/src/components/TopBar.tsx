@@ -12,6 +12,7 @@ import { usePaletteStore } from '../stores/palette-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { commandRegistry } from '../commands/command-registry';
 import { IconButton } from './ui/IconButton';
+import { FileMenu } from './FileMenu';
 
 function basename(p: string): string {
   const parts = p.split('/').filter(Boolean);
@@ -30,10 +31,11 @@ export function TopBar(): React.JSX.Element {
   return (
     <header className="drag flex h-11 shrink-0 items-center gap-3 border-b border-line bg-surface pl-20 pr-3">
       {/* Brand + workspace */}
-      <div className="no-drag flex items-center gap-2">
+      <div className="no-drag flex items-center gap-1">
         <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent text-[13px] font-bold text-accent-fg">
           F
         </div>
+        <FileMenu />
         <button
           type="button"
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-fg hover:bg-surface-3"
