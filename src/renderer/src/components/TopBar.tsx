@@ -9,9 +9,14 @@ import {
 } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
 import { usePaletteStore } from '../stores/palette-store';
+import { useWorkspaceStore } from '../stores/workspace-store';
 import { commandRegistry } from '../commands/command-registry';
-import { workspaces } from '../data/workspace-meta';
 import { IconButton } from './ui/IconButton';
+
+function basename(p: string): string {
+  const parts = p.split('/').filter(Boolean);
+  return parts[parts.length - 1] ?? p;
+}
 
 export function TopBar(): React.JSX.Element {
   const togglePanel = useLayoutStore((s) => s.togglePanel);
@@ -19,6 +24,8 @@ export function TopBar(): React.JSX.Element {
   const rightVisible = useLayoutStore((s) => s.rightVisible);
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
   const openPalette = usePaletteStore((s) => s.openPalette);
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const workspaceName = rootPath ? basename(rootPath) : 'No workspace';
 
   return (
     <header className="drag flex h-11 shrink-0 items-center gap-3 border-b border-line bg-surface pl-20 pr-3">
@@ -31,7 +38,7 @@ export function TopBar(): React.JSX.Element {
           type="button"
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-fg hover:bg-surface-3"
         >
-          {workspaces[0]}
+          {workspaceName}
           <ChevronDown size={14} className="text-faint" />
         </button>
       </div>

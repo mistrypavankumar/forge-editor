@@ -1,21 +1,18 @@
 import { Play } from 'lucide-react';
-import { terminalHistory, quickTasks, type TerminalLineKind } from '../data/terminal';
-import { cn } from '../lib/cn';
 
-const LINE_STYLE: Record<TerminalLineKind, string> = {
-  cmd: 'text-fg',
-  out: 'text-muted',
-  ok: 'text-success',
-  err: 'text-danger',
-  muted: 'text-faint',
-};
+const QUICK_TASKS = [
+  { id: 'dev', label: 'Dev', command: 'npm run dev' },
+  { id: 'test', label: 'Test', command: 'npm run test' },
+  { id: 'build', label: 'Build', command: 'npm run build' },
+  { id: 'lint', label: 'Lint', command: 'npm run lint' },
+];
 
 export function TerminalPanel(): React.JSX.Element {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center gap-1.5 border-b border-line-soft px-3 py-1.5">
         <span className="mr-1 text-[11px] text-faint">Tasks</span>
-        {quickTasks.map((t) => (
+        {QUICK_TASKS.map((t) => (
           <button
             key={t.id}
             type="button"
@@ -27,13 +24,7 @@ export function TerminalPanel(): React.JSX.Element {
           </button>
         ))}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto px-3 py-2 font-mono text-[12px] leading-5">
-        {terminalHistory.map((line) => (
-          <div key={line.id} className={cn('whitespace-pre-wrap', LINE_STYLE[line.kind])}>
-            {line.kind === 'cmd' ? <span className="mr-1.5 text-accent">❯</span> : null}
-            {line.text}
-          </div>
-        ))}
+      <div className="min-h-0 flex-1 overflow-auto px-3 py-2 font-mono text-[12px] leading-5 text-faint">
         <div className="flex items-center text-fg">
           <span className="mr-1.5 text-accent">❯</span>
           <span className="h-3.5 w-1.5 animate-pulse bg-fg/70" />

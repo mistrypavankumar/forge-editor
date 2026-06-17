@@ -15,10 +15,17 @@ self.MonacoEnvironment = {
   },
 };
 
-let themeDefined = false;
+let configured = false;
 
 export function getMonaco(): typeof monaco {
-  if (!themeDefined) {
+  if (!configured) {
+    // Real, low-noise diagnostics: surface genuine syntax errors but skip
+    // module-resolution errors (we have no node_modules type info here).
+    const tsDiagnostics = { noSemanticValidation: true, noSyntaxValidation: false };
+    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(tsDiagnostics);
+    monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(tsDiagnostics);
+  }
+  if (!configured) {
     monaco.editor.defineTheme('forge-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -59,7 +66,7 @@ export function getMonaco(): typeof monaco {
         'editorWidget.border': '#e3e3e7',
       },
     });
-    themeDefined = true;
+    configured = true;
   }
   return monaco;
 }

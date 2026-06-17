@@ -1,5 +1,4 @@
-import { useNavigatorStore } from '../stores/navigator-store';
-import { filterChips } from '../data/project-map';
+import { useNavigatorStore, filterChips } from '../stores/navigator-store';
 import { NavigatorTabs } from './NavigatorTabs';
 import { FocusView } from './FocusView';
 import { ProjectMapView } from './ProjectMapView';

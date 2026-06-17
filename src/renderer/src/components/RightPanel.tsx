@@ -3,7 +3,6 @@ import { Tabs } from './ui/Tabs';
 import { AssistantPanel } from './AssistantPanel';
 import { ContextPanel } from './ContextPanel';
 import { ChangesPanel } from './ChangesPanel';
-import { fileChanges } from '../data/changes';
 
 export function RightPanel(): React.JSX.Element {
   const rightTab = useLayoutStore((s) => s.rightTab);
@@ -16,7 +15,7 @@ export function RightPanel(): React.JSX.Element {
           items={[
             { id: 'assistant', label: 'Assistant' },
             { id: 'context', label: 'Context' },
-            { id: 'changes', label: 'Changes', badge: fileChanges.length },
+            { id: 'changes', label: 'Changes' },
           ]}
           active={rightTab}
           onSelect={(id) => setRightTab(id as typeof rightTab)}

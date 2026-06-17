@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { FolderOpen } from 'lucide-react';
-import type { editor } from 'monaco-editor';
+import type { editor, IDisposable } from 'monaco-editor';
 import { getMonaco } from '../editor/monaco-setup';
 import { useEditorStore } from '../stores/editor-store';
 import { useThemeStore } from '../stores/theme-store';
 import { builtInThemes } from '../theme/themes';
-import { problemsForFile, type Severity } from '../data/problems';
-import { SAMPLE_FILE_PATH } from '../data/sample-code';
+import {
+  useWorkbenchStatusStore,
+  type MarkerInfo,
+  type MarkerSeverity,
+} from '../stores/workbench-status-store';
 
 function languageFor(name: string): string {
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
@@ -18,17 +21,16 @@ function languageFor(name: string): string {
   return map[ext] ?? 'plaintext';
 }
 
-function severityLevel(monaco: ReturnType<typeof getMonaco>, sev: Severity): number {
-  if (sev === 'error') return monaco.MarkerSeverity.Error;
-  if (sev === 'warning') return monaco.MarkerSeverity.Warning;
-  return monaco.MarkerSeverity.Info;
+function severityName(level: number): MarkerSeverity {
+  if (level >= 8) return 'error';
+  if (level >= 4) return 'warning';
+  return 'info';
 }
 
 export function CodeEditor(): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const modelsRef = useRef<Map<string, editor.ITextModel>>(new Map());
-  const suggestionRef = useRef<editor.IContentWidget | null>(null);
 
   const tabs = useEditorStore((s) => s.tabs);
   const activePath = useEditorStore((s) => s.activePath);
@@ -58,17 +60,49 @@ export function CodeEditor(): React.JSX.Element {
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     });
     editorRef.current = instance;
-    const sub = instance.onDidChangeModelContent(() => {
-      const model = instance.getModel();
-      if (model) updateContent(model.uri.path, instance.getValue());
-    });
+
+    const status = useWorkbenchStatusStore.getState();
+    const disposables: IDisposable[] = [];
+
+    disposables.push(
+      instance.onDidChangeModelContent(() => {
+        const model = instance.getModel();
+        if (model) updateContent(model.uri.path, instance.getValue());
+      }),
+    );
+    disposables.push(
+      instance.onDidChangeCursorPosition((e) => {
+        status.setCursor(e.position.lineNumber, e.position.column);
+      }),
+    );
+
+    const refreshMarkers = (): void => {
+      const all = monaco.editor.getModelMarkers({});
+      const markers: MarkerInfo[] = all.map((m, i) => {
+        const path = m.resource.path;
+        return {
+          id: `${path}:${m.startLineNumber}:${m.startColumn}:${i}`,
+          severity: severityName(m.severity),
+          message: m.message,
+          path,
+          file: path.slice(path.lastIndexOf('/') + 1),
+          line: m.startLineNumber,
+          col: m.startColumn,
+          code: typeof m.code === 'string' ? m.code : undefined,
+        };
+      });
+      status.setMarkers(markers);
+    };
+    disposables.push(monaco.editor.onDidChangeMarkers(refreshMarkers));
+    refreshMarkers();
+
     return () => {
-      sub.dispose();
+      disposables.forEach((d) => d.dispose());
       instance.dispose();
     };
   }, [updateContent]);
 
-  // Bind the active tab to a per-path Monaco model (preserves undo + cursor).
+  // Bind active tab to a per-path model + report its language.
   useEffect(() => {
     const instance = editorRef.current;
     if (!instance) return;
@@ -85,9 +119,9 @@ export function CodeEditor(): React.JSX.Element {
       modelsRef.current.set(activePath, model);
     }
     instance.setModel(model);
+    useWorkbenchStatusStore.getState().setLanguage(languageFor(tab.name));
   }, [activePath, tabs]);
 
-  // Dispose models for closed tabs.
   useEffect(() => {
     const openPaths = new Set(tabs.map((t) => t.path));
     for (const [path, model] of modelsRef.current) {
@@ -98,62 +132,10 @@ export function CodeEditor(): React.JSX.Element {
     }
   }, [tabs]);
 
-  // Sync Monaco theme with the app theme.
   useEffect(() => {
     const theme = builtInThemes[themeId];
     getMonaco().editor.setTheme(theme?.type === 'light' ? 'forge-light' : 'forge-dark');
   }, [themeId]);
-
-  // Project mock problems onto the active model as real Monaco markers (squiggles + hover).
-  useEffect(() => {
-    const monaco = getMonaco();
-    const model = editorRef.current?.getModel();
-    if (!model) return;
-    const probs = problemsForFile(activePath);
-    monaco.editor.setModelMarkers(
-      model,
-      'forge',
-      probs.map((p) => ({
-        severity: severityLevel(monaco, p.severity),
-        message: `${p.message}  ${p.code}`,
-        startLineNumber: p.line,
-        startColumn: p.col,
-        endLineNumber: p.line,
-        endColumn: p.col + 10,
-      })),
-    );
-  }, [activePath, tabs]);
-
-  // Inline AI suggestion — a content widget anchored in the sample file.
-  useEffect(() => {
-    const instance = editorRef.current;
-    if (!instance) return;
-    const monaco = getMonaco();
-    if (suggestionRef.current) {
-      instance.removeContentWidget(suggestionRef.current);
-      suggestionRef.current = null;
-    }
-    if (activePath !== SAMPLE_FILE_PATH) return;
-    const node = document.createElement('div');
-    node.className = 'forge-inline-suggestion';
-    node.innerHTML = '✦ Set <code>createdAt</code> before insert <kbd>Tab</kbd>';
-    const widget: editor.IContentWidget = {
-      getId: () => 'forge.inline.suggestion',
-      getDomNode: () => node,
-      getPosition: () => ({
-        position: { lineNumber: 23, column: 52 },
-        preference: [monaco.editor.ContentWidgetPositionPreference.EXACT],
-      }),
-    };
-    instance.addContentWidget(widget);
-    suggestionRef.current = widget;
-    return () => {
-      if (editorRef.current && suggestionRef.current) {
-        editorRef.current.removeContentWidget(suggestionRef.current);
-        suggestionRef.current = null;
-      }
-    };
-  }, [activePath, tabs]);
 
   const hasTabs = tabs.length > 0;
 

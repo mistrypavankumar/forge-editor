@@ -1,26 +1,37 @@
-import { recentFiles, type RecentStatus } from '../data/recent';
+import { useEditorStore } from '../stores/editor-store';
 import { ModernFileIcon } from './ModernFileIcon';
-import { ProjectRow, type BadgeTone } from './ProjectRow';
-import { openEntry } from '../lib/open-entry';
+import { ProjectRow } from './ProjectRow';
 
-function statusBadge(status: RecentStatus): { label: string; tone: BadgeTone } | undefined {
-  if (status === 'modified') return { label: 'modified', tone: 'changed' };
-  if (status === 'issue') return { label: '1 issue', tone: 'issue' };
-  return undefined;
+function dirOf(path: string): string {
+  const i = path.lastIndexOf('/');
+  return i > 0 ? path.slice(0, i).replace(/^\//, '') : '';
 }
 
 export function RecentFilesView(): React.JSX.Element {
+  const tabs = useEditorStore((s) => s.tabs);
+  const setActive = useEditorStore((s) => s.setActive);
+
+  if (tabs.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center px-6 text-center">
+        <p className="text-sm text-faint">No recent files yet.</p>
+      </div>
+    );
+  }
+
+  // Most-recently opened first.
+  const recent = [...tabs].reverse();
+
   return (
     <div className="overflow-auto p-2">
-      {recentFiles.map((f) => (
+      {recent.map((t) => (
         <ProjectRow
-          key={f.id}
-          icon={<ModernFileIcon name={f.name} />}
-          name={f.name}
-          meta={f.path}
-          badge={statusBadge(f.status)}
-          trailing={<span className="text-[11px] text-faint">{f.when}</span>}
-          onClick={() => openEntry(f.name, f.path)}
+          key={t.path}
+          icon={<ModernFileIcon name={t.name} />}
+          name={t.name}
+          meta={dirOf(t.path)}
+          badge={t.dirty ? { label: 'modified', tone: 'changed' } : undefined}
+          onClick={() => setActive(t.path)}
         />
       ))}
     </div>

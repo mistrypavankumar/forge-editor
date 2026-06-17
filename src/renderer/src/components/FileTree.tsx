@@ -1,16 +1,9 @@
 import { ChevronRight } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
-import { problems } from '../data/problems';
 import { FileTypeIcon, FolderIcon } from './file-icon';
 import { cn } from '../lib/cn';
 import type { DirEntry } from '@shared/ipc-contract';
-
-function hasError(path: string, isDir: boolean): boolean {
-  return problems.some(
-    (p) => p.severity === 'error' && (isDir ? p.file.startsWith(`${path}/`) : p.file === path),
-  );
-}
 
 function TreeNode({ entry, depth }: { entry: DirEntry; depth: number }): React.JSX.Element {
   const expanded = useWorkspaceStore((s) => s.expandedPaths[entry.path] ?? false);
@@ -35,7 +28,6 @@ function TreeNode({ entry, depth }: { entry: DirEntry; depth: number }): React.J
   };
 
   const isActive = !entry.isDirectory && entry.path === activePath;
-  const errored = hasError(entry.path, entry.isDirectory);
 
   return (
     <>
@@ -62,13 +54,9 @@ function TreeNode({ entry, depth }: { entry: DirEntry; depth: number }): React.J
         <span className="flex shrink-0 items-center">
           {entry.isDirectory ? <FolderIcon open={expanded} /> : <FileTypeIcon name={entry.name} />}
         </span>
-        <span className={cn('flex-1 truncate text-left', errored && 'text-danger')}>
-          {entry.name}
-        </span>
+        <span className="flex-1 truncate text-left">{entry.name}</span>
         {dirty ? (
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warning" title="Unsaved changes" />
-        ) : errored ? (
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-danger" title="Has errors" />
         ) : null}
       </button>
       {entry.isDirectory && expanded ? (

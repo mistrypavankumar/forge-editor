@@ -6,14 +6,14 @@ import { TerminalPanel } from './TerminalPanel';
 import { ProblemList } from './ProblemList';
 import { OutputPanel } from './OutputPanel';
 import { TestPanel } from './TestPanel';
-import { problemCounts } from '../data/problems';
-import { testSummary } from '../data/tests';
+import { useWorkbenchStatusStore, markerCounts } from '../stores/workbench-status-store';
 
 export function BottomPanel(): React.JSX.Element {
   const bottomTab = useLayoutStore((s) => s.bottomTab);
   const setBottomTab = useLayoutStore((s) => s.setBottomTab);
   const togglePanel = useLayoutStore((s) => s.togglePanel);
-  const counts = problemCounts();
+  const markers = useWorkbenchStatusStore((s) => s.markers);
+  const counts = markerCounts(markers);
 
   return (
     <div className="flex h-full flex-col border-t border-line bg-surface">
@@ -24,7 +24,7 @@ export function BottomPanel(): React.JSX.Element {
             { id: 'problems', label: 'Problems', badge: counts.errors + counts.warnings },
             { id: 'terminal', label: 'Terminal' },
             { id: 'output', label: 'Output' },
-            { id: 'tests', label: 'Tests', badge: testSummary.failed },
+            { id: 'tests', label: 'Tests' },
             { id: 'debug', label: 'Debug Console' },
           ]}
           active={bottomTab}

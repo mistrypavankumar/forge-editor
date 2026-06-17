@@ -1,43 +1,73 @@
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
-import {
-  projectMap,
-  entryMatchesFilter,
-  type BadgeKind,
-  type MapEntry,
-} from '../data/project-map';
+import { ChevronDown, FolderOpen } from 'lucide-react';
+import { useWorkspaceStore } from '../stores/workspace-store';
+import { useEditorStore } from '../stores/editor-store';
+import { useWorkbenchStatusStore } from '../stores/workbench-status-store';
 import { useNavigatorStore } from '../stores/navigator-store';
+import { deriveProjectMap, entryMatchesFilter } from '../lib/derive-project-map';
 import { ModernFolderIcon } from './ModernFolderIcon';
 import { ModernFileIcon } from './ModernFileIcon';
 import { ProjectRow, type BadgeTone } from './ProjectRow';
-import { openEntry } from '../lib/open-entry';
 import { cn } from '../lib/cn';
 
-const BADGE_TONE: Record<BadgeKind, BadgeTone> = {
-  changed: 'changed',
-  issue: 'issue',
-  clean: 'clean',
-  count: 'count',
-};
-
-function entryBadge(entry: MapEntry): { label: string; tone: BadgeTone } | undefined {
-  if (!entry.badge) return undefined;
-  return { label: entry.badge.label, tone: BADGE_TONE[entry.badge.kind] };
-}
-
 export function ProjectMapView(): React.JSX.Element {
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const rootEntries = useWorkspaceStore((s) => s.rootEntries);
+  const setWorkspace = useWorkspaceStore((s) => s.setWorkspace);
+  const openFile = useEditorStore((s) => s.openFile);
+  const tabs = useEditorStore((s) => s.tabs);
+  const markers = useWorkbenchStatusStore((s) => s.markers);
   const filter = useNavigatorStore((s) => s.filter);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(projectMap.filter((g) => g.collapsedByDefault).map((g) => [g.id, true])),
-  );
+  const setTab = useNavigatorStore((s) => s.setTab);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ hidden: true });
+
+  const onOpenFolder = async (): Promise<void> => {
+    const res = await window.forge.openFolder();
+    if (res.ok && res.data) setWorkspace(res.data.rootPath, res.data.tree);
+  };
+
+  if (!rootPath) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+        <p className="text-sm text-faint">Open a folder to map your project</p>
+        <button
+          type="button"
+          onClick={() => void onOpenFolder()}
+          className="rounded-md bg-accent px-3.5 py-1.5 text-xs font-medium text-accent-fg transition-opacity hover:opacity-90"
+        >
+          Open Folder
+        </button>
+      </div>
+    );
+  }
+
+  const groups = deriveProjectMap(rootEntries, tabs, markers);
+
+  const onEntry = (name: string, path: string, isFolder: boolean): void => {
+    if (isFolder) {
+      setTab('structure');
+      return;
+    }
+    void window.forge.readFile(path).then((res) => {
+      if (res.ok) openFile({ path, name, content: res.data });
+    });
+  };
+
+  const badgeFor = (e: {
+    changed: boolean;
+    errors: boolean;
+  }): { label: string; tone: BadgeTone } | undefined => {
+    if (e.errors) return { label: 'issue', tone: 'issue' };
+    if (e.changed) return { label: 'changed', tone: 'changed' };
+    return undefined;
+  };
 
   return (
     <div className="space-y-2.5 overflow-auto px-2.5 py-3">
-      {projectMap.map((group) => {
+      {groups.map((group) => {
         const entries = group.entries.filter((e) => entryMatchesFilter(e, filter));
         if (entries.length === 0) return null;
         const isCollapsed = collapsed[group.id];
-
         return (
           <section
             key={group.id}
@@ -50,7 +80,6 @@ export function ProjectMapView(): React.JSX.Element {
             >
               <ModernFolderIcon category={group.category} open={!isCollapsed} size={15} />
               <span className="text-[12px] font-semibold text-fg">{group.title}</span>
-              <span className="truncate text-[11px] text-faint">· {group.description}</span>
               <span className="ml-auto flex items-center gap-2">
                 <span className="rounded-md bg-surface-3 px-1.5 py-0.5 text-[10px] text-muted">
                   {entries.length}
@@ -61,7 +90,6 @@ export function ProjectMapView(): React.JSX.Element {
                 />
               </span>
             </button>
-
             {!isCollapsed ? (
               <div className="border-t border-line-soft p-1.5">
                 {entries.map((entry) => (
@@ -75,9 +103,8 @@ export function ProjectMapView(): React.JSX.Element {
                       )
                     }
                     name={entry.name}
-                    meta={entry.desc}
-                    badge={entryBadge(entry)}
-                    onClick={() => openEntry(entry.name, group.title)}
+                    badge={badgeFor(entry)}
+                    onClick={() => onEntry(entry.name, entry.path, entry.isFolder)}
                   />
                 ))}
               </div>
@@ -85,6 +112,13 @@ export function ProjectMapView(): React.JSX.Element {
           </section>
         );
       })}
+      <button
+        type="button"
+        onClick={() => void onOpenFolder()}
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-line py-1.5 text-[11px] text-faint hover:text-muted"
+      >
+        <FolderOpen size={12} /> Change folder
+      </button>
     </div>
   );
 }

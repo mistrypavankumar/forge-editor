@@ -1,9 +1,13 @@
-import { GitBranch, CircleX, TriangleAlert, Check, Sparkles, FlaskConical } from 'lucide-react';
+import { CircleX, TriangleAlert, Sparkles, FolderGit2 } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
-import { problemCounts } from '../data/problems';
-import { testSummary } from '../data/tests';
-import { projectStatus } from '../data/workspace-meta';
+import { useWorkspaceStore } from '../stores/workspace-store';
+import { useWorkbenchStatusStore, markerCounts } from '../stores/workbench-status-store';
 import { cn } from '../lib/cn';
+
+function basename(p: string): string {
+  const parts = p.split('/').filter(Boolean);
+  return parts[parts.length - 1] ?? p;
+}
 
 function Segment({
   children,
@@ -29,12 +33,16 @@ function Segment({
 }
 
 export function StatusBar(): React.JSX.Element {
-  const counts = problemCounts();
+  const markers = useWorkbenchStatusStore((s) => s.markers);
+  const cursor = useWorkbenchStatusStore((s) => s.cursor);
+  const language = useWorkbenchStatusStore((s) => s.language);
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
   const setBottomTab = useLayoutStore((s) => s.setBottomTab);
   const setPanelVisible = useLayoutStore((s) => s.setPanelVisible);
+  const counts = markerCounts(markers);
 
-  const openBottom = (tab: 'problems' | 'tests'): void => {
-    setBottomTab(tab);
+  const openProblems = (): void => {
+    setBottomTab('problems');
     setPanelVisible('bottom', true);
   };
 
@@ -44,36 +52,30 @@ export function StatusBar(): React.JSX.Element {
       className="flex h-6 shrink-0 items-center justify-between border-t border-line bg-surface"
     >
       <div className="flex h-full items-center">
-        <Segment onClick={() => openBottom('problems')} className="text-accent hover:text-accent">
-          <GitBranch size={12} />
-          {projectStatus.branch}
-        </Segment>
-        <Segment onClick={() => openBottom('problems')}>
+        {rootPath ? (
+          <Segment className="text-accent">
+            <FolderGit2 size={12} />
+            {basename(rootPath)}
+          </Segment>
+        ) : null}
+        <Segment onClick={openProblems}>
           <CircleX size={12} className={counts.errors ? 'text-danger' : ''} />
           {counts.errors}
-          <TriangleAlert size={12} className="ml-1" />
+          <TriangleAlert size={12} className={cn('ml-1', counts.warnings ? 'text-warning' : '')} />
           {counts.warnings}
         </Segment>
       </div>
 
       <div className="flex h-full items-center">
+        <Segment className="uppercase">{language}</Segment>
         <Segment>
-          <Check size={12} className="text-success" />
-          TypeScript
+          Ln {cursor.line}, Col {cursor.column}
         </Segment>
-        <Segment onClick={() => openBottom('tests')}>
-          <FlaskConical size={12} className={testSummary.failed ? 'text-warning' : 'text-success'} />
-          {testSummary.passed}/{testSummary.passed + testSummary.failed}
-        </Segment>
-        <Segment>Build passing</Segment>
-        <Segment>Prettier</Segment>
-        <span className="mx-1 h-3 w-px bg-line" />
-        <Segment>Ln 23, Col 32</Segment>
         <Segment>Spaces: 2</Segment>
-        <Segment>{projectStatus.encoding}</Segment>
+        <Segment>UTF-8</Segment>
         <Segment className="text-accent">
           <Sparkles size={12} />
-          Indexed
+          Ready
         </Segment>
       </div>
     </footer>
