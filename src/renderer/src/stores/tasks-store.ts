@@ -24,8 +24,9 @@ export const useTasksStore = create<TasksState>((set) => ({
   setOverride: (id, command) =>
     set((s) => {
       const overrides = { ...s.overrides };
-      if (command && command.trim()) overrides[id] = command.trim();
-      else delete overrides[id];
+      // Store raw text (don't trim — that would eat spaces in a controlled input).
+      if (command === null || command === '') delete overrides[id];
+      else overrides[id] = command;
       return { overrides };
     }),
   setOverrides: (overrides) => set({ overrides }),
