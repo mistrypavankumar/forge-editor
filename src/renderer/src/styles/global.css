@@ -20,7 +20,7 @@
   --color-info: var(--info);
 
   --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace;
+  --font-mono: 'Fira Code', 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
 }
 
 /* Dark defaults — overridden at runtime by the theme store. */

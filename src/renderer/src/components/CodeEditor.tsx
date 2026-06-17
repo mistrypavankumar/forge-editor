@@ -45,7 +45,7 @@ export function CodeEditor(): React.JSX.Element {
       automaticLayout: true,
       minimap: { enabled: true, renderCharacters: false, maxColumn: 80 },
       fontSize: 13,
-      fontFamily: "'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace",
+      fontFamily: "'Fira Code', 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace",
       fontLigatures: true,
       lineNumbersMinChars: 4,
       padding: { top: 12 },
@@ -60,6 +60,9 @@ export function CodeEditor(): React.JSX.Element {
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     });
     editorRef.current = instance;
+
+    // Re-measure once the Fira Code webfont is ready so glyphs align precisely.
+    void document.fonts?.ready.then(() => monaco.editor.remeasureFonts());
 
     const status = useWorkbenchStatusStore.getState();
     const disposables: IDisposable[] = [];
