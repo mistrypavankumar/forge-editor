@@ -122,7 +122,7 @@ export function Palette(): React.JSX.Element | null {
       onClick={close}
     >
       <div
-        className="flex max-h-[60vh] w-[640px] max-w-[90vw] flex-col overflow-hidden rounded-xl border border-line bg-surface-2 shadow-2xl shadow-black/50"
+        className="flex max-h-[60vh] w-[640px] max-w-[90vw] flex-col overflow-hidden rounded-xl border border-line-strong bg-elevated shadow-2xl shadow-black/50"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2.5 border-b border-line px-4">
@@ -156,7 +156,7 @@ export function Palette(): React.JSX.Element | null {
                 onClick={() => runAt(i)}
                 className={cn(
                   'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left',
-                  i === activeIndex ? 'bg-accent/15' : 'hover:bg-surface-3',
+                  i === activeIndex ? 'bg-active' : 'hover:bg-surface-3',
                 )}
               >
                 <span className="flex shrink-0 items-center">

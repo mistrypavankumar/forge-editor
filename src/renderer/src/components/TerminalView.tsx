@@ -7,11 +7,11 @@ import { useEditorStore } from '../stores/editor-store';
 import { useNavigatorStore } from '../stores/navigator-store';
 import { registerExec, unregisterExec } from '../lib/terminal-exec';
 
-const ACCENT = '\x1b[38;2;124;130;245m';
-const MUTED = '\x1b[38;2;124;124;135m';
+const ACCENT = '\x1b[38;2;124;92;255m';
+const MUTED = '\x1b[38;2;107;118;138m';
 const GREEN = '\x1b[38;2;61;220;151m';
-const RED = '\x1b[38;2;248;113;113m';
-const GIT = '\x1b[38;2;199;146;234m';
+const RED = '\x1b[38;2;255;92;122m';
+const GIT = '\x1b[38;2;139;115;255m';
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
 
@@ -64,27 +64,27 @@ export function TerminalView({
       cursorStyle: 'bar',
       convertEol: true,
       theme: {
-        background: '#0d0d11',
-        foreground: '#e7e7ea',
-        cursor: '#7c82f5',
-        cursorAccent: '#0d0d11',
-        selectionBackground: '#7c82f540',
-        black: '#1c1c21',
-        red: '#f87171',
-        green: '#3ddc97',
-        yellow: '#f5c451',
-        blue: '#5b9df0',
-        magenta: '#c792ea',
-        cyan: '#22d3ee',
-        white: '#cdcdd4',
-        brightBlack: '#5c5c66',
-        brightRed: '#fca5a5',
-        brightGreen: '#86efac',
-        brightYellow: '#fde68a',
-        brightBlue: '#93c5fd',
-        brightMagenta: '#d8b4fe',
-        brightCyan: '#67e8f9',
-        brightWhite: '#ffffff',
+        background: '#080B12',
+        foreground: '#E6EDF7',
+        cursor: '#8B73FF',
+        cursorAccent: '#080B12',
+        selectionBackground: '#7C5CFF40',
+        black: '#111827',
+        red: '#FF5C7A',
+        green: '#3DDC97',
+        yellow: '#F7B955',
+        blue: '#4DBBFF',
+        magenta: '#8B73FF',
+        cyan: '#4DD0E1',
+        white: '#A8B3C7',
+        brightBlack: '#6B768A',
+        brightRed: '#ff7d95',
+        brightGreen: '#6ee7b0',
+        brightYellow: '#ffce7a',
+        brightBlue: '#7cccff',
+        brightMagenta: '#a48bff',
+        brightCyan: '#6fe0ee',
+        brightWhite: '#E6EDF7',
       },
     });
     const fit = new FitAddon();

@@ -26,7 +26,7 @@ export function TerminalPanel(): React.JSX.Element {
   const allSessions = Object.values(sessions);
 
   return (
-    <div className="flex h-full flex-col bg-[#0d0d11]">
+    <div className="flex h-full flex-col bg-bg">
       <div className="flex shrink-0 items-center gap-1.5 border-b border-line-soft bg-surface px-3 py-1.5">
         <TerminalSquare size={13} className="text-accent" />
         <span className="mr-1 text-[11px] text-faint">Tasks</span>

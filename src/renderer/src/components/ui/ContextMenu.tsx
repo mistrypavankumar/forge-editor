@@ -55,7 +55,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps): React.J
   return createPortal(
     <div
       ref={ref}
-      className="fixed z-[2000] min-w-56 overflow-hidden rounded-lg border border-line bg-surface-2 py-1 shadow-2xl shadow-black/50"
+      className="fixed z-[2000] min-w-56 overflow-hidden rounded-lg border border-line-strong bg-elevated py-1 shadow-2xl shadow-black/50"
       style={{ left: pos.x, top: pos.y }}
       onMouseDown={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
