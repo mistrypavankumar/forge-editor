@@ -11,7 +11,16 @@ export function runCommand(sender: WebContents, args: TerminalRunArgs): void {
   const child = spawn(args.command, {
     shell: true,
     cwd: args.cwd ?? process.cwd(),
-    env: process.env,
+    // The child is piped (not a TTY), so most CLIs disable color. Force it on —
+    // these are honored by chalk/Next.js/npm/git/ls etc. even without a real PTY.
+    env: {
+      ...process.env,
+      FORCE_COLOR: '3',
+      COLORTERM: 'truecolor',
+      TERM: 'xterm-256color',
+      CLICOLOR: '1',
+      CLICOLOR_FORCE: '1',
+    },
   });
   processes.set(args.id, child);
 
