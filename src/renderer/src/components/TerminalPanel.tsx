@@ -77,7 +77,11 @@ export function TerminalPanel(): React.JSX.Element {
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
+    term.open(el);
+    fit.fit();
+    termRef.current = term;
 
+    // Link features must be registered AFTER open() — they attach to the DOM.
     // URLs: Cmd/Ctrl+click opens in the external browser.
     term.loadAddon(
       new WebLinksAddon((event, uri) => {
@@ -131,10 +135,6 @@ export function TerminalPanel(): React.JSX.Element {
         callback(links.length > 0 ? links : undefined);
       },
     });
-
-    term.open(el);
-    fit.fit();
-    termRef.current = term;
 
     const writePrompt = (): void => {
       const folder = basename(rootRef.current);
