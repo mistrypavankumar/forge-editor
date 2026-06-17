@@ -70,6 +70,13 @@ function TreeNode({
         <button
           type="button"
           onClick={() => void onClick()}
+          onKeyDown={(e) => {
+            // Enter on a selected item renames it (instead of activating the row).
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              setRenaming(entry.path);
+            }
+          }}
           onContextMenu={(e) => {
             e.preventDefault();
             e.stopPropagation();
