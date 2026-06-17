@@ -98,6 +98,34 @@ export function TerminalPanel(): React.JSX.Element {
       exec(command);
     };
 
+    const erase = (n: number): void => {
+      if (n > 0) term.write('\b \b'.repeat(n));
+    };
+    const deleteWord = (): void => {
+      const line = lineRef.current;
+      let i = line.length;
+      while (i > 0 && line[i - 1] === ' ') i--;
+      while (i > 0 && line[i - 1] !== ' ') i--;
+      erase(line.length - i);
+      lineRef.current = line.slice(0, i);
+    };
+    const deleteLine = (): void => {
+      erase(lineRef.current.length);
+      lineRef.current = '';
+    };
+
+    // Option+Backspace = delete word, Cmd+Backspace = delete line.
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type !== 'keydown' || runningRef.current) return true;
+      if (e.key === 'Backspace' && (e.altKey || e.metaKey)) {
+        e.preventDefault();
+        if (e.metaKey) deleteLine();
+        else deleteWord();
+        return false;
+      }
+      return true;
+    });
+
     const offData = window.forge.onTerminalData(({ chunk }) => term.write(chunk));
     const offExit = window.forge.onTerminalExit(({ code }) => {
       runningRef.current = false;
