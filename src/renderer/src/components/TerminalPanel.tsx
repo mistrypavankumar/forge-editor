@@ -46,7 +46,7 @@ export function TerminalPanel(): React.JSX.Element {
 
       <div className="flex min-h-0 flex-1">
         {/* Panes — all sessions stay mounted; only the active group's are visible. */}
-        <div className="relative flex min-h-0 flex-1">
+        <div className="relative flex min-h-0 min-w-0 flex-1">
           <div className="absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-accent/60 via-accent/20 to-transparent" />
           {allSessions.map((s) => {
             const inGroup = activeSessions.has(s.id);
