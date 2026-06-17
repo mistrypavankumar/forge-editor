@@ -1,5 +1,5 @@
 import {
-  Files,
+  Boxes,
   Search,
   GitBranch,
   Play,
@@ -20,12 +20,12 @@ interface Item {
 }
 
 const TOP: Item[] = [
-  { id: 'explorer', label: 'Explorer', Icon: Files },
+  { id: 'explorer', label: 'Project', Icon: Boxes },
   { id: 'search', label: 'Search', Icon: Search },
   { id: 'git', label: 'Source Control', Icon: GitBranch, badge: 4 },
   { id: 'run', label: 'Run & Debug', Icon: Play },
-  { id: 'extensions', label: 'Extensions', Icon: Blocks },
   { id: 'database', label: 'Database / API', Icon: Database },
+  { id: 'extensions', label: 'Extensions', Icon: Blocks },
 ];
 
 export function ActivitySidebar(): React.JSX.Element {

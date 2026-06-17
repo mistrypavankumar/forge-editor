@@ -8,7 +8,7 @@ import { useKeybindings } from '../keybindings/use-keybindings';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
 import { TopBar } from './TopBar';
 import { ActivitySidebar } from './ActivitySidebar';
-import { FileExplorer } from './FileExplorer';
+import { ProjectNavigator } from './ProjectNavigator';
 import { EditorTabs } from './EditorTabs';
 import { Breadcrumbs } from './Breadcrumbs';
 import { CodeEditor } from './CodeEditor';
@@ -39,9 +39,9 @@ export function AppShell(): React.JSX.Element {
         <div className="min-w-0 flex-1">
           <Allotment proportionalLayout={false}>
             {sidebarVisible ? (
-              <Allotment.Pane preferredSize={260} minSize={200} maxSize={460} snap>
-                <div data-testid="sidebar-region" className="h-full bg-surface">
-                  <FileExplorer />
+              <Allotment.Pane preferredSize={300} minSize={248} maxSize={460} snap>
+                <div data-testid="sidebar-region" className="h-full border-r border-line bg-surface">
+                  <ProjectNavigator />
                 </div>
               </Allotment.Pane>
             ) : null}
