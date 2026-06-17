@@ -205,6 +205,38 @@ body {
   max-width: 100%;
 }
 
+/* Git change gutter — colored bars (add/modify) and a deletion marker.
+   Bars sit in Monaco's lines-decorations strip; clicking one reverts the hunk. */
+.forge-git-gutter {
+  margin-left: 3px;
+  cursor: pointer;
+}
+.forge-git-add {
+  border-left: 3px solid var(--success);
+}
+.forge-git-mod {
+  border-left: 3px solid var(--info);
+}
+.forge-git-add:hover,
+.forge-git-mod:hover {
+  border-left-width: 5px;
+  margin-left: 1px;
+}
+.forge-git-del {
+  position: relative;
+}
+.forge-git-del::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  bottom: -3px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--danger);
+}
+
 /* Inline AI suggestion widget rendered inside Monaco */
 .forge-inline-suggestion {
   display: inline-flex;

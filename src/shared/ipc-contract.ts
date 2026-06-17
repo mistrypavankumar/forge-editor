@@ -16,6 +16,7 @@ export const IpcChannels = {
   gitUnstage: 'forge:git:unstage',
   gitDiscard: 'forge:git:discard',
   gitStageAll: 'forge:git:stageAll',
+  gitOriginal: 'forge:git:original',
   search: 'forge:search',
   watchWorkspace: 'forge:fs:watch',
   fsChanged: 'forge:fs:changed',
@@ -125,6 +126,7 @@ export interface ForgeApi {
   gitUnstage: (rootPath: string, path: string) => Promise<Result<void>>;
   gitDiscard: (rootPath: string, path: string) => Promise<Result<void>>;
   gitStageAll: (rootPath: string) => Promise<Result<void>>;
+  gitOriginal: (rootPath: string, path: string) => Promise<Result<string | null>>;
   search: (rootPath: string, query: string) => Promise<Result<SearchMatch[]>>;
   watchWorkspace: (rootPath: string) => void;
   onFsChanged: (cb: () => void) => () => void;

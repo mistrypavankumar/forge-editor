@@ -1,9 +1,29 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { basename } from 'node:path';
+import { basename, relative, sep } from 'node:path';
 import type { GitChange, SearchMatch } from '@shared/ipc-contract';
 
 const run = promisify(execFile);
+
+/**
+ * The committed (HEAD) content of a file, or null when it isn't tracked
+ * (new/untracked files, or paths outside a repo). Used to diff the gutter.
+ */
+export async function getGitOriginalContent(
+  rootPath: string,
+  filePath: string,
+): Promise<string | null> {
+  const rel = relative(rootPath, filePath).split(sep).join('/');
+  if (!rel || rel.startsWith('..')) return null;
+  try {
+    const { stdout } = await run('git', ['-C', rootPath, 'show', `HEAD:${rel}`], {
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    return stdout;
+  } catch {
+    return null;
+  }
+}
 
 export async function getGitChanges(rootPath: string): Promise<GitChange[]> {
   try {

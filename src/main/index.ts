@@ -23,6 +23,7 @@ import {
 import { readSettings, writeSettings } from './settings/settings-service';
 import {
   getGitChanges,
+  getGitOriginalContent,
   gitCommit,
   gitStage,
   gitUnstage,
@@ -151,6 +152,9 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.gitStageAll, (_e, rootPath: string) =>
     toResult(() => gitStageAll(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.gitOriginal, (_e, rootPath: string, path: string) =>
+    toResult(() => getGitOriginalContent(rootPath, path)),
   );
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, query: string) =>
     toResult(() => searchInFiles(rootPath, query)),

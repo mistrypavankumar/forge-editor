@@ -1,9 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { FolderOpen } from 'lucide-react';
 import type { editor, IDisposable } from 'monaco-editor';
 import { getMonaco } from '../editor/monaco-setup';
+import { hunkAtLine, hunkToDecoration, revertHunk } from '../editor/git-gutter';
+import { computeDiff, type DiffHunk } from '../lib/line-diff';
 import { useEditorStore } from '../stores/editor-store';
 import { useThemeStore } from '../stores/theme-store';
+import { useWorkspaceStore } from '../stores/workspace-store';
 import { builtInThemes } from '../theme/themes';
 import {
   useWorkbenchStatusStore,
@@ -31,6 +34,10 @@ export function CodeEditor(): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const modelsRef = useRef<Map<string, editor.ITextModel>>(new Map());
+  const decoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+  const hunksRef = useRef<DiffHunk[]>([]);
+  const originalRef = useRef<Map<string, string | null>>(new Map());
+  const diffTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const tabs = useEditorStore((s) => s.tabs);
   const activePath = useEditorStore((s) => s.activePath);
@@ -38,6 +45,26 @@ export function CodeEditor(): React.JSX.Element {
   const reveal = useEditorStore((s) => s.reveal);
   const pendingRevert = useEditorStore((s) => s.pendingRevert);
   const themeId = useThemeStore((s) => s.currentId);
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const syncTick = useWorkspaceStore((s) => s.syncTick);
+
+  // Recompute the git change gutter for the active model against its HEAD content.
+  const recomputeDiff = useCallback(() => {
+    const instance = editorRef.current;
+    const collection = decoRef.current;
+    if (!instance || !collection) return;
+    const model = instance.getModel();
+    const original = model ? originalRef.current.get(model.uri.path) : null;
+    if (!model || original == null) {
+      collection.clear();
+      hunksRef.current = [];
+      return;
+    }
+    const monaco = getMonaco();
+    const hunks = computeDiff(original.split(/\r?\n/), model.getLinesContent());
+    hunksRef.current = hunks;
+    collection.set(hunks.map((h) => hunkToDecoration(h, monaco)));
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -59,9 +86,12 @@ export function CodeEditor(): React.JSX.Element {
       roundedSelection: true,
       guides: { indentation: false },
       overviewRulerBorder: false,
+      glyphMargin: true,
+      lineDecorationsWidth: 14,
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     });
     editorRef.current = instance;
+    decoRef.current = instance.createDecorationsCollection();
 
     // Re-measure once the Fira Code webfont is ready so glyphs align precisely.
     void document.fonts?.ready.then(() => monaco.editor.remeasureFonts());
@@ -73,6 +103,25 @@ export function CodeEditor(): React.JSX.Element {
       instance.onDidChangeModelContent(() => {
         const model = instance.getModel();
         if (model) updateContent(model.uri.path, instance.getValue());
+        clearTimeout(diffTimer.current);
+        diffTimer.current = setTimeout(recomputeDiff, 250);
+      }),
+    );
+
+    // Click the change gutter (colored bar / deletion marker) to revert that hunk.
+    disposables.push(
+      instance.onMouseDown((e) => {
+        const { GUTTER_LINE_DECORATIONS, GUTTER_GLYPH_MARGIN } = monaco.editor.MouseTargetType;
+        if (e.target.type !== GUTTER_LINE_DECORATIONS && e.target.type !== GUTTER_GLYPH_MARGIN) {
+          return;
+        }
+        const line = e.target.position?.lineNumber;
+        if (!line) return;
+        const hunk = hunksRef.current.find((h) => hunkAtLine(h, line));
+        if (!hunk) return;
+        e.event.preventDefault();
+        revertHunk(instance, hunk, monaco);
+        recomputeDiff();
       }),
     );
     disposables.push(
@@ -102,10 +151,11 @@ export function CodeEditor(): React.JSX.Element {
     refreshMarkers();
 
     return () => {
+      clearTimeout(diffTimer.current);
       disposables.forEach((d) => d.dispose());
       instance.dispose();
     };
-  }, [updateContent]);
+  }, [updateContent, recomputeDiff]);
 
   // Bind active tab to a per-path model + report its language.
   useEffect(() => {
@@ -126,6 +176,26 @@ export function CodeEditor(): React.JSX.Element {
     instance.setModel(model);
     useWorkbenchStatusStore.getState().setLanguage(languageFor(tab.name));
   }, [activePath, tabs]);
+
+  // Fetch the active file's committed (HEAD) content to drive the change gutter.
+  // Re-runs on workspace sync (syncTick) so the gutter settles after commits/stages.
+  useEffect(() => {
+    if (!activePath) return;
+    if (!rootPath) {
+      originalRef.current.set(activePath, null);
+      recomputeDiff();
+      return;
+    }
+    let cancelled = false;
+    void window.forge.gitOriginal(rootPath, activePath).then((res) => {
+      if (cancelled) return;
+      originalRef.current.set(activePath, res.ok ? res.data : null);
+      recomputeDiff();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activePath, rootPath, syncTick, recomputeDiff]);
 
   useEffect(() => {
     const openPaths = new Set(tabs.map((t) => t.path));
