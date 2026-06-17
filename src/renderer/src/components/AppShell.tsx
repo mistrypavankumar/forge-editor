@@ -56,6 +56,8 @@ export function AppShell(): React.JSX.Element {
     if (theme) applyCssVariables(theme);
   }, [themeId]);
 
+  const syncTick = useWorkspaceStore((s) => s.syncTick);
+
   // Warm the quick-open file list + resolve the git branch when a folder opens.
   useEffect(() => {
     if (!rootPath) return;
@@ -64,6 +66,17 @@ export function AppShell(): React.JSX.Element {
       useWorkspaceStore.getState().setBranch(res.ok ? res.data : null);
     });
   }, [rootPath]);
+
+  // Keep the source-control change count (activity-bar badge) in sync.
+  useEffect(() => {
+    if (!rootPath) {
+      useWorkspaceStore.getState().setChangeCount(0);
+      return;
+    }
+    void window.forge.gitChangedFiles(rootPath).then((res) => {
+      useWorkspaceStore.getState().setChangeCount(res.ok ? res.data.length : 0);
+    });
+  }, [rootPath, syncTick]);
 
   // Auto-detect the package manager from the project's lockfile.
   useEffect(() => {
