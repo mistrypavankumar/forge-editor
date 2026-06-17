@@ -5,6 +5,10 @@ export interface OpenFile {
   name: string;
   content: string;
   dirty: boolean;
+  /** Read-only tabs (e.g. a staged "(Index)" view) can't be edited or saved. */
+  readOnly?: boolean;
+  /** Real on-disk path backing the tab; differs from `path` for synthetic views. */
+  filePath?: string;
 }
 
 export interface RevealTarget {
@@ -20,7 +24,13 @@ export interface EditorState {
   autoSave: boolean;
   pendingRevert: { path: string; content: string } | null;
   mdPreview: boolean;
-  openFile: (file: { path: string; name: string; content: string }) => void;
+  openFile: (file: {
+    path: string;
+    name: string;
+    content: string;
+    readOnly?: boolean;
+    filePath?: string;
+  }) => void;
   closeFile: (path: string) => void;
   setActive: (path: string) => void;
   updateContent: (path: string, content: string) => void;

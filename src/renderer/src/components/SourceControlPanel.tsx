@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw, GitCommitVertical, Plus, Minus, Undo2 } from 'lucide-react';
+import { RefreshCw, GitCommitVertical, Plus, Minus, Undo2, FileSymlink } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
-import { openFilePath } from '../lib/workspace-actions';
+import { openFilePath, openGitIndexFile } from '../lib/workspace-actions';
 import { deleteEntry } from '../lib/fs-actions';
 import { PanelHeader } from './ui/Panel';
 import { ModernFileIcon } from './ModernFileIcon';
@@ -18,16 +18,16 @@ const STATUS_CLS: Record<GitChange['status'], string> = {
 
 function ChangeRow({
   change,
-  rootPath,
+  onOpen,
   actions,
 }: {
   change: GitChange;
-  rootPath: string;
+  onOpen: () => void;
   actions: { icon: typeof Plus; label: string; onClick: () => void }[];
 }): React.JSX.Element {
   return (
     <div
-      onClick={() => void openFilePath(`${rootPath}/${change.path}`, change.name)}
+      onClick={onOpen}
       className="group flex h-7 cursor-pointer items-center gap-2 px-3 hover:bg-surface-2"
     >
       <ModernFileIcon name={change.name} />
@@ -177,8 +177,15 @@ export function SourceControlPanel(): React.JSX.Element {
               <ChangeRow
                 key={`s-${c.path}`}
                 change={c}
-                rootPath={root}
-                actions={[{ icon: Minus, label: 'Unstage', onClick: () => unstage(c) }]}
+                onOpen={() => void openGitIndexFile(root, c.path)}
+                actions={[
+                  {
+                    icon: FileSymlink,
+                    label: 'Open File',
+                    onClick: () => void openFilePath(`${root}/${c.path}`, c.name),
+                  },
+                  { icon: Minus, label: 'Unstage', onClick: () => unstage(c) },
+                ]}
               />
             ))}
           </>
@@ -205,7 +212,7 @@ export function SourceControlPanel(): React.JSX.Element {
               <ChangeRow
                 key={`u-${c.path}`}
                 change={c}
-                rootPath={root}
+                onOpen={() => void openFilePath(`${root}/${c.path}`, c.name)}
                 actions={[
                   { icon: Undo2, label: 'Discard changes', onClick: () => discard(c) },
                   { icon: Plus, label: 'Stage changes', onClick: () => stage(c) },

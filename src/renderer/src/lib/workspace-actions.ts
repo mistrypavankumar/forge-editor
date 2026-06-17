@@ -39,3 +39,17 @@ export async function openFilePath(path: string, name?: string, record = false):
   const res = await window.forge.readFile(path);
   if (res.ok) applyFile(path, name ?? base(path), res.data, record);
 }
+
+/** Open the staged (index) version of a file as a read-only "(Index)" tab. */
+export async function openGitIndexFile(rootPath: string, relPath: string): Promise<void> {
+  const filePath = `${rootPath}/${relPath}`;
+  const res = await window.forge.gitStaged(rootPath, filePath);
+  const content = res.ok && res.data != null ? res.data : '';
+  useEditorStore.getState().openFile({
+    path: `git-index://${filePath}`,
+    name: base(relPath),
+    content,
+    readOnly: true,
+    filePath,
+  });
+}

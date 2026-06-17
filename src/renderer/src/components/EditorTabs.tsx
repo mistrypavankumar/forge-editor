@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Lock } from 'lucide-react';
 import { useEditorStore } from '../stores/editor-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { FileTypeIcon } from './file-icon';
@@ -50,6 +50,7 @@ export function EditorTabs(): React.JSX.Element | null {
             {isActive ? <span className="absolute inset-x-0 top-0 h-0.5 bg-accent" /> : null}
             <FileTypeIcon name={tab.name} />
             <span className="truncate">{tab.name}</span>
+            {tab.readOnly ? <Lock size={11} className="shrink-0 text-faint" /> : null}
             <button
               type="button"
               aria-label={`Close ${tab.name}`}

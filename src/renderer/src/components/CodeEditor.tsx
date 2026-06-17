@@ -191,6 +191,7 @@ export function CodeEditor(): React.JSX.Element {
       modelsRef.current.set(activePath, model);
     }
     instance.setModel(model);
+    instance.updateOptions({ readOnly: tab.readOnly ?? false });
     useWorkbenchStatusStore.getState().setLanguage(languageFor(tab.name));
   }, [activePath, tabs]);
 

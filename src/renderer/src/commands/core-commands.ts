@@ -14,7 +14,7 @@ function isUntitled(path: string): boolean {
 export async function saveActiveFile(): Promise<void> {
   const state = useEditorStore.getState();
   const tab = state.tabs.find((t) => t.path === state.activePath);
-  if (!tab) return;
+  if (!tab || tab.readOnly) return;
   if (isUntitled(tab.path)) {
     const res = await window.forge.saveDialog(tab.name);
     if (!res.ok || !res.data) return;
@@ -37,7 +37,7 @@ export function newTextFile(): void {
 export async function revertActiveFile(): Promise<void> {
   const state = useEditorStore.getState();
   const tab = state.tabs.find((t) => t.path === state.activePath);
-  if (!tab || isUntitled(tab.path)) return;
+  if (!tab || tab.readOnly || isUntitled(tab.path)) return;
   const res = await window.forge.readFile(tab.path);
   if (res.ok) state.requestRevert(tab.path, res.data);
 }

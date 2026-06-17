@@ -5,24 +5,31 @@ import type { GitChange, SearchMatch } from '@shared/ipc-contract';
 
 const run = promisify(execFile);
 
-/**
- * The committed (HEAD) content of a file, or null when it isn't tracked
- * (new/untracked files, or paths outside a repo). Used to diff the gutter.
- */
-export async function getGitOriginalContent(
-  rootPath: string,
-  filePath: string,
-): Promise<string | null> {
+/** `git show <ref>:<relpath>`, or null when the path isn't resolvable at that ref. */
+async function gitShow(rootPath: string, filePath: string, ref: string): Promise<string | null> {
   const rel = relative(rootPath, filePath).split(sep).join('/');
   if (!rel || rel.startsWith('..')) return null;
   try {
-    const { stdout } = await run('git', ['-C', rootPath, 'show', `HEAD:${rel}`], {
+    const { stdout } = await run('git', ['-C', rootPath, 'show', `${ref}:${rel}`], {
       maxBuffer: 16 * 1024 * 1024,
     });
     return stdout;
   } catch {
     return null;
   }
+}
+
+/**
+ * The committed (HEAD) content of a file, or null when it isn't tracked
+ * (new/untracked files, or paths outside a repo). Used to diff the gutter.
+ */
+export function getGitOriginalContent(rootPath: string, filePath: string): Promise<string | null> {
+  return gitShow(rootPath, filePath, 'HEAD');
+}
+
+/** The staged (index) content of a file — what a commit would record right now. */
+export function getGitStagedContent(rootPath: string, filePath: string): Promise<string | null> {
+  return gitShow(rootPath, filePath, '');
 }
 
 export async function getGitChanges(rootPath: string): Promise<GitChange[]> {

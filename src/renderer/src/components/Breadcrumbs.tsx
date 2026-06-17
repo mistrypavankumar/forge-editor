@@ -1,4 +1,4 @@
-import { ChevronRight, Eye, Pencil } from 'lucide-react';
+import { ChevronRight, Eye, Pencil, Lock } from 'lucide-react';
 import { useEditorStore } from '../stores/editor-store';
 import { FileTypeIcon } from './file-icon';
 
@@ -10,8 +10,9 @@ export function Breadcrumbs(): React.JSX.Element | null {
   const active = tabs.find((t) => t.path === activePath);
   if (!active || !activePath) return null;
 
-  const isMarkdown = /\.mdx?$/i.test(active.name);
-  const segments = activePath.split('/').filter(Boolean);
+  const isMarkdown = !active.readOnly && /\.mdx?$/i.test(active.name);
+  const displayPath = active.filePath ?? activePath;
+  const segments = displayPath.split('/').filter(Boolean);
   const crumbs = segments.slice(-4);
 
   return (
@@ -25,6 +26,7 @@ export function Breadcrumbs(): React.JSX.Element | null {
               <span className="inline-flex items-center gap-1.5 text-muted">
                 <FileTypeIcon name={seg} />
                 {seg}
+                {active.readOnly ? <span className="text-faint">(Index)</span> : null}
               </span>
             ) : (
               <span className="hover:text-muted">{seg}</span>
@@ -32,6 +34,14 @@ export function Breadcrumbs(): React.JSX.Element | null {
           </span>
         );
       })}
+      {active.readOnly ? (
+        <span
+          title="This file is read-only (staged version). Use “Open File” to edit."
+          className="ml-auto flex items-center gap-1 text-faint"
+        >
+          <Lock size={12} /> Read-only
+        </span>
+      ) : null}
       {isMarkdown ? (
         <button
           type="button"
