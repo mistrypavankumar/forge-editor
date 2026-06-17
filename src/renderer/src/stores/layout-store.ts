@@ -39,7 +39,7 @@ export const useLayoutStore = create<LayoutState>((set) => ({
   sidebarSide: 'left',
   activity: 'explorer',
   rightTab: 'assistant',
-  bottomTab: 'problems',
+  bottomTab: 'terminal',
   togglePanel: (id) => set((s) => ({ [visKey(id)]: !s[visKey(id)] }) as Partial<LayoutState>),
   setPanelVisible: (id, visible) => set({ [visKey(id)]: visible } as Partial<LayoutState>),
   setSidebarSide: (side) => set({ sidebarSide: side }),
