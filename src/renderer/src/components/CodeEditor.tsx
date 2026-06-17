@@ -57,6 +57,7 @@ export function CodeEditor(): React.JSX.Element {
     const hunks = computeDiff(original.split(/\r?\n/), model.getLinesContent());
     hunksRef.current = hunks;
     collection.set(hunks.map((h) => hunkToDecoration(h, monaco)));
+    if (hunks.length === 0) peekRef.current?.close();
   }, []);
 
   useEffect(() => {
@@ -205,6 +206,26 @@ export function CodeEditor(): React.JSX.Element {
       cancelled = true;
     };
   }, [activePath, rootPath, syncTick, recomputeDiff]);
+
+  // Reload non-dirty open buffers when the workspace changes on disk (external
+  // edits, discard, checkout). Dirty buffers are left alone to protect unsaved work.
+  useEffect(() => {
+    if (!rootPath) return;
+    let cancelled = false;
+    for (const tab of useEditorStore.getState().tabs) {
+      if (tab.dirty || tab.readOnly || !tab.path.startsWith('/')) continue;
+      const model = modelsRef.current.get(tab.path);
+      if (!model) continue;
+      void window.forge.readFile(tab.path).then((res) => {
+        if (cancelled || !res.ok || res.data === model.getValue()) return;
+        model.setValue(res.data);
+        useEditorStore.getState().markSaved(tab.path);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [syncTick, rootPath]);
 
   useEffect(() => {
     const openPaths = new Set(tabs.map((t) => t.path));

@@ -116,10 +116,15 @@ export function SourceControlPanel(): React.JSX.Element {
   const unstage = (c: GitChange): void => {
     void window.forge.gitUnstage(root, c.path).then(refresh);
   };
+  const synced = (): void => {
+    refresh();
+    useWorkspaceStore.getState().bumpSync();
+  };
+
   const discard = (c: GitChange): void => {
     if (!window.confirm(`Discard changes in "${c.name}"? This cannot be undone.`)) return;
     const op = c.status === 'U' ? deleteEntry(`${root}/${c.path}`) : window.forge.gitDiscard(root, c.path);
-    void Promise.resolve(op).then(refresh);
+    void Promise.resolve(op).then(synced);
   };
 
   const commit = async (): Promise<void> => {
@@ -129,7 +134,7 @@ export function SourceControlPanel(): React.JSX.Element {
     setCommitting(false);
     if (res.ok) {
       setMessage('');
-      refresh();
+      synced();
     }
   };
 
