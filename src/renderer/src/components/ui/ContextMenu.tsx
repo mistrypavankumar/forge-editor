@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check } from 'lucide-react';
 import { cn } from '../../lib/cn';
@@ -17,6 +17,23 @@ interface ContextMenuProps {
 }
 
 export function ContextMenu({ x, y, items, onClose }: ContextMenuProps): React.JSX.Element {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ x, y });
+
+  // Flip/clamp so the menu stays within the viewport (e.g. when opened near the right edge).
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    const pad = 6;
+    let nx = x;
+    let ny = y;
+    if (x + width > window.innerWidth) nx = x - width;
+    if (nx < pad) nx = pad;
+    if (y + height > window.innerHeight) ny = Math.max(pad, window.innerHeight - height - pad);
+    setPos({ x: nx, y: ny });
+  }, [x, y]);
+
   useEffect(() => {
     // Defer so the event that opened the menu doesn't immediately close it.
     const id = window.setTimeout(() => {
@@ -36,8 +53,9 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps): React.J
 
   return createPortal(
     <div
+      ref={ref}
       className="fixed z-[2000] min-w-56 overflow-hidden rounded-lg border border-line bg-surface-2 py-1 shadow-2xl shadow-black/50"
-      style={{ left: x, top: y }}
+      style={{ left: pos.x, top: pos.y }}
       onMouseDown={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
     >
