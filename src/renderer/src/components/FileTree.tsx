@@ -36,7 +36,7 @@ function TreeNode({ entry, depth }: { entry: DirEntry; depth: number }): React.J
         onClick={() => void onClick()}
         style={{ paddingLeft: depth * 12 + 8 }}
         className={cn(
-          'group flex h-7 w-full items-center gap-1.5 pr-2 text-[13px] transition-colors',
+          'group flex h-[22px] w-full items-center gap-1.5 pr-2 text-[13px] transition-colors',
           isActive
             ? 'bg-accent/12 text-fg'
             : 'text-muted hover:bg-surface-2 hover:text-fg',
