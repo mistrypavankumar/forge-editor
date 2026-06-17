@@ -36,6 +36,8 @@
     "vitest": "^3.0.0"
   },
   "dependencies": {
+    "@iconify-json/vscode-icons": "^1.2.58",
+    "@iconify/react": "^6.0.2",
     "allotment": "^1.20.2",
     "lucide-react": "^0.469.0",
     "monaco-editor": "^0.52.2",

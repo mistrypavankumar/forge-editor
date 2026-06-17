@@ -52,7 +52,11 @@ function TreeNode({ entry, depth }: { entry: DirEntry; depth: number }): React.J
           ) : null}
         </span>
         <span className="flex shrink-0 items-center">
-          {entry.isDirectory ? <FolderIcon open={expanded} /> : <FileTypeIcon name={entry.name} />}
+          {entry.isDirectory ? (
+            <FolderIcon open={expanded} name={entry.name} />
+          ) : (
+            <FileTypeIcon name={entry.name} />
+          )}
         </span>
         <span className="flex-1 truncate text-left">{entry.name}</span>
         {dirty ? (

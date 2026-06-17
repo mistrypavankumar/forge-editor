@@ -97,7 +97,7 @@ export function ProjectMapView(): React.JSX.Element {
                     key={entry.id}
                     icon={
                       entry.isFolder ? (
-                        <ModernFolderIcon category={group.category} />
+                        <ModernFolderIcon category={group.category} name={entry.name} />
                       ) : (
                         <ModernFileIcon name={entry.name} />
                       )

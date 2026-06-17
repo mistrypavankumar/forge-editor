@@ -6,6 +6,6 @@ export function FileTypeIcon({ name }: { name: string }): React.JSX.Element {
   return <ModernFileIcon name={name} />;
 }
 
-export function FolderIcon({ open }: { open: boolean }): React.JSX.Element {
-  return <ModernFolderIcon open={open} />;
+export function FolderIcon({ open, name }: { open: boolean; name?: string }): React.JSX.Element {
+  return <ModernFolderIcon open={open} name={name} />;
 }
