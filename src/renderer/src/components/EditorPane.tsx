@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 import type { editor } from 'monaco-editor';
 import { getMonaco } from '../editor/monaco-setup';
 import { useEditorStore } from '../stores/editor-store';
+import { FileTypeIcon } from './file-icon';
 
 function languageFor(name: string): string {
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
@@ -30,10 +32,18 @@ export function EditorPane(): React.JSX.Element {
     if (!containerRef.current) return;
     const monaco = getMonaco();
     const instance = monaco.editor.create(containerRef.current, {
-      theme: 'vs-dark',
+      theme: 'forge-dark',
       automaticLayout: true,
       minimap: { enabled: true },
       fontSize: 13,
+      fontFamily: "'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace",
+      fontLigatures: true,
+      lineNumbersMinChars: 3,
+      padding: { top: 10 },
+      smoothScrolling: true,
+      cursorBlinking: 'smooth',
+      renderLineHighlight: 'all',
+      scrollBeyondLastLine: false,
     });
     editorRef.current = instance;
     const sub = instance.onDidChangeModelContent(() => {
@@ -97,32 +107,59 @@ export function EditorPane(): React.JSX.Element {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [markSaved]);
 
+  const hasTabs = tabs.length > 0;
+
   return (
     <div className="editor-pane">
-      <div className="tab-bar">
-        {tabs.map((tab) => (
-          <div
-            key={tab.path}
-            className={`tab${tab.path === activePath ? ' tab-active' : ''}`}
-            onClick={() => setActive(tab.path)}
-          >
-            <span className="tab-name">
-              {tab.name}
-              {tab.dirty ? ' ●' : ''}
-            </span>
-            <span
-              className="tab-close"
-              onClick={(e) => {
-                e.stopPropagation();
-                closeFile(tab.path);
-              }}
+      {hasTabs && (
+        <div className="tab-bar">
+          {tabs.map((tab) => (
+            <div
+              key={tab.path}
+              className={`tab${tab.path === activePath ? ' tab-active' : ''}`}
+              onClick={() => setActive(tab.path)}
             >
-              ×
-            </span>
+              <span className="tab-icon">
+                <FileTypeIcon name={tab.name} />
+              </span>
+              <span className="tab-name">{tab.name}</span>
+              <button
+                type="button"
+                className={`tab-close${tab.dirty ? ' tab-close-dirty' : ''}`}
+                aria-label={`Close ${tab.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeFile(tab.path);
+                }}
+              >
+                {tab.dirty ? <span className="dirty-dot" /> : <X size={14} strokeWidth={2} />}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="editor-body">
+        <div className="editor-host" ref={containerRef} />
+        {!hasTabs && (
+          <div className="editor-empty">
+            <div className="editor-empty-mark">Forge</div>
+            <ul className="editor-empty-hints">
+              <li>
+                <span>Open Folder</span>
+                <kbd>⌘O</kbd>
+              </li>
+              <li>
+                <span>Find in File</span>
+                <kbd>⌘F</kbd>
+              </li>
+              <li>
+                <span>Save</span>
+                <kbd>⌘S</kbd>
+              </li>
+            </ul>
           </div>
-        ))}
+        )}
       </div>
-      <div className="editor-host" ref={containerRef} />
     </div>
   );
 }

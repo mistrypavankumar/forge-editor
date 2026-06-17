@@ -1,37 +1,51 @@
-import { useEffect, useState } from 'react';
+import { GitBranch } from 'lucide-react';
 import { Allotment } from 'allotment';
 import { useLayoutStore } from '../stores/layout-store';
+import { useEditorStore } from '../stores/editor-store';
+import { TitleBar } from './TitleBar';
+import { ActivityBar } from './ActivityBar';
 import { FileExplorer } from './FileExplorer';
 import { EditorPane } from './EditorPane';
 
 export function AppShell(): React.JSX.Element {
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
-  const [pong, setPong] = useState('');
-
-  useEffect(() => {
-    void window.forge.ping('ready').then(setPong);
-  }, []);
+  const activePath = useEditorStore((s) => s.activePath);
+  const tabs = useEditorStore((s) => s.tabs);
+  const active = tabs.find((t) => t.path === activePath);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ flex: 1, minHeight: 0 }}>
-        <Allotment>
-          {sidebarVisible && (
-            <Allotment.Pane preferredSize={240} minSize={160}>
-              <div className="region" data-testid="sidebar-region">
-                <FileExplorer />
+    <div className="app-shell">
+      <TitleBar />
+      <div className="app-body">
+        <ActivityBar />
+        <div className="app-main">
+          <Allotment proportionalLayout={false}>
+            {sidebarVisible && (
+              <Allotment.Pane preferredSize={260} minSize={180}>
+                <div className="sidebar" data-testid="sidebar-region">
+                  <FileExplorer />
+                </div>
+              </Allotment.Pane>
+            )}
+            <Allotment.Pane>
+              <div className="editor-region" data-testid="editor-region">
+                <EditorPane />
               </div>
             </Allotment.Pane>
-          )}
-          <Allotment.Pane>
-            <div className="region" data-testid="editor-region" style={{ padding: 0 }}>
-              <EditorPane />
-            </div>
-          </Allotment.Pane>
-        </Allotment>
+          </Allotment>
+        </div>
       </div>
       <div className="statusbar" data-testid="statusbar-region">
-        Forge — {pong || 'connecting…'}
+        <div className="statusbar-left">
+          <span className="statusbar-item statusbar-branch">
+            <GitBranch size={13} strokeWidth={1.75} />
+            main
+          </span>
+        </div>
+        <div className="statusbar-right">
+          {active && <span className="statusbar-item">{active.dirty ? 'Unsaved' : 'Saved'}</span>}
+          <span className="statusbar-item">Forge</span>
+        </div>
       </div>
     </div>
   );
