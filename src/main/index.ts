@@ -21,7 +21,15 @@ import {
   writeFileText,
 } from './fs/fs-service';
 import { readSettings, writeSettings } from './settings/settings-service';
-import { getGitChanges, gitCommit, searchInFiles } from './git/git-service';
+import {
+  getGitChanges,
+  gitCommit,
+  gitStage,
+  gitUnstage,
+  gitDiscard,
+  gitStageAll,
+  searchInFiles,
+} from './git/git-service';
 import {
   createTerminal,
   writeTerminal,
@@ -91,6 +99,18 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.gitCommit, (_e, rootPath: string, message: string) =>
     toResult(() => gitCommit(rootPath, message)),
+  );
+  ipcMain.handle(IpcChannels.gitStage, (_e, rootPath: string, path: string) =>
+    toResult(() => gitStage(rootPath, path)),
+  );
+  ipcMain.handle(IpcChannels.gitUnstage, (_e, rootPath: string, path: string) =>
+    toResult(() => gitUnstage(rootPath, path)),
+  );
+  ipcMain.handle(IpcChannels.gitDiscard, (_e, rootPath: string, path: string) =>
+    toResult(() => gitDiscard(rootPath, path)),
+  );
+  ipcMain.handle(IpcChannels.gitStageAll, (_e, rootPath: string) =>
+    toResult(() => gitStageAll(rootPath)),
   );
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, query: string) =>
     toResult(() => searchInFiles(rootPath, query)),

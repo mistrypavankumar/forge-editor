@@ -13,15 +13,17 @@ export async function getGitChanges(rootPath: string): Promise<GitChange[]> {
     const changes: GitChange[] = [];
     for (const raw of stdout.split('\n')) {
       if (!raw.trim()) continue;
-      const code = raw.slice(0, 2);
+      const x = raw[0];
+      const y = raw[1];
       let p = raw.slice(3);
-      if (code.includes('R') && p.includes(' -> ')) p = p.split(' -> ')[1];
-      let status: GitChange['status'] = 'M';
-      if (code === '??') status = 'U';
-      else if (code.includes('A')) status = 'A';
-      else if (code.includes('D')) status = 'D';
-      else if (code.includes('R')) status = 'R';
-      changes.push({ path: p, name: basename(p), status });
+      if (raw.slice(0, 2).includes('R') && p.includes(' -> ')) p = p.split(' -> ')[1];
+      const untracked = x === '?' && y === '?';
+      const staged = !untracked && x !== ' ';
+      const unstaged = untracked || y !== ' ';
+      const code = untracked ? '?' : unstaged ? y : x;
+      const status: GitChange['status'] =
+        code === 'A' ? 'A' : code === 'D' ? 'D' : code === 'R' ? 'R' : code === '?' ? 'U' : 'M';
+      changes.push({ path: p, name: basename(p), status, staged, unstaged });
     }
     return changes;
   } catch {
@@ -29,8 +31,32 @@ export async function getGitChanges(rootPath: string): Promise<GitChange[]> {
   }
 }
 
-export async function gitCommit(rootPath: string, message: string): Promise<void> {
+export async function gitStage(rootPath: string, path: string): Promise<void> {
+  await run('git', ['-C', rootPath, 'add', '--', path]);
+}
+
+export async function gitUnstage(rootPath: string, path: string): Promise<void> {
+  await run('git', ['-C', rootPath, 'reset', '-q', 'HEAD', '--', path]);
+}
+
+export async function gitDiscard(rootPath: string, path: string): Promise<void> {
+  await run('git', ['-C', rootPath, 'checkout', '--', path]);
+}
+
+export async function gitStageAll(rootPath: string): Promise<void> {
   await run('git', ['-C', rootPath, 'add', '-A']);
+}
+
+export async function gitCommit(rootPath: string, message: string): Promise<void> {
+  // Commit staged changes; if nothing is staged, stage everything first (VS Code-style).
+  let nothingStaged = false;
+  try {
+    await run('git', ['-C', rootPath, 'diff', '--cached', '--quiet']);
+    nothingStaged = true; // exit 0 = no staged changes
+  } catch {
+    nothingStaged = false; // exit 1 = staged changes exist
+  }
+  if (nothingStaged) await run('git', ['-C', rootPath, 'add', '-A']);
   await run('git', ['-C', rootPath, 'commit', '-m', message]);
 }
 

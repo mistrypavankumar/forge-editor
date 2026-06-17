@@ -11,6 +11,10 @@ export const IpcChannels = {
   gitBranch: 'forge:fs:gitBranch',
   gitChanges: 'forge:git:changes',
   gitCommit: 'forge:git:commit',
+  gitStage: 'forge:git:stage',
+  gitUnstage: 'forge:git:unstage',
+  gitDiscard: 'forge:git:discard',
+  gitStageAll: 'forge:git:stageAll',
   search: 'forge:search',
   rename: 'forge:fs:rename',
   remove: 'forge:fs:remove',
@@ -55,6 +59,8 @@ export interface GitChange {
   path: string;
   name: string;
   status: 'M' | 'A' | 'D' | 'R' | 'U';
+  staged: boolean;
+  unstaged: boolean;
 }
 
 export interface SearchMatch {
@@ -107,6 +113,10 @@ export interface ForgeApi {
   gitBranch: (rootPath: string) => Promise<Result<string | null>>;
   gitChangedFiles: (rootPath: string) => Promise<Result<GitChange[]>>;
   gitCommit: (rootPath: string, message: string) => Promise<Result<void>>;
+  gitStage: (rootPath: string, path: string) => Promise<Result<void>>;
+  gitUnstage: (rootPath: string, path: string) => Promise<Result<void>>;
+  gitDiscard: (rootPath: string, path: string) => Promise<Result<void>>;
+  gitStageAll: (rootPath: string) => Promise<Result<void>>;
   search: (rootPath: string, query: string) => Promise<Result<SearchMatch[]>>;
   rename: (oldPath: string, newPath: string) => Promise<Result<void>>;
   remove: (path: string) => Promise<Result<void>>;
