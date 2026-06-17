@@ -11,6 +11,7 @@ export interface WorkspaceState {
   renamingPath: string | null;
   selectedDir: string | null;
   creating: { dir: string; kind: 'file' | 'folder' } | null;
+  syncTick: number;
   setWorkspace: (rootPath: string, entries: DirEntry[]) => void;
   setRootEntries: (entries: DirEntry[]) => void;
   setChildren: (path: string, entries: DirEntry[]) => void;
@@ -23,6 +24,7 @@ export interface WorkspaceState {
   startCreating: (dir: string, kind: 'file' | 'folder') => void;
   cancelCreating: () => void;
   collapseAll: () => void;
+  bumpSync: () => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
@@ -35,6 +37,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   renamingPath: null,
   selectedDir: null,
   creating: null,
+  syncTick: 0,
   setWorkspace: (rootPath, entries) =>
     set({
       rootPath,
@@ -61,4 +64,5 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   startCreating: (dir, kind) => set({ creating: { dir, kind } }),
   cancelCreating: () => set({ creating: null }),
   collapseAll: () => set({ expandedPaths: {} }),
+  bumpSync: () => set((s) => ({ syncTick: s.syncTick + 1 })),
 }));

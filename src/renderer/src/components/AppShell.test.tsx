@@ -16,6 +16,8 @@ beforeAll(() => {
     listFiles: async () => ({ ok: true, data: [] }),
     gitBranch: async () => ({ ok: true, data: null }),
     gitChangedFiles: async () => ({ ok: true, data: [] }),
+    watchWorkspace: () => {},
+    onFsChanged: () => () => {},
   };
 });
 

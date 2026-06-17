@@ -30,6 +30,7 @@ import {
   gitStageAll,
   searchInFiles,
 } from './git/git-service';
+import { watchWorkspace } from './fs/watcher';
 import {
   createTerminal,
   writeTerminal,
@@ -114,6 +115,9 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, query: string) =>
     toResult(() => searchInFiles(rootPath, query)),
+  );
+  ipcMain.on(IpcChannels.watchWorkspace, (e, rootPath: string) =>
+    watchWorkspace(e.sender, rootPath),
   );
   ipcMain.handle(IpcChannels.rename, (_e, oldPath: string, newPath: string) =>
     toResult(() => renameEntry(oldPath, newPath)),

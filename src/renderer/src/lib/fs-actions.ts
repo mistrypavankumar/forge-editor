@@ -16,6 +16,16 @@ export async function refreshDir(dir: string): Promise<void> {
   else ws.setChildren(dir, res.data);
 }
 
+/** Re-read the root and every already-loaded directory (for external sync). */
+export async function refreshTree(): Promise<void> {
+  const ws = useWorkspaceStore.getState();
+  if (!ws.rootPath) return;
+  await refreshDir(ws.rootPath);
+  for (const dir of Object.keys(ws.childrenByPath)) {
+    await refreshDir(dir);
+  }
+}
+
 export async function renameEntry(oldPath: string, newName: string): Promise<void> {
   const dir = dirname(oldPath);
   const trimmed = newName.trim();

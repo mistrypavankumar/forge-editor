@@ -6,6 +6,7 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 import { applyCssVariables } from '../theme/theme-service';
 import { builtInThemes } from '../theme/themes';
 import { loadFiles } from '../lib/quickopen-cache';
+import { refreshTree } from '../lib/fs-actions';
 import { detectPackageManager } from '../lib/detect-pm';
 import { useTasksStore } from '../stores/tasks-store';
 import { useKeybindings } from '../keybindings/use-keybindings';
@@ -70,6 +71,20 @@ export function AppShell(): React.JSX.Element {
       useTasksStore.getState().setPm(detectPackageManager(rootEntries.map((e) => e.name)));
     }
   }, [rootEntries]);
+
+  // Watch the workspace and auto-sync the tree, git status, and branch on external changes.
+  useEffect(() => {
+    if (!rootPath) return;
+    window.forge.watchWorkspace(rootPath);
+    const off = window.forge.onFsChanged(() => {
+      void refreshTree();
+      void window.forge.gitBranch(rootPath).then((r) => {
+        useWorkspaceStore.getState().setBranch(r.ok ? r.data : null);
+      });
+      useWorkspaceStore.getState().bumpSync();
+    });
+    return off;
+  }, [rootPath]);
 
   const showLanding = !rootPath && tabCount === 0;
 

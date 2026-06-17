@@ -26,6 +26,7 @@ export function FocusView(): React.JSX.Element {
   const activePath = useEditorStore((s) => s.activePath);
   const setActive = useEditorStore((s) => s.setActive);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const syncTick = useWorkspaceStore((s) => s.syncTick);
   const active = tabs.find((t) => t.path === activePath);
   const others = tabs.filter((t) => t.path !== activePath);
 
@@ -38,7 +39,7 @@ export function FocusView(): React.JSX.Element {
     void window.forge.gitChangedFiles(rootPath).then((res) => {
       if (res.ok) setChanges(res.data);
     });
-  }, [rootPath, tabs]);
+  }, [rootPath, tabs, syncTick]);
 
   return (
     <div className="flex h-full flex-col">

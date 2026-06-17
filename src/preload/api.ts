@@ -22,6 +22,12 @@ export const api: ForgeApi = {
   gitDiscard: (rootPath, path) => ipcRenderer.invoke(IpcChannels.gitDiscard, rootPath, path),
   gitStageAll: (rootPath) => ipcRenderer.invoke(IpcChannels.gitStageAll, rootPath),
   search: (rootPath, query) => ipcRenderer.invoke(IpcChannels.search, rootPath, query),
+  watchWorkspace: (rootPath) => ipcRenderer.send(IpcChannels.watchWorkspace, rootPath),
+  onFsChanged: (cb) => {
+    const listener = (): void => cb();
+    ipcRenderer.on(IpcChannels.fsChanged, listener);
+    return () => ipcRenderer.removeListener(IpcChannels.fsChanged, listener);
+  },
   rename: (oldPath, newPath) => ipcRenderer.invoke(IpcChannels.rename, oldPath, newPath),
   remove: (path) => ipcRenderer.invoke(IpcChannels.remove, path),
   copyEntry: (src, destDir) => ipcRenderer.invoke(IpcChannels.copyEntry, src, destDir),

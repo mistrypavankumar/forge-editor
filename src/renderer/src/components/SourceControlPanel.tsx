@@ -83,6 +83,7 @@ function GroupHeader({
 export function SourceControlPanel(): React.JSX.Element {
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const branch = useWorkspaceStore((s) => s.branch);
+  const syncTick = useWorkspaceStore((s) => s.syncTick);
   const [changes, setChanges] = useState<GitChange[]>([]);
   const [message, setMessage] = useState('');
   const [committing, setCommitting] = useState(false);
@@ -94,7 +95,7 @@ export function SourceControlPanel(): React.JSX.Element {
     });
   }, [rootPath]);
 
-  useEffect(() => refresh(), [refresh]);
+  useEffect(() => refresh(), [refresh, syncTick]);
 
   if (!rootPath) {
     return (
