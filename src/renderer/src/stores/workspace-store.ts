@@ -9,6 +9,7 @@ export interface WorkspaceState {
   scopedPath: string | null;
   branch: string | null;
   renamingPath: string | null;
+  selectedDir: string | null;
   setWorkspace: (rootPath: string, entries: DirEntry[]) => void;
   setRootEntries: (entries: DirEntry[]) => void;
   setChildren: (path: string, entries: DirEntry[]) => void;
@@ -16,6 +17,8 @@ export interface WorkspaceState {
   setScope: (path: string | null) => void;
   setBranch: (branch: string | null) => void;
   setRenaming: (path: string | null) => void;
+  setSelectedDir: (dir: string | null) => void;
+  expandPath: (path: string) => void;
   collapseAll: () => void;
 }
 
@@ -27,6 +30,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   scopedPath: null,
   branch: null,
   renamingPath: null,
+  selectedDir: null,
   setWorkspace: (rootPath, entries) =>
     set({
       rootPath,
@@ -36,6 +40,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       scopedPath: null,
       branch: null,
       renamingPath: null,
+      selectedDir: null,
     }),
   setRootEntries: (entries) => set({ rootEntries: entries }),
   setChildren: (path, entries) =>
@@ -45,5 +50,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setScope: (path) => set({ scopedPath: path }),
   setBranch: (branch) => set({ branch }),
   setRenaming: (path) => set({ renamingPath: path }),
+  setSelectedDir: (dir) => set({ selectedDir: dir }),
+  expandPath: (path) =>
+    set((s) => ({ expandedPaths: { ...s.expandedPaths, [path]: true } })),
   collapseAll: () => set({ expandedPaths: {} }),
 }));

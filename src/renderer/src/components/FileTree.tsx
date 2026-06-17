@@ -23,12 +23,14 @@ function TreeNode({
   const setChildren = useWorkspaceStore((s) => s.setChildren);
   const toggleExpanded = useWorkspaceStore((s) => s.toggleExpanded);
   const setRenaming = useWorkspaceStore((s) => s.setRenaming);
+  const setSelectedDir = useWorkspaceStore((s) => s.setSelectedDir);
   const openFile = useEditorStore((s) => s.openFile);
   const activePath = useEditorStore((s) => s.activePath);
   const dirty = useEditorStore((s) => s.tabs.some((t) => t.path === entry.path && t.dirty));
 
   const onClick = async (): Promise<void> => {
     if (entry.isDirectory) {
+      setSelectedDir(entry.path);
       toggleExpanded(entry.path);
       if (!expanded && children === undefined) {
         const res = await window.forge.readDirectory(entry.path);
@@ -36,6 +38,7 @@ function TreeNode({
       }
       return;
     }
+    setSelectedDir(entry.path.slice(0, entry.path.lastIndexOf('/')) || '/');
     const res = await window.forge.readFile(entry.path);
     if (res.ok) openFile({ path: entry.path, name: entry.name, content: res.data });
   };

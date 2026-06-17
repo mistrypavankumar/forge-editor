@@ -27,6 +27,7 @@ export function FileExplorer(): React.JSX.Element {
   const rootEntries = useWorkspaceStore((s) => s.rootEntries);
   const childrenByPath = useWorkspaceStore((s) => s.childrenByPath);
   const scopedPath = useWorkspaceStore((s) => s.scopedPath);
+  const selectedDir = useWorkspaceStore((s) => s.selectedDir);
   const setScope = useWorkspaceStore((s) => s.setScope);
   const setRenaming = useWorkspaceStore((s) => s.setRenaming);
   const collapseAll = useWorkspaceStore((s) => s.collapseAll);
@@ -54,18 +55,26 @@ export function FileExplorer(): React.JSX.Element {
 
   const scoped = scopedPath !== null;
   const entries = scoped ? (childrenByPath[scopedPath] ?? []) : rootEntries;
+  const targetDir = selectedDir ?? scopedPath ?? rootPath;
 
   const copy = (text: string): void => void navigator.clipboard?.writeText(text);
 
   const menuItems = (entry: DirEntry): MenuItem[] => {
-    const items: MenuItem[] = [
+    const items: MenuItem[] = [];
+    if (entry.isDirectory) {
+      items.push(
+        { label: 'New File', onSelect: () => void newFile(entry.path) },
+        { label: 'New Folder', dividerAfter: true, onSelect: () => void newFolder(entry.path) },
+      );
+    }
+    items.push(
       { label: 'Cut', onSelect: () => setClipboard({ path: entry.path, name: entry.name }, 'cut') },
       {
         label: 'Copy',
         dividerAfter: !entry.isDirectory || !clipboardItem,
         onSelect: () => setClipboard({ path: entry.path, name: entry.name }, 'copy'),
       },
-    ];
+    );
     if (entry.isDirectory && clipboardItem) {
       items.push({ label: 'Paste', dividerAfter: true, onSelect: () => void pasteInto(entry.path) });
     }
@@ -107,13 +116,13 @@ export function FileExplorer(): React.JSX.Element {
         <div className="flex h-8 shrink-0 items-center justify-between pl-3 pr-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint">
           <span className="truncate">{basename(rootPath)}</span>
           <div className="flex items-center gap-0.5">
-            <IconButton label="New File" className="h-6 w-6" onClick={() => void newFile(rootPath)}>
+            <IconButton label="New File" className="h-6 w-6" onClick={() => void newFile(targetDir)}>
               <FilePlus size={14} />
             </IconButton>
             <IconButton
               label="New Folder"
               className="h-6 w-6"
-              onClick={() => void newFolder(rootPath)}
+              onClick={() => void newFolder(targetDir)}
             >
               <FolderPlus size={14} />
             </IconButton>

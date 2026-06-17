@@ -47,24 +47,33 @@ function namesIn(dir: string): string[] {
   return entries.map((e) => e.name);
 }
 
-export async function newFile(dir: string): Promise<void> {
-  const name = uniqueName('untitled', namesIn(dir));
+async function createIn(
+  dir: string,
+  base: string,
+  create: (path: string) => Promise<{ ok: boolean }>,
+): Promise<void> {
+  const ws = useWorkspaceStore.getState();
+  // Ensure the target folder's children are loaded so the new item is visible.
+  if (dir !== ws.rootPath && ws.childrenByPath[dir] === undefined) {
+    const listing = await window.forge.readDirectory(dir);
+    if (listing.ok) ws.setChildren(dir, listing.data);
+  }
+  const name = uniqueName(base, namesIn(dir));
   const path = `${dir}/${name}`;
-  const res = await window.forge.writeFile(path, '');
+  const res = await create(path);
   if (res.ok) {
     await refreshDir(dir);
+    if (dir !== ws.rootPath) useWorkspaceStore.getState().expandPath(dir);
     useWorkspaceStore.getState().setRenaming(path);
   }
 }
 
-export async function newFolder(dir: string): Promise<void> {
-  const name = uniqueName('new-folder', namesIn(dir));
-  const path = `${dir}/${name}`;
-  const res = await window.forge.mkdir(path);
-  if (res.ok) {
-    await refreshDir(dir);
-    useWorkspaceStore.getState().setRenaming(path);
-  }
+export function newFile(dir: string): Promise<void> {
+  return createIn(dir, 'untitled', (path) => window.forge.writeFile(path, ''));
+}
+
+export function newFolder(dir: string): Promise<void> {
+  return createIn(dir, 'new-folder', (path) => window.forge.mkdir(path));
 }
 
 export async function pasteInto(destDir: string): Promise<void> {
