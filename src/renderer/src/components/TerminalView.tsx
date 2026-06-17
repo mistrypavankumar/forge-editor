@@ -150,11 +150,9 @@ export function TerminalView({
 
     const writePrompt = (): void => {
       const folder = basename(rootRef.current);
-      term.write(`\r\n${ACCENT}╭─${RESET} ${BOLD}${folder}${RESET}\r\n${ACCENT}╰─❯${RESET} `);
+      term.write(`${ACCENT}╭─${RESET} ${BOLD}${folder}${RESET}\r\n${ACCENT}╰─❯${RESET} `);
     };
 
-    term.writeln(`${ACCENT}▌${RESET} ${BOLD}Forge${RESET} ${MUTED}terminal${RESET}`);
-    term.writeln(`${MUTED}  commands run in the open folder · Ctrl+C to cancel${RESET}`);
     writePrompt();
 
     const exec = (command: string): void => {
