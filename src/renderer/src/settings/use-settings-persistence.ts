@@ -7,6 +7,7 @@ export function useSettingsPersistence(): void {
   const hydrated = useRef(false);
   const themeId = useThemeStore((s) => s.currentId);
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
+  const sidebarSide = useLayoutStore((s) => s.sidebarSide);
   const recents = useRecentsStore((s) => s.recents);
 
   // Hydrate once on mount.
@@ -17,6 +18,7 @@ export function useSettingsPersistence(): void {
         if (typeof res.data.sidebarVisible === 'boolean') {
           useLayoutStore.getState().setPanelVisible('sidebar', res.data.sidebarVisible);
         }
+        if (res.data.sidebarSide) useLayoutStore.getState().setSidebarSide(res.data.sidebarSide);
         if (res.data.recents) useRecentsStore.getState().setRecents(res.data.recents);
       }
       hydrated.current = true;
@@ -26,6 +28,6 @@ export function useSettingsPersistence(): void {
   // Persist on change (after hydration, to avoid clobbering stored values on first render).
   useEffect(() => {
     if (!hydrated.current) return;
-    void window.forge.saveSettings({ themeId, sidebarVisible, recents });
-  }, [themeId, sidebarVisible, recents]);
+    void window.forge.saveSettings({ themeId, sidebarVisible, sidebarSide, recents });
+  }, [themeId, sidebarVisible, sidebarSide, recents]);
 }

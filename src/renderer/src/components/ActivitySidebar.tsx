@@ -28,7 +28,11 @@ const TOP: Item[] = [
   { id: 'extensions', label: 'Extensions', Icon: Blocks },
 ];
 
-export function ActivitySidebar(): React.JSX.Element {
+export function ActivitySidebar({
+  onContextMenu,
+}: {
+  onContextMenu?: (e: React.MouseEvent) => void;
+}): React.JSX.Element {
   const activity = useLayoutStore((s) => s.activity);
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
   const setActivity = useLayoutStore((s) => s.setActivity);
@@ -73,7 +77,10 @@ export function ActivitySidebar(): React.JSX.Element {
   };
 
   return (
-    <nav className="flex w-12 shrink-0 flex-col justify-between border-r border-line bg-bg py-1">
+    <nav
+      onContextMenu={onContextMenu}
+      className="flex w-12 shrink-0 flex-col justify-between border-x border-line bg-bg py-1"
+    >
       <div className="flex flex-col">{TOP.map(renderItem)}</div>
       <div className="flex flex-col">
         <button

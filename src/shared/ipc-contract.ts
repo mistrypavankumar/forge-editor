@@ -49,6 +49,7 @@ export interface RecentEntry {
 export interface ForgeSettings {
   themeId?: string;
   sidebarVisible?: boolean;
+  sidebarSide?: 'left' | 'right';
   keybindings?: Record<string, string>;
   recents?: RecentEntry[];
 }
