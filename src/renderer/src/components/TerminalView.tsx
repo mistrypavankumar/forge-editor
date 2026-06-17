@@ -57,9 +57,12 @@ export function TerminalView({
     const branchRef = { current: null as string | null };
 
     const term = new Terminal({
-      fontFamily: "'Fira Code', 'SF Mono', Menlo, monospace",
-      fontSize: 12,
-      lineHeight: 1.35,
+      fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
+      fontSize: 12.5,
+      fontWeight: 400,
+      fontWeightBold: 600,
+      lineHeight: 1.45,
+      letterSpacing: 0.2,
       cursorBlink: true,
       cursorStyle: 'bar',
       convertEol: true,

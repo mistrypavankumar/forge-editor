@@ -46,7 +46,7 @@ export function CodeEditor(): React.JSX.Element {
       automaticLayout: true,
       minimap: { enabled: true, renderCharacters: false, maxColumn: 80 },
       fontSize: 13,
-      fontFamily: "'Fira Code', 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace",
+      fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, monospace",
       fontLigatures: true,
       lineNumbersMinChars: 4,
       padding: { top: 12 },
