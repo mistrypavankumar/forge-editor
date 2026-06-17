@@ -5,56 +5,104 @@ export interface TerminalSession {
   title: string;
 }
 
-let seq = 0;
-function makeSession(): TerminalSession {
-  seq += 1;
-  return { id: `term-${seq}`, title: `zsh ${seq}` };
+export interface TerminalGroup {
+  id: string;
+  sessions: string[]; // session ids shown side-by-side when this group is active
 }
 
-const first = makeSession();
+let sSeq = 0;
+let gSeq = 0;
+function makeSession(): TerminalSession {
+  sSeq += 1;
+  return { id: `term-${sSeq}`, title: `zsh ${sSeq}` };
+}
+function makeGroupId(): string {
+  gSeq += 1;
+  return `grp-${gSeq}`;
+}
+
+const s0 = makeSession();
+const g0: TerminalGroup = { id: makeGroupId(), sessions: [s0.id] };
 
 export interface TerminalState {
-  sessions: TerminalSession[];
-  activeId: string;
-  splitId: string | null;
-  createSession: () => string;
+  sessions: Record<string, TerminalSession>;
+  groups: TerminalGroup[];
+  activeGroupId: string;
+  activeSessionId: string;
+  newTerminal: () => void;
+  splitActive: () => void;
   closeSession: (id: string) => void;
-  setActive: (id: string) => void;
-  toggleSplit: () => void;
+  focusGroup: (groupId: string) => void;
+  focusSession: (id: string) => void;
 }
 
 export const useTerminalStore = create<TerminalState>((set, get) => ({
-  sessions: [first],
-  activeId: first.id,
-  splitId: null,
-  createSession: () => {
+  sessions: { [s0.id]: s0 },
+  groups: [g0],
+  activeGroupId: g0.id,
+  activeSessionId: s0.id,
+
+  newTerminal: () => {
     const s = makeSession();
-    set((st) => ({ sessions: [...st.sessions, s], activeId: s.id }));
-    return s.id;
+    const g: TerminalGroup = { id: makeGroupId(), sessions: [s.id] };
+    set((st) => ({
+      sessions: { ...st.sessions, [s.id]: s },
+      groups: [...st.groups, g],
+      activeGroupId: g.id,
+      activeSessionId: s.id,
+    }));
   },
+
+  splitActive: () => {
+    const st = get();
+    const s = makeSession();
+    set({
+      sessions: { ...st.sessions, [s.id]: s },
+      groups: st.groups.map((g) =>
+        g.id === st.activeGroupId ? { ...g, sessions: [...g.sessions, s.id] } : g,
+      ),
+      activeSessionId: s.id,
+    });
+  },
+
   closeSession: (id) =>
     set((st) => {
-      const sessions = st.sessions.filter((x) => x.id !== id);
-      if (sessions.length === 0) {
+      const sessions = { ...st.sessions };
+      delete sessions[id];
+      const groups = st.groups
+        .map((g) => ({ ...g, sessions: g.sessions.filter((x) => x !== id) }))
+        .filter((g) => g.sessions.length > 0);
+
+      if (groups.length === 0) {
         const s = makeSession();
-        return { sessions: [s], activeId: s.id, splitId: null };
+        const g: TerminalGroup = { id: makeGroupId(), sessions: [s.id] };
+        return { sessions: { [s.id]: s }, groups: [g], activeGroupId: g.id, activeSessionId: s.id };
       }
-      const splitId = st.splitId === id ? null : st.splitId;
-      const activeId = st.activeId === id ? sessions[sessions.length - 1].id : st.activeId;
-      return { sessions, activeId, splitId };
+
+      let activeGroupId = st.activeGroupId;
+      let activeSessionId = st.activeSessionId;
+      let activeGroup = groups.find((g) => g.id === activeGroupId);
+      if (!activeGroup) {
+        activeGroup = groups[groups.length - 1];
+        activeGroupId = activeGroup.id;
+      }
+      if (!activeGroup.sessions.includes(activeSessionId)) {
+        activeSessionId = activeGroup.sessions[activeGroup.sessions.length - 1];
+      }
+      return { sessions, groups, activeGroupId, activeSessionId };
     }),
-  setActive: (id) => set({ activeId: id }),
-  toggleSplit: () => {
-    const st = get();
-    if (st.splitId) {
-      set({ splitId: null });
-      return;
-    }
-    let second = st.sessions.find((s) => s.id !== st.activeId);
-    if (!second) {
-      second = makeSession();
-      set((state) => ({ sessions: [...state.sessions, second as TerminalSession] }));
-    }
-    set({ splitId: second.id });
-  },
+
+  focusGroup: (groupId) =>
+    set((st) => {
+      const g = st.groups.find((x) => x.id === groupId);
+      if (!g) return st;
+      return { activeGroupId: groupId, activeSessionId: g.sessions[0] };
+    }),
+
+  focusSession: (id) =>
+    set((st) => {
+      const g = st.groups.find((x) => x.sessions.includes(id));
+      if (!g) return st;
+      return { activeGroupId: g.id, activeSessionId: id };
+    }),
 }));
