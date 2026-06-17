@@ -6,26 +6,26 @@ describe('layout-store', () => {
     useLayoutStore.setState({
       sidebarVisible: true,
       rightVisible: false,
-      bottomVisible: true,
+      bottomVisible: false,
       activity: 'explorer',
       rightTab: 'assistant',
       bottomTab: 'problems',
     });
   });
 
-  it('defaults with sidebar + bottom visible, assistant hidden, explorer active', () => {
+  it('defaults with only the sidebar visible, explorer active', () => {
     const s = useLayoutStore.getState();
     expect(s.sidebarVisible).toBe(true);
     expect(s.rightVisible).toBe(false);
-    expect(s.bottomVisible).toBe(true);
+    expect(s.bottomVisible).toBe(false);
     expect(s.activity).toBe('explorer');
   });
 
   it('togglePanel flips the targeted panel only', () => {
     useLayoutStore.getState().togglePanel('bottom');
-    expect(useLayoutStore.getState().bottomVisible).toBe(false);
+    expect(useLayoutStore.getState().bottomVisible).toBe(true);
     expect(useLayoutStore.getState().sidebarVisible).toBe(true);
-    expect(useLayoutStore.getState().rightVisible).toBe(true);
+    expect(useLayoutStore.getState().rightVisible).toBe(false);
   });
 
   it('setPanelVisible sets an explicit value', () => {

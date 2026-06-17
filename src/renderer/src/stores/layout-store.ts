@@ -32,7 +32,7 @@ const visKey = (id: PanelId): 'sidebarVisible' | 'rightVisible' | 'bottomVisible
 export const useLayoutStore = create<LayoutState>((set) => ({
   sidebarVisible: true,
   rightVisible: false,
-  bottomVisible: true,
+  bottomVisible: false,
   activity: 'explorer',
   rightTab: 'assistant',
   bottomTab: 'problems',
