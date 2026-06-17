@@ -24,6 +24,7 @@ import { Database, Blocks } from 'lucide-react';
 import { EditorTabs } from './EditorTabs';
 import { Breadcrumbs } from './Breadcrumbs';
 import { CodeEditor } from './CodeEditor';
+import { MarkdownPreview } from './MarkdownPreview';
 import { Landing } from './Landing';
 import { useEditorStore } from '../stores/editor-store';
 import { RightPanel } from './RightPanel';
@@ -55,6 +56,11 @@ export function AppShell(): React.JSX.Element {
   useAutoSave();
 
   const autoSave = useEditorStore((s) => s.autoSave);
+  const tabs = useEditorStore((s) => s.tabs);
+  const activePath = useEditorStore((s) => s.activePath);
+  const mdPreview = useEditorStore((s) => s.mdPreview);
+  const activeTab = tabs.find((t) => t.path === activePath);
+  const showPreview = mdPreview && !!activeTab && /\.mdx?$/i.test(activeTab.name);
 
   // Native (mac) File-menu actions → run the matching command.
   useEffect(() => {
@@ -167,8 +173,9 @@ export function AppShell(): React.JSX.Element {
           <div data-testid="editor-region" className="flex h-full flex-col bg-bg">
             <EditorTabs />
             <Breadcrumbs />
-            <div className="min-h-0 flex-1">
+            <div className="relative min-h-0 flex-1">
               <CodeEditor />
+              {showPreview && activeTab ? <MarkdownPreview content={activeTab.content} /> : null}
             </div>
           </div>
         </Allotment.Pane>

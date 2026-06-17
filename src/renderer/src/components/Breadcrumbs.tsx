@@ -1,13 +1,16 @@
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Eye, Pencil } from 'lucide-react';
 import { useEditorStore } from '../stores/editor-store';
 import { FileTypeIcon } from './file-icon';
 
 export function Breadcrumbs(): React.JSX.Element | null {
   const activePath = useEditorStore((s) => s.activePath);
   const tabs = useEditorStore((s) => s.tabs);
+  const mdPreview = useEditorStore((s) => s.mdPreview);
+  const toggleMdPreview = useEditorStore((s) => s.toggleMdPreview);
   const active = tabs.find((t) => t.path === activePath);
   if (!active || !activePath) return null;
 
+  const isMarkdown = /\.mdx?$/i.test(active.name);
   const segments = activePath.split('/').filter(Boolean);
   const crumbs = segments.slice(-4);
 
@@ -29,6 +32,18 @@ export function Breadcrumbs(): React.JSX.Element | null {
           </span>
         );
       })}
+      {isMarkdown ? (
+        <button
+          type="button"
+          onClick={toggleMdPreview}
+          title={mdPreview ? 'Edit (show source)' : 'Preview (rendered)'}
+          className="no-drag ml-auto flex h-6 items-center gap-1 rounded-md px-2 text-[11px] text-faint hover:bg-surface-3 hover:text-fg"
+        >
+          {mdPreview ? <Pencil size={13} /> : <Eye size={13} />}
+          {mdPreview ? 'Edit' : 'Preview'}
+        </button>
+      ) : null}
     </div>
   );
 }
+

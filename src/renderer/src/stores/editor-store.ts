@@ -19,6 +19,7 @@ export interface EditorState {
   reveal: RevealTarget | null;
   autoSave: boolean;
   pendingRevert: { path: string; content: string } | null;
+  mdPreview: boolean;
   openFile: (file: { path: string; name: string; content: string }) => void;
   closeFile: (path: string) => void;
   setActive: (path: string) => void;
@@ -27,6 +28,7 @@ export interface EditorState {
   requestReveal: (target: RevealTarget) => void;
   consumeReveal: () => void;
   setAutoSave: (on: boolean) => void;
+  toggleMdPreview: () => void;
   requestRevert: (path: string, content: string) => void;
   consumeRevert: () => void;
   renameTab: (oldPath: string, newPath: string, name: string) => void;
@@ -42,6 +44,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   reveal: null,
   autoSave: false,
   pendingRevert: null,
+  mdPreview: false,
   openFile: (file) =>
     set((s) => {
       if (s.tabs.some((t) => t.path === file.path)) return { activePath: file.path };
@@ -71,6 +74,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   requestReveal: (target) => set({ reveal: target }),
   consumeReveal: () => set({ reveal: null }),
   setAutoSave: (on) => set({ autoSave: on }),
+  toggleMdPreview: () => set((s) => ({ mdPreview: !s.mdPreview })),
   requestRevert: (path, content) => set({ pendingRevert: { path, content } }),
   consumeRevert: () => set({ pendingRevert: null }),
   renameTab: (oldPath, newPath, name) =>

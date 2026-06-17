@@ -46,6 +46,7 @@
     "@xterm/xterm": "^6.0.0",
     "allotment": "^1.20.2",
     "lucide-react": "^0.469.0",
+    "marked": "^18.0.5",
     "monaco-editor": "^0.52.2",
     "node-pty": "^1.1.0",
     "react": "^19.0.0",
