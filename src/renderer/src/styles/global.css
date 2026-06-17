@@ -29,3 +29,44 @@ html, body, #root {
   font-size: 12px;
   border-top: 1px solid var(--forge-border);
 }
+
+.explorer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  text-align: left;
+}
+
+.explorer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--forge-border);
+}
+
+.explorer-title {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer-tree {
+  flex: 1;
+  overflow: auto;
+  font-size: 13px;
+}
+
+.tree-node {
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: pre;
+  user-select: none;
+}
+
+.tree-node:hover {
+  background: var(--forge-border);
+}
