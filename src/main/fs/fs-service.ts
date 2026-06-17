@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import type { DirEntry, FileItem } from '@shared/ipc-contract';
 
 export function sortDirEntries(entries: DirEntry[]): DirEntry[] {
@@ -45,4 +45,23 @@ export async function listFilesRecursive(rootPath: string): Promise<FileItem[]> 
   }
   await walk(rootPath);
   return results;
+}
+
+/** Read the current git branch (or short SHA if detached) from .git/HEAD; null if not a repo. */
+export async function readGitBranch(rootPath: string): Promise<string | null> {
+  try {
+    let gitDir = join(rootPath, '.git');
+    const stat = await fs.stat(gitDir);
+    if (stat.isFile()) {
+      const content = (await fs.readFile(gitDir, 'utf8')).trim();
+      const m = content.match(/^gitdir:\s*(.+)$/);
+      if (m) gitDir = resolve(rootPath, m[1]);
+    }
+    const head = (await fs.readFile(join(gitDir, 'HEAD'), 'utf8')).trim();
+    const ref = head.match(/^ref:\s*refs\/heads\/(.+)$/);
+    if (ref) return ref[1];
+    return head.slice(0, 7);
+  } catch {
+    return null;
+  }
 }

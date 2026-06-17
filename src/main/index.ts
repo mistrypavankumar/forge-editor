@@ -7,6 +7,7 @@ import {
   listFilesRecursive,
   readDirectoryEntries,
   readFileText,
+  readGitBranch,
   writeFileText,
 } from './fs/fs-service';
 import { readSettings, writeSettings } from './settings/settings-service';
@@ -65,6 +66,9 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.listFiles, (_e, rootPath: string) =>
     toResult(() => listFilesRecursive(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.gitBranch, (_e, rootPath: string) =>
+    toResult(() => readGitBranch(rootPath)),
   );
   ipcMain.handle(IpcChannels.loadSettings, () => toResult(() => readSettings(SETTINGS_PATH)));
   ipcMain.handle(IpcChannels.saveSettings, (_e, settings: ForgeSettings) =>

@@ -8,6 +8,7 @@ export const IpcChannels = {
   readFile: 'forge:fs:readFile',
   writeFile: 'forge:fs:writeFile',
   listFiles: 'forge:fs:listFiles',
+  gitBranch: 'forge:fs:gitBranch',
   loadSettings: 'forge:settings:load',
   saveSettings: 'forge:settings:save',
   terminalRun: 'forge:terminal:run',
@@ -78,6 +79,7 @@ export interface ForgeApi {
   readFile: (path: string) => Promise<Result<string>>;
   writeFile: (path: string, content: string) => Promise<Result<void>>;
   listFiles: (rootPath: string) => Promise<Result<FileItem[]>>;
+  gitBranch: (rootPath: string) => Promise<Result<string | null>>;
   loadSettings: () => Promise<Result<ForgeSettings>>;
   saveSettings: (settings: ForgeSettings) => Promise<Result<void>>;
   runCommand: (args: TerminalRunArgs) => Promise<Result<void>>;

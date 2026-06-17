@@ -14,6 +14,7 @@ export const api: ForgeApi = {
   readFile: (path) => ipcRenderer.invoke(IpcChannels.readFile, path),
   writeFile: (path, content) => ipcRenderer.invoke(IpcChannels.writeFile, path, content),
   listFiles: (rootPath) => ipcRenderer.invoke(IpcChannels.listFiles, rootPath),
+  gitBranch: (rootPath) => ipcRenderer.invoke(IpcChannels.gitBranch, rootPath),
   loadSettings: () => ipcRenderer.invoke(IpcChannels.loadSettings),
   saveSettings: (settings) => ipcRenderer.invoke(IpcChannels.saveSettings, settings),
   runCommand: (args) => ipcRenderer.invoke(IpcChannels.terminalRun, args),

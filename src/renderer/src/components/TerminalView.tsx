@@ -11,6 +11,7 @@ const ACCENT = '\x1b[38;2;124;130;245m';
 const MUTED = '\x1b[38;2;124;124;135m';
 const GREEN = '\x1b[38;2;61;220;151m';
 const RED = '\x1b[38;2;248;113;113m';
+const GIT = '\x1b[38;2;199;146;234m';
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
 
@@ -53,6 +54,7 @@ export function TerminalView({
     const runningRef = { current: false };
     const lineRef = { current: '' };
     const posRef = { current: 0 };
+    const branchRef = { current: null as string | null };
 
     const term = new Terminal({
       fontFamily: "'Fira Code', 'SF Mono', Menlo, monospace",
@@ -150,10 +152,16 @@ export function TerminalView({
 
     const writePrompt = (): void => {
       const folder = basename(rootRef.current);
-      term.write(`${ACCENT}╭─${RESET} ${BOLD}${folder}${RESET}\r\n${ACCENT}╰─❯${RESET} `);
+      const branch = branchRef.current;
+      const gitPart = branch ? ` ${MUTED}on${RESET} ${GIT}⎇ ${branch}${RESET}` : '';
+      term.write(`${ACCENT}╭─${RESET} ${BOLD}${folder}${RESET}${gitPart}\r\n${ACCENT}╰─❯${RESET} `);
     };
 
-    writePrompt();
+    // Resolve the git branch, then draw the first prompt.
+    void window.forge.gitBranch(rootRef.current ?? '').then((res) => {
+      branchRef.current = res.ok ? res.data : null;
+      writePrompt();
+    });
 
     const exec = (command: string): void => {
       runningRef.current = true;
