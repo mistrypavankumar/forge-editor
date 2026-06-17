@@ -94,10 +94,11 @@ export async function gitCommit(rootPath: string, message: string): Promise<void
 export async function getIgnoredNames(dirPath: string, names: string[]): Promise<Set<string>> {
   if (names.length === 0) return new Set();
   try {
-    const { stdout } = await run('git', ['-C', dirPath, 'check-ignore', '-z', '--', ...names], {
+    // check-ignore echoes each matched pathspec (one per line); -z is stdin-only.
+    const { stdout } = await run('git', ['-C', dirPath, 'check-ignore', '--', ...names], {
       maxBuffer: 4 * 1024 * 1024,
     });
-    return new Set(stdout.split('\0').filter(Boolean));
+    return new Set(stdout.split('\n').filter(Boolean));
   } catch {
     // exit 1 = none ignored; exit 128 = not a repo. Either way: nothing to dim.
     return new Set();
