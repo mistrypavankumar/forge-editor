@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
-import { IpcChannels, pongOf, type ForgeSettings } from '@shared/ipc-contract';
+import { IpcChannels, pongOf, type ForgeSettings, type TerminalRunArgs } from '@shared/ipc-contract';
 import { ok, toResult } from '@shared/result';
 import {
   listFilesRecursive,
@@ -10,6 +10,7 @@ import {
   writeFileText,
 } from './fs/fs-service';
 import { readSettings, writeSettings } from './settings/settings-service';
+import { runCommand, killCommand } from './terminal/command-runner';
 
 const SETTINGS_PATH = join(homedir(), '.forge', 'settings.json');
 
@@ -59,6 +60,12 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannels.loadSettings, () => toResult(() => readSettings(SETTINGS_PATH)));
   ipcMain.handle(IpcChannels.saveSettings, (_e, settings: ForgeSettings) =>
     toResult(() => writeSettings(SETTINGS_PATH, settings)),
+  );
+  ipcMain.handle(IpcChannels.terminalRun, (e, args: TerminalRunArgs) =>
+    toResult(async () => runCommand(e.sender, args)),
+  );
+  ipcMain.handle(IpcChannels.terminalKill, (_e, id: string) =>
+    toResult(async () => killCommand(id)),
   );
   createWindow();
   app.on('activate', () => {

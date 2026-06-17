@@ -9,6 +9,10 @@ export const IpcChannels = {
   listFiles: 'forge:fs:listFiles',
   loadSettings: 'forge:settings:load',
   saveSettings: 'forge:settings:save',
+  terminalRun: 'forge:terminal:run',
+  terminalKill: 'forge:terminal:kill',
+  terminalData: 'forge:terminal:data',
+  terminalExit: 'forge:terminal:exit',
 } as const;
 
 export interface DirEntry {
@@ -34,6 +38,22 @@ export interface ForgeSettings {
   keybindings?: Record<string, string>;
 }
 
+export interface TerminalRunArgs {
+  id: string;
+  command: string;
+  cwd?: string;
+}
+
+export interface TerminalDataEvent {
+  id: string;
+  chunk: string;
+}
+
+export interface TerminalExitEvent {
+  id: string;
+  code: number;
+}
+
 export interface ForgeApi {
   ping: (msg: string) => Promise<string>;
   openFolder: () => Promise<Result<WorkspaceData | null>>;
@@ -43,6 +63,10 @@ export interface ForgeApi {
   listFiles: (rootPath: string) => Promise<Result<FileItem[]>>;
   loadSettings: () => Promise<Result<ForgeSettings>>;
   saveSettings: (settings: ForgeSettings) => Promise<Result<void>>;
+  runCommand: (args: TerminalRunArgs) => Promise<Result<void>>;
+  killCommand: (id: string) => Promise<Result<void>>;
+  onTerminalData: (cb: (e: TerminalDataEvent) => void) => () => void;
+  onTerminalExit: (cb: (e: TerminalExitEvent) => void) => () => void;
 }
 
 export function pongOf(msg: string): string {
