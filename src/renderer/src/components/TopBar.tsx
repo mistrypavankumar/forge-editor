@@ -35,7 +35,7 @@ export function TopBar(): React.JSX.Element {
         <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent text-[13px] font-bold text-accent-fg">
           F
         </div>
-        <FileMenu />
+        {window.forge.isMac ? null : <FileMenu />}
         <button
           type="button"
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-fg hover:bg-surface-3"

@@ -29,6 +29,13 @@ export const api: ForgeApi = {
     ipcRenderer.on(IpcChannels.fsChanged, listener);
     return () => ipcRenderer.removeListener(IpcChannels.fsChanged, listener);
   },
+  onMenuAction: (cb) => {
+    const listener = (_e: unknown, id: string): void => cb(id);
+    ipcRenderer.on(IpcChannels.menuAction, listener);
+    return () => ipcRenderer.removeListener(IpcChannels.menuAction, listener);
+  },
+  syncMenuState: (autoSave) => ipcRenderer.send(IpcChannels.menuSyncState, autoSave),
+  isMac: process.platform === 'darwin',
   rename: (oldPath, newPath) => ipcRenderer.invoke(IpcChannels.rename, oldPath, newPath),
   remove: (path) => ipcRenderer.invoke(IpcChannels.remove, path),
   copyEntry: (src, destDir) => ipcRenderer.invoke(IpcChannels.copyEntry, src, destDir),

@@ -19,6 +19,8 @@ export const IpcChannels = {
   search: 'forge:search',
   watchWorkspace: 'forge:fs:watch',
   fsChanged: 'forge:fs:changed',
+  menuAction: 'forge:menu:action',
+  menuSyncState: 'forge:menu:syncState',
   rename: 'forge:fs:rename',
   remove: 'forge:fs:remove',
   copyEntry: 'forge:fs:copyEntry',
@@ -125,6 +127,9 @@ export interface ForgeApi {
   search: (rootPath: string, query: string) => Promise<Result<SearchMatch[]>>;
   watchWorkspace: (rootPath: string) => void;
   onFsChanged: (cb: () => void) => () => void;
+  onMenuAction: (cb: (id: string) => void) => () => void;
+  syncMenuState: (autoSave: boolean) => void;
+  isMac: boolean;
   rename: (oldPath: string, newPath: string) => Promise<Result<void>>;
   remove: (path: string) => Promise<Result<void>>;
   copyEntry: (src: string, destDir: string) => Promise<Result<void>>;

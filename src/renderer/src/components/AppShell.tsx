@@ -12,6 +12,7 @@ import { useTasksStore } from '../stores/tasks-store';
 import { useKeybindings } from '../keybindings/use-keybindings';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
 import { useAutoSave } from '../settings/use-auto-save';
+import { commandRegistry } from '../commands/command-registry';
 import { TopBar } from './TopBar';
 import { ActivitySidebar } from './ActivitySidebar';
 import { ProjectNavigator } from './ProjectNavigator';
@@ -52,6 +53,24 @@ export function AppShell(): React.JSX.Element {
   useKeybindings();
   useSettingsPersistence();
   useAutoSave();
+
+  const autoSave = useEditorStore((s) => s.autoSave);
+
+  // Native (mac) File-menu actions → run the matching command.
+  useEffect(() => {
+    return window.forge.onMenuAction((id) => {
+      if (id === 'toggleAutoSave') {
+        useEditorStore.getState().setAutoSave(!useEditorStore.getState().autoSave);
+      } else {
+        void commandRegistry.run(id);
+      }
+    });
+  }, []);
+
+  // Keep the native Auto Save checkbox in sync.
+  useEffect(() => {
+    window.forge.syncMenuState(autoSave);
+  }, [autoSave]);
 
   useEffect(() => {
     const theme = builtInThemes[themeId];

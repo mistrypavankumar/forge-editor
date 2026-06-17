@@ -39,6 +39,40 @@ import {
 } from './terminal/command-runner';
 
 const SETTINGS_PATH = join(homedir(), '.forge', 'settings.json');
+const isMac = process.platform === 'darwin';
+let autoSaveState = false;
+
+function menuAction(id: string): void {
+  BrowserWindow.getFocusedWindow()?.webContents.send(IpcChannels.menuAction, id);
+}
+
+/** macOS: a full File menu in the native menu bar. Other platforms use the in-window menu. */
+function buildAppMenu(): void {
+  const fileMenu: Electron.MenuItemConstructorOptions = {
+    label: 'File',
+    submenu: [
+      { label: 'New Text File', click: () => menuAction('file.newTextFile') },
+      { label: 'New File…', click: () => menuAction('file.newFile') },
+      { type: 'separator' },
+      { label: 'Open File…', click: () => menuAction('file.openFile') },
+      { label: 'Open Folder…', click: () => menuAction('file.openFolder') },
+      { type: 'separator' },
+      { label: 'Save', click: () => menuAction('file.save') },
+      { type: 'separator' },
+      { label: 'Auto Save', type: 'checkbox', checked: autoSaveState, click: () => menuAction('toggleAutoSave') },
+      { label: 'Revert File', click: () => menuAction('file.revert') },
+      { type: 'separator' },
+      { label: 'Close Editor', click: () => menuAction('file.closeEditor') },
+      { label: 'Close Folder', click: () => menuAction('file.closeFolder') },
+      { type: 'separator' },
+      { role: 'close' },
+    ],
+  };
+  const template: Electron.MenuItemConstructorOptions[] = isMac
+    ? [{ role: 'appMenu' }, fileMenu, { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }]
+    : [{ role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -69,17 +103,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  // Custom native menu WITHOUT a File submenu (Forge has its own in-window File menu).
-  // Keep Edit/View/Window so copy-paste, zoom, and window shortcuts still work.
-  const isMac = process.platform === 'darwin';
-  const template: Electron.MenuItemConstructorOptions[] = [
-    ...(isMac ? [{ role: 'appMenu' as const }] : []),
-    { role: 'editMenu' },
-    { role: 'viewMenu' },
-    { role: 'windowMenu' },
-  ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-
+  buildAppMenu();
   ipcMain.handle(IpcChannels.ping, (_event, msg: string) => pongOf(msg));
   ipcMain.handle(IpcChannels.openFolder, async () => {
     const res = await dialog.showOpenDialog({ properties: ['openDirectory'] });
@@ -134,6 +158,10 @@ app.whenReady().then(() => {
   ipcMain.on(IpcChannels.watchWorkspace, (e, rootPath: string) =>
     watchWorkspace(e.sender, rootPath),
   );
+  ipcMain.on(IpcChannels.menuSyncState, (_e, autoSave: boolean) => {
+    autoSaveState = autoSave;
+    buildAppMenu();
+  });
   ipcMain.handle(IpcChannels.rename, (_e, oldPath: string, newPath: string) =>
     toResult(() => renameEntry(oldPath, newPath)),
   );

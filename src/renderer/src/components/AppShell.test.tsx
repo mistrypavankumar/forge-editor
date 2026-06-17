@@ -18,6 +18,9 @@ beforeAll(() => {
     gitChangedFiles: async () => ({ ok: true, data: [] }),
     watchWorkspace: () => {},
     onFsChanged: () => () => {},
+    onMenuAction: () => () => {},
+    syncMenuState: () => {},
+    isMac: false,
   };
 });
 
