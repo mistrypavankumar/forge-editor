@@ -6,6 +6,8 @@ import { languageFor } from '../editor/language';
 import { hunkAtLine, hunkToDecoration, revertHunk } from '../editor/git-gutter';
 import { DiffPeek } from '../editor/diff-peek';
 import { computeDiff, type DiffHunk } from '../lib/line-diff';
+import { relativeTime } from '../lib/relative-time';
+import type { BlameLine } from '@shared/ipc-contract';
 import { useEditorStore } from '../stores/editor-store';
 import { useThemeStore } from '../stores/theme-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
@@ -15,6 +17,11 @@ import {
   type MarkerInfo,
   type MarkerSeverity,
 } from '../stores/workbench-status-store';
+
+function formatBlame(b: BlameLine | undefined): string | null {
+  if (!b) return null;
+  return b.time == null ? `${b.author} (uncommitted)` : `${b.author} (${relativeTime(b.time)})`;
+}
 
 function severityName(level: number): MarkerSeverity {
   if (level >= 8) return 'error';
@@ -29,6 +36,7 @@ export function CodeEditor(): React.JSX.Element {
   const decoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   const peekRef = useRef<DiffPeek | null>(null);
   const hunksRef = useRef<DiffHunk[]>([]);
+  const blameRef = useRef<BlameLine[]>([]);
   const originalRef = useRef<Map<string, string | null>>(new Map());
   const diffTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -134,6 +142,7 @@ export function CodeEditor(): React.JSX.Element {
     disposables.push(
       instance.onDidChangeCursorPosition((e) => {
         status.setCursor(e.position.lineNumber, e.position.column);
+        status.setBlame(formatBlame(blameRef.current[e.position.lineNumber - 1]));
       }),
     );
 
@@ -206,6 +215,27 @@ export function CodeEditor(): React.JSX.Element {
       cancelled = true;
     };
   }, [activePath, rootPath, syncTick, recomputeDiff]);
+
+  // Fetch per-line git blame for the active file; show the cursor line's blame
+  // in the status bar. Refetched on workspace sync (after saves/commits).
+  useEffect(() => {
+    const setBlame = useWorkbenchStatusStore.getState().setBlame;
+    if (!activePath || !rootPath || !activePath.startsWith('/')) {
+      blameRef.current = [];
+      setBlame(null);
+      return;
+    }
+    let cancelled = false;
+    void window.forge.gitBlame(rootPath, activePath).then((res) => {
+      if (cancelled) return;
+      blameRef.current = res.ok ? res.data : [];
+      const line = editorRef.current?.getPosition()?.lineNumber ?? 1;
+      setBlame(formatBlame(blameRef.current[line - 1]));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activePath, rootPath, syncTick]);
 
   // Reload non-dirty open buffers when the workspace changes on disk (external
   // edits, discard, checkout). Dirty buffers are left alone to protect unsaved work.

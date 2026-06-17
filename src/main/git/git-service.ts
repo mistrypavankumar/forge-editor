@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { basename, relative, sep } from 'node:path';
-import type { GitChange, SearchMatch } from '@shared/ipc-contract';
+import type { BlameLine, GitChange, SearchMatch } from '@shared/ipc-contract';
 
 const run = promisify(execFile);
 
@@ -102,6 +102,57 @@ export async function getIgnoredNames(dirPath: string, names: string[]): Promise
   } catch {
     // exit 1 = none ignored; exit 128 = not a repo. Either way: nothing to dim.
     return new Set();
+  }
+}
+
+const BLAME_HEADER = /^([0-9a-f]{40}) \d+ (\d+)(?: \d+)?$/;
+
+/** Parse `git blame --porcelain` output into per-line author/time (1-based index). */
+function parseBlame(stdout: string): BlameLine[] {
+  const commits = new Map<string, { author: string; time: number }>();
+  const result: BlameLine[] = [];
+  let sha = '';
+  let finalLine = 0;
+  let author: string | undefined;
+  let time: number | undefined;
+
+  for (const line of stdout.split('\n')) {
+    const header = BLAME_HEADER.exec(line);
+    if (header) {
+      sha = header[1];
+      finalLine = Number(header[2]);
+      author = undefined;
+      time = undefined;
+    } else if (line.startsWith('author ')) {
+      author = line.slice('author '.length);
+    } else if (line.startsWith('author-time ')) {
+      time = Number(line.slice('author-time '.length));
+    } else if (line.startsWith('\t')) {
+      // The content line closes a group; commit info is cached per sha (repeats omit it).
+      let info = commits.get(sha);
+      if (!info) {
+        info = { author: author ?? 'Unknown', time: time ?? 0 };
+        commits.set(sha, info);
+      }
+      result[finalLine - 1] = /^0{40}$/.test(sha)
+        ? { author: 'You', time: null }
+        : { author: info.author, time: info.time };
+    }
+  }
+  return result;
+}
+
+/** Per-line blame for a file; empty when the file isn't tracked or not in a repo. */
+export async function getGitBlame(rootPath: string, filePath: string): Promise<BlameLine[]> {
+  const rel = relative(rootPath, filePath).split(sep).join('/');
+  if (!rel || rel.startsWith('..')) return [];
+  try {
+    const { stdout } = await run('git', ['-C', rootPath, 'blame', '--porcelain', '--', rel], {
+      maxBuffer: 32 * 1024 * 1024,
+    });
+    return parseBlame(stdout);
+  } catch {
+    return [];
   }
 }
 

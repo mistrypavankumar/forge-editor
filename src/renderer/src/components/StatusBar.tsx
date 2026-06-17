@@ -1,4 +1,4 @@
-import { CircleX, TriangleAlert, Sparkles, GitBranch } from 'lucide-react';
+import { CircleX, TriangleAlert, Sparkles, GitBranch, GitCommitVertical } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useWorkbenchStatusStore, markerCounts } from '../stores/workbench-status-store';
@@ -36,6 +36,7 @@ export function StatusBar(): React.JSX.Element {
   const markers = useWorkbenchStatusStore((s) => s.markers);
   const cursor = useWorkbenchStatusStore((s) => s.cursor);
   const language = useWorkbenchStatusStore((s) => s.language);
+  const blame = useWorkbenchStatusStore((s) => s.blame);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const branch = useWorkspaceStore((s) => s.branch);
   const setBottomTab = useLayoutStore((s) => s.setBottomTab);
@@ -68,6 +69,12 @@ export function StatusBar(): React.JSX.Element {
       </div>
 
       <div className="flex h-full items-center">
+        {blame ? (
+          <Segment className="text-faint">
+            <GitCommitVertical size={12} />
+            {blame}
+          </Segment>
+        ) : null}
         <Segment className="uppercase">{language}</Segment>
         <Segment>
           Ln {cursor.line}, Col {cursor.column}

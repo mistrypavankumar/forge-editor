@@ -22,6 +22,7 @@ import {
 } from './fs/fs-service';
 import { readSettings, writeSettings } from './settings/settings-service';
 import {
+  getGitBlame,
   getGitChanges,
   getGitOriginalContent,
   getGitStagedContent,
@@ -159,6 +160,9 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.gitStaged, (_e, rootPath: string, path: string) =>
     toResult(() => getGitStagedContent(rootPath, path)),
+  );
+  ipcMain.handle(IpcChannels.gitBlame, (_e, rootPath: string, path: string) =>
+    toResult(() => getGitBlame(rootPath, path)),
   );
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, query: string) =>
     toResult(() => searchInFiles(rootPath, query)),

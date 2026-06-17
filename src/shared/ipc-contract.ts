@@ -18,6 +18,7 @@ export const IpcChannels = {
   gitStageAll: 'forge:git:stageAll',
   gitOriginal: 'forge:git:original',
   gitStaged: 'forge:git:staged',
+  gitBlame: 'forge:git:blame',
   search: 'forge:search',
   watchWorkspace: 'forge:fs:watch',
   fsChanged: 'forge:fs:changed',
@@ -70,6 +71,12 @@ export interface GitChange {
   status: 'M' | 'A' | 'D' | 'R' | 'U';
   staged: boolean;
   unstaged: boolean;
+}
+
+export interface BlameLine {
+  author: string;
+  /** Author commit time in epoch seconds, or null for uncommitted local changes. */
+  time: number | null;
 }
 
 export interface SearchMatch {
@@ -131,6 +138,7 @@ export interface ForgeApi {
   gitStageAll: (rootPath: string) => Promise<Result<void>>;
   gitOriginal: (rootPath: string, path: string) => Promise<Result<string | null>>;
   gitStaged: (rootPath: string, path: string) => Promise<Result<string | null>>;
+  gitBlame: (rootPath: string, path: string) => Promise<Result<BlameLine[]>>;
   search: (rootPath: string, query: string) => Promise<Result<SearchMatch[]>>;
   watchWorkspace: (rootPath: string) => void;
   onFsChanged: (cb: () => void) => () => void;
