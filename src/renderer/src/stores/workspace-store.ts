@@ -10,6 +10,7 @@ export interface WorkspaceState {
   branch: string | null;
   renamingPath: string | null;
   selectedDir: string | null;
+  creating: { dir: string; kind: 'file' | 'folder' } | null;
   setWorkspace: (rootPath: string, entries: DirEntry[]) => void;
   setRootEntries: (entries: DirEntry[]) => void;
   setChildren: (path: string, entries: DirEntry[]) => void;
@@ -19,6 +20,8 @@ export interface WorkspaceState {
   setRenaming: (path: string | null) => void;
   setSelectedDir: (dir: string | null) => void;
   expandPath: (path: string) => void;
+  startCreating: (dir: string, kind: 'file' | 'folder') => void;
+  cancelCreating: () => void;
   collapseAll: () => void;
 }
 
@@ -31,6 +34,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   branch: null,
   renamingPath: null,
   selectedDir: null,
+  creating: null,
   setWorkspace: (rootPath, entries) =>
     set({
       rootPath,
@@ -41,6 +45,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       branch: null,
       renamingPath: null,
       selectedDir: null,
+      creating: null,
     }),
   setRootEntries: (entries) => set({ rootEntries: entries }),
   setChildren: (path, entries) =>
@@ -53,5 +58,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setSelectedDir: (dir) => set({ selectedDir: dir }),
   expandPath: (path) =>
     set((s) => ({ expandedPaths: { ...s.expandedPaths, [path]: true } })),
+  startCreating: (dir, kind) => set({ creating: { dir, kind } }),
+  cancelCreating: () => set({ creating: null }),
   collapseAll: () => set({ expandedPaths: {} }),
 }));

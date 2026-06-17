@@ -34,46 +34,51 @@ export async function deleteEntry(path: string): Promise<void> {
   }
 }
 
-function uniqueName(base: string, existing: string[]): string {
-  if (!existing.includes(base)) return base;
-  let i = 1;
-  while (existing.includes(`${base}-${i}`)) i += 1;
-  return `${base}-${i}`;
-}
-
 function namesIn(dir: string): string[] {
   const ws = useWorkspaceStore.getState();
   const entries = dir === ws.rootPath ? ws.rootEntries : (ws.childrenByPath[dir] ?? []);
   return entries.map((e) => e.name);
 }
 
-async function createIn(
-  dir: string,
-  base: string,
-  create: (path: string) => Promise<{ ok: boolean }>,
-): Promise<void> {
+// Begin a draft (inline input) in `dir`; nothing is written until committed.
+async function beginCreate(dir: string, kind: 'file' | 'folder'): Promise<void> {
   const ws = useWorkspaceStore.getState();
-  // Ensure the target folder's children are loaded so the new item is visible.
-  if (dir !== ws.rootPath && ws.childrenByPath[dir] === undefined) {
-    const listing = await window.forge.readDirectory(dir);
-    if (listing.ok) ws.setChildren(dir, listing.data);
+  if (dir !== ws.rootPath) {
+    if (ws.childrenByPath[dir] === undefined) {
+      const listing = await window.forge.readDirectory(dir);
+      if (listing.ok) ws.setChildren(dir, listing.data);
+    }
+    ws.expandPath(dir);
   }
-  const name = uniqueName(base, namesIn(dir));
-  const path = `${dir}/${name}`;
-  const res = await create(path);
-  if (res.ok) {
-    await refreshDir(dir);
-    if (dir !== ws.rootPath) useWorkspaceStore.getState().expandPath(dir);
-    useWorkspaceStore.getState().setRenaming(path);
-  }
+  ws.startCreating(dir, kind);
 }
 
 export function newFile(dir: string): Promise<void> {
-  return createIn(dir, 'untitled', (path) => window.forge.writeFile(path, ''));
+  return beginCreate(dir, 'file');
 }
 
 export function newFolder(dir: string): Promise<void> {
-  return createIn(dir, 'new-folder', (path) => window.forge.mkdir(path));
+  return beginCreate(dir, 'folder');
+}
+
+/** Commit the active draft with the typed name. Empty/duplicate name → discard. */
+export async function commitCreate(name: string): Promise<void> {
+  const ws = useWorkspaceStore.getState();
+  const draft = ws.creating;
+  if (!draft) return;
+  ws.cancelCreating();
+  const trimmed = name.trim();
+  if (!trimmed || namesIn(draft.dir).includes(trimmed)) return;
+  const path = `${draft.dir}/${trimmed}`;
+  const res =
+    draft.kind === 'file' ? await window.forge.writeFile(path, '') : await window.forge.mkdir(path);
+  if (!res.ok) return;
+  await refreshDir(draft.dir);
+  if (draft.kind === 'file') {
+    useEditorStore.getState().openFile({ path, name: trimmed, content: '' });
+  } else {
+    useWorkspaceStore.getState().expandPath(path);
+  }
 }
 
 export async function pasteInto(destDir: string): Promise<void> {

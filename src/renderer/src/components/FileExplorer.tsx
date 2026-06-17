@@ -138,6 +138,7 @@ export function FileExplorer(): React.JSX.Element {
       <div className="min-h-0 flex-1 overflow-auto pb-2">
         <FileTree
           entries={entries}
+          dir={scopedPath ?? rootPath}
           onContextMenu={(e, entry) => setMenu({ x: e.clientX, y: e.clientY, entry })}
         />
       </div>
