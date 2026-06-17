@@ -30,6 +30,7 @@ export function TerminalView({
       if (t) {
         t.refresh(0, Math.max(t.rows - 1, 0));
         window.forge.resizeTerminal(sessionId, t.cols, t.rows);
+        t.focus();
       }
     });
     return () => cancelAnimationFrame(raf);
@@ -165,12 +166,18 @@ export function TerminalView({
     });
     resizeObs.observe(el);
 
+    // Focus so keystrokes are captured immediately; also focus on click.
+    term.focus();
+    const focusOnClick = (): void => term.focus();
+    el.addEventListener('mousedown', focusOnClick);
+
     return () => {
       unregisterExec(sessionId);
       offData();
       offExit();
       dataSub.dispose();
       resizeObs.disconnect();
+      el.removeEventListener('mousedown', focusOnClick);
       window.forge.killCommand(sessionId);
       term.dispose();
       termRef.current = null;
