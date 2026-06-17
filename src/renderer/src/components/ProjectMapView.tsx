@@ -45,13 +45,13 @@ export function ProjectMapView(): React.JSX.Element {
 
   const onEntry = async (name: string, path: string, isFolder: boolean): Promise<void> => {
     if (isFolder) {
-      // Reveal the folder in Structure: load its children and expand it.
+      // Scope the Structure tree to this folder's contents.
       const ws = useWorkspaceStore.getState();
       if (ws.childrenByPath[path] === undefined) {
         const res = await window.forge.readDirectory(path);
         if (res.ok) ws.setChildren(path, res.data);
       }
-      if (!ws.expandedPaths[path]) ws.toggleExpanded(path);
+      ws.setScope(path);
       setTab('structure');
       return;
     }
