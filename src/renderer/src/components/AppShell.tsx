@@ -2,6 +2,7 @@ import { GitBranch } from 'lucide-react';
 import { Allotment } from 'allotment';
 import { useLayoutStore } from '../stores/layout-store';
 import { useEditorStore } from '../stores/editor-store';
+import { useKeybindings } from '../keybindings/use-keybindings';
 import { TitleBar } from './TitleBar';
 import { ActivityBar } from './ActivityBar';
 import { FileExplorer } from './FileExplorer';
@@ -12,6 +13,8 @@ export function AppShell(): React.JSX.Element {
   const activePath = useEditorStore((s) => s.activePath);
   const tabs = useEditorStore((s) => s.tabs);
   const active = tabs.find((t) => t.path === activePath);
+
+  useKeybindings();
 
   return (
     <div className="app-shell">
