@@ -25,7 +25,6 @@ export function EditorPane(): React.JSX.Element {
   const setActive = useEditorStore((s) => s.setActive);
   const closeFile = useEditorStore((s) => s.closeFile);
   const updateContent = useEditorStore((s) => s.updateContent);
-  const markSaved = useEditorStore((s) => s.markSaved);
 
   // Create the Monaco instance once.
   useEffect(() => {
@@ -89,23 +88,6 @@ export function EditorPane(): React.JSX.Element {
       }
     }
   }, [tabs]);
-
-  // Cmd/Ctrl+S saves the active tab. (Migrates to the keybinding-service in Phase 2.)
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent): void => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        const state = useEditorStore.getState();
-        const tab = state.tabs.find((t) => t.path === state.activePath);
-        if (!tab) return;
-        void window.forge.writeFile(tab.path, tab.content).then((res) => {
-          if (res.ok) markSaved(tab.path);
-        });
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [markSaved]);
 
   const hasTabs = tabs.length > 0;
 
