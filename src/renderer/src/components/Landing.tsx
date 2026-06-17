@@ -71,7 +71,9 @@ export function Landing(): React.JSX.Element {
                 key={`${r.type}:${r.path}`}
                 type="button"
                 onClick={() =>
-                  void (r.type === 'folder' ? openFolderPath(r.path) : openFilePath(r.path, r.name))
+                  void (r.type === 'folder'
+                    ? openFolderPath(r.path)
+                    : openFilePath(r.path, r.name, true))
                 }
                 className="flex w-full items-center gap-2.5 border-b border-line-soft px-3 py-2 text-left last:border-b-0 hover:bg-surface-2"
               >

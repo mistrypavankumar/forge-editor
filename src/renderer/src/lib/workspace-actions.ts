@@ -13,9 +13,10 @@ function applyFolder(rootPath: string, tree: DirEntry[]): void {
   useRecentsStore.getState().addRecent({ type: 'folder', path: rootPath, name: base(rootPath) });
 }
 
-function applyFile(path: string, name: string, content: string): void {
+function applyFile(path: string, name: string, content: string, record: boolean): void {
   useEditorStore.getState().openFile({ path, name, content });
-  useRecentsStore.getState().addRecent({ type: 'file', path, name });
+  // Only explicit "Open File"/recents reopens count as recents — not editor navigation.
+  if (record) useRecentsStore.getState().addRecent({ type: 'file', path, name });
 }
 
 export async function openFolderDialog(): Promise<void> {
@@ -30,10 +31,11 @@ export async function openFolderPath(path: string): Promise<void> {
 
 export async function openFileDialog(): Promise<void> {
   const res = await window.forge.openFileDialog();
-  if (res.ok && res.data) applyFile(res.data.path, res.data.name, res.data.content);
+  if (res.ok && res.data) applyFile(res.data.path, res.data.name, res.data.content, true);
 }
 
-export async function openFilePath(path: string, name?: string): Promise<void> {
+/** Open a file by path. `record` adds it to Recent (only for landing/recents flows). */
+export async function openFilePath(path: string, name?: string, record = false): Promise<void> {
   const res = await window.forge.readFile(path);
-  if (res.ok) applyFile(path, name ?? base(path), res.data);
+  if (res.ok) applyFile(path, name ?? base(path), res.data, record);
 }
