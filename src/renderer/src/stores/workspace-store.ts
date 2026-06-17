@@ -16,6 +16,7 @@ export interface WorkspaceState {
   setScope: (path: string | null) => void;
   setBranch: (branch: string | null) => void;
   setRenaming: (path: string | null) => void;
+  collapseAll: () => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
@@ -44,4 +45,5 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setScope: (path) => set({ scopedPath: path }),
   setBranch: (branch) => set({ branch }),
   setRenaming: (path) => set({ renamingPath: path }),
+  collapseAll: () => set({ expandedPaths: {} }),
 }));

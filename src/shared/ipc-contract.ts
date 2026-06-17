@@ -13,6 +13,7 @@ export const IpcChannels = {
   remove: 'forge:fs:remove',
   copyEntry: 'forge:fs:copyEntry',
   moveEntry: 'forge:fs:moveEntry',
+  mkdir: 'forge:fs:mkdir',
   loadSettings: 'forge:settings:load',
   saveSettings: 'forge:settings:save',
   terminalRun: 'forge:terminal:run',
@@ -88,6 +89,7 @@ export interface ForgeApi {
   remove: (path: string) => Promise<Result<void>>;
   copyEntry: (src: string, destDir: string) => Promise<Result<void>>;
   moveEntry: (src: string, destDir: string) => Promise<Result<void>>;
+  mkdir: (path: string) => Promise<Result<void>>;
   loadSettings: () => Promise<Result<ForgeSettings>>;
   saveSettings: (settings: ForgeSettings) => Promise<Result<void>>;
   runCommand: (args: TerminalRunArgs) => Promise<Result<void>>;

@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { FolderOpen, ChevronLeft } from 'lucide-react';
+import { ChevronLeft, FilePlus, FolderPlus, RefreshCw, ChevronsDownUp } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useFileClipboard } from '../stores/file-clipboard';
 import { openFolderDialog } from '../lib/workspace-actions';
-import { deleteEntry, pasteInto } from '../lib/fs-actions';
+import { deleteEntry, pasteInto, newFile, newFolder, refreshDir } from '../lib/fs-actions';
 import { FileTree } from './FileTree';
 import { IconButton } from './ui/IconButton';
 import { ContextMenu, type MenuItem } from './ui/ContextMenu';
@@ -29,6 +29,7 @@ export function FileExplorer(): React.JSX.Element {
   const scopedPath = useWorkspaceStore((s) => s.scopedPath);
   const setScope = useWorkspaceStore((s) => s.setScope);
   const setRenaming = useWorkspaceStore((s) => s.setRenaming);
+  const collapseAll = useWorkspaceStore((s) => s.collapseAll);
   const setClipboard = useFileClipboard((s) => s.set);
   const clipboardItem = useFileClipboard((s) => s.item);
 
@@ -103,11 +104,26 @@ export function FileExplorer(): React.JSX.Element {
           <span className="ml-auto pr-1 text-faint">Show all</span>
         </button>
       ) : (
-        <div className="flex h-8 shrink-0 items-center justify-between px-3 text-[11px] font-semibold uppercase tracking-wider text-faint">
+        <div className="flex h-8 shrink-0 items-center justify-between pl-3 pr-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint">
           <span className="truncate">{basename(rootPath)}</span>
-          <IconButton label="Change folder" className="h-6 w-6" onClick={() => void onOpenFolder()}>
-            <FolderOpen size={13} />
-          </IconButton>
+          <div className="flex items-center gap-0.5">
+            <IconButton label="New File" className="h-6 w-6" onClick={() => void newFile(rootPath)}>
+              <FilePlus size={14} />
+            </IconButton>
+            <IconButton
+              label="New Folder"
+              className="h-6 w-6"
+              onClick={() => void newFolder(rootPath)}
+            >
+              <FolderPlus size={14} />
+            </IconButton>
+            <IconButton label="Refresh" className="h-6 w-6" onClick={() => void refreshDir(rootPath)}>
+              <RefreshCw size={13} />
+            </IconButton>
+            <IconButton label="Collapse All" className="h-6 w-6" onClick={collapseAll}>
+              <ChevronsDownUp size={14} />
+            </IconButton>
+          </div>
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-auto pb-2">

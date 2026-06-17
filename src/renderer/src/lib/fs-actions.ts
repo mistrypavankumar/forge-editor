@@ -34,6 +34,39 @@ export async function deleteEntry(path: string): Promise<void> {
   }
 }
 
+function uniqueName(base: string, existing: string[]): string {
+  if (!existing.includes(base)) return base;
+  let i = 1;
+  while (existing.includes(`${base}-${i}`)) i += 1;
+  return `${base}-${i}`;
+}
+
+function namesIn(dir: string): string[] {
+  const ws = useWorkspaceStore.getState();
+  const entries = dir === ws.rootPath ? ws.rootEntries : (ws.childrenByPath[dir] ?? []);
+  return entries.map((e) => e.name);
+}
+
+export async function newFile(dir: string): Promise<void> {
+  const name = uniqueName('untitled', namesIn(dir));
+  const path = `${dir}/${name}`;
+  const res = await window.forge.writeFile(path, '');
+  if (res.ok) {
+    await refreshDir(dir);
+    useWorkspaceStore.getState().setRenaming(path);
+  }
+}
+
+export async function newFolder(dir: string): Promise<void> {
+  const name = uniqueName('new-folder', namesIn(dir));
+  const path = `${dir}/${name}`;
+  const res = await window.forge.mkdir(path);
+  if (res.ok) {
+    await refreshDir(dir);
+    useWorkspaceStore.getState().setRenaming(path);
+  }
+}
+
 export async function pasteInto(destDir: string): Promise<void> {
   const cb = useFileClipboard.getState();
   if (!cb.item || !cb.mode) return;

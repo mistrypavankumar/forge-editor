@@ -19,6 +19,7 @@ export const api: ForgeApi = {
   remove: (path) => ipcRenderer.invoke(IpcChannels.remove, path),
   copyEntry: (src, destDir) => ipcRenderer.invoke(IpcChannels.copyEntry, src, destDir),
   moveEntry: (src, destDir) => ipcRenderer.invoke(IpcChannels.moveEntry, src, destDir),
+  mkdir: (path) => ipcRenderer.invoke(IpcChannels.mkdir, path),
   loadSettings: () => ipcRenderer.invoke(IpcChannels.loadSettings),
   saveSettings: (settings) => ipcRenderer.invoke(IpcChannels.saveSettings, settings),
   runCommand: (args) => ipcRenderer.invoke(IpcChannels.terminalRun, args),

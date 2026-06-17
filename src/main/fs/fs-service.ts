@@ -63,6 +63,10 @@ export async function moveEntry(src: string, destDir: string): Promise<void> {
   await fs.rename(src, join(destDir, basename(src)));
 }
 
+export async function makeDir(path: string): Promise<void> {
+  await fs.mkdir(path, { recursive: true });
+}
+
 /** Read the current git branch (or short SHA if detached) from .git/HEAD; null if not a repo. */
 export async function readGitBranch(rootPath: string): Promise<string | null> {
   try {

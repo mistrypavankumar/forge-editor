@@ -7,6 +7,7 @@ import {
   copyEntry,
   deleteEntry,
   listFilesRecursive,
+  makeDir,
   moveEntry,
   readDirectoryEntries,
   readFileText,
@@ -84,6 +85,7 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannels.moveEntry, (_e, src: string, destDir: string) =>
     toResult(() => moveEntry(src, destDir)),
   );
+  ipcMain.handle(IpcChannels.mkdir, (_e, path: string) => toResult(() => makeDir(path)));
   ipcMain.handle(IpcChannels.loadSettings, () => toResult(() => readSettings(SETTINGS_PATH)));
   ipcMain.handle(IpcChannels.saveSettings, (_e, settings: ForgeSettings) =>
     toResult(() => writeSettings(SETTINGS_PATH, settings)),
