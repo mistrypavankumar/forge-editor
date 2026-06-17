@@ -1,7 +1,7 @@
 import { commandRegistry } from './command-registry';
 import { useEditorStore } from '../stores/editor-store';
 import { useLayoutStore } from '../stores/layout-store';
-import { useWorkspaceStore } from '../stores/workspace-store';
+import { openFolderDialog } from '../lib/workspace-actions';
 
 export async function saveActiveFile(): Promise<void> {
   const state = useEditorStore.getState();
@@ -9,13 +9,6 @@ export async function saveActiveFile(): Promise<void> {
   if (!tab) return;
   const res = await window.forge.writeFile(tab.path, tab.content);
   if (res.ok) state.markSaved(tab.path);
-}
-
-async function openFolder(): Promise<void> {
-  const res = await window.forge.openFolder();
-  if (res.ok && res.data) {
-    useWorkspaceStore.getState().setWorkspace(res.data.rootPath, res.data.tree);
-  }
 }
 
 export function registerCoreCommands(): void {
@@ -30,7 +23,7 @@ export function registerCoreCommands(): void {
     id: 'file.openFolder',
     title: 'Open Folder…',
     category: 'File',
-    run: openFolder,
+    run: () => openFolderDialog(),
   });
   commandRegistry.register({
     id: 'view.toggleSidebar',

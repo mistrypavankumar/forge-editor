@@ -5,6 +5,7 @@ import { useEditorStore } from '../stores/editor-store';
 import { useWorkbenchStatusStore } from '../stores/workbench-status-store';
 import { useNavigatorStore } from '../stores/navigator-store';
 import { deriveProjectMap, entryMatchesFilter } from '../lib/derive-project-map';
+import { openFolderDialog } from '../lib/workspace-actions';
 import { ModernFolderIcon } from './ModernFolderIcon';
 import { ModernFileIcon } from './ModernFileIcon';
 import { ProjectRow, type BadgeTone } from './ProjectRow';
@@ -13,7 +14,6 @@ import { cn } from '../lib/cn';
 export function ProjectMapView(): React.JSX.Element {
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const rootEntries = useWorkspaceStore((s) => s.rootEntries);
-  const setWorkspace = useWorkspaceStore((s) => s.setWorkspace);
   const openFile = useEditorStore((s) => s.openFile);
   const tabs = useEditorStore((s) => s.tabs);
   const markers = useWorkbenchStatusStore((s) => s.markers);
@@ -21,10 +21,7 @@ export function ProjectMapView(): React.JSX.Element {
   const setTab = useNavigatorStore((s) => s.setTab);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ hidden: true });
 
-  const onOpenFolder = async (): Promise<void> => {
-    const res = await window.forge.openFolder();
-    if (res.ok && res.data) setWorkspace(res.data.rootPath, res.data.tree);
-  };
+  const onOpenFolder = (): void => void openFolderDialog();
 
   if (!rootPath) {
     return (

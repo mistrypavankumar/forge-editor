@@ -40,10 +40,17 @@ export interface OpenedFile {
   content: string;
 }
 
+export interface RecentEntry {
+  type: 'folder' | 'file';
+  path: string;
+  name: string;
+}
+
 export interface ForgeSettings {
   themeId?: string;
   sidebarVisible?: boolean;
   keybindings?: Record<string, string>;
+  recents?: RecentEntry[];
 }
 
 export interface TerminalRunArgs {

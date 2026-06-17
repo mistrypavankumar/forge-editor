@@ -1,5 +1,6 @@
 import { FolderOpen, ChevronLeft } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { openFolderDialog } from '../lib/workspace-actions';
 import { FileTree } from './FileTree';
 import { IconButton } from './ui/IconButton';
 
@@ -14,13 +15,9 @@ export function FileExplorer(): React.JSX.Element {
   const rootEntries = useWorkspaceStore((s) => s.rootEntries);
   const childrenByPath = useWorkspaceStore((s) => s.childrenByPath);
   const scopedPath = useWorkspaceStore((s) => s.scopedPath);
-  const setWorkspace = useWorkspaceStore((s) => s.setWorkspace);
   const setScope = useWorkspaceStore((s) => s.setScope);
 
-  const onOpenFolder = async (): Promise<void> => {
-    const res = await window.forge.openFolder();
-    if (res.ok && res.data) setWorkspace(res.data.rootPath, res.data.tree);
-  };
+  const onOpenFolder = (): void => void openFolderDialog();
 
   if (!rootPath) {
     return (
