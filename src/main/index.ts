@@ -1,7 +1,12 @@
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import { IpcChannels, pongOf, type ForgeSettings, type TerminalRunArgs } from '@shared/ipc-contract';
+import {
+  IpcChannels,
+  pongOf,
+  type ForgeSettings,
+  type TerminalCreateArgs,
+} from '@shared/ipc-contract';
 import { ok, toResult } from '@shared/result';
 import {
   copyEntry,
@@ -16,7 +21,12 @@ import {
   writeFileText,
 } from './fs/fs-service';
 import { readSettings, writeSettings } from './settings/settings-service';
-import { runCommand, killCommand } from './terminal/command-runner';
+import {
+  createTerminal,
+  writeTerminal,
+  resizeTerminal,
+  killTerminal,
+} from './terminal/command-runner';
 
 const SETTINGS_PATH = join(homedir(), '.forge', 'settings.json');
 
@@ -90,11 +100,15 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannels.saveSettings, (_e, settings: ForgeSettings) =>
     toResult(() => writeSettings(SETTINGS_PATH, settings)),
   );
-  ipcMain.handle(IpcChannels.terminalRun, (e, args: TerminalRunArgs) =>
-    toResult(async () => runCommand(e.sender, args)),
+  ipcMain.handle(IpcChannels.terminalCreate, (e, args: TerminalCreateArgs) =>
+    toResult(async () => createTerminal(e.sender, args)),
+  );
+  ipcMain.on(IpcChannels.terminalInput, (_e, id: string, data: string) => writeTerminal(id, data));
+  ipcMain.on(IpcChannels.terminalResize, (_e, id: string, cols: number, rows: number) =>
+    resizeTerminal(id, cols, rows),
   );
   ipcMain.handle(IpcChannels.terminalKill, (_e, id: string) =>
-    toResult(async () => killCommand(id)),
+    toResult(async () => killTerminal(id)),
   );
   ipcMain.handle(IpcChannels.openExternal, (_e, url: string) =>
     toResult(() => shell.openExternal(url)),

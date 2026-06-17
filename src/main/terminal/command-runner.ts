@@ -1,45 +1,55 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { createRequire } from 'node:module';
+import type { IPty } from 'node-pty';
 import type { WebContents } from 'electron';
-import { IpcChannels, type TerminalRunArgs } from '@shared/ipc-contract';
+import { IpcChannels, type TerminalCreateArgs } from '@shared/ipc-contract';
 
-const processes = new Map<string, ChildProcess>();
+// node-pty is a native CJS addon kept external from the bundle; load via require.
+const require = createRequire(import.meta.url);
+const pty = require('node-pty') as typeof import('node-pty');
 
-export function runCommand(sender: WebContents, args: TerminalRunArgs): void {
-  // One process per terminal id — replace any existing one.
-  processes.get(args.id)?.kill();
+const sessions = new Map<string, IPty>();
 
-  const child = spawn(args.command, {
-    shell: true,
-    cwd: args.cwd ?? process.cwd(),
-    // The child is piped (not a TTY), so most CLIs disable color. Force it on —
-    // these are honored by chalk/Next.js/npm/git/ls etc. even without a real PTY.
-    env: {
-      ...process.env,
-      FORCE_COLOR: '3',
-      COLORTERM: 'truecolor',
-      TERM: 'xterm-256color',
-      CLICOLOR: '1',
-      CLICOLOR_FORCE: '1',
-    },
+function defaultShell(): string {
+  if (process.platform === 'win32') return process.env.COMSPEC ?? 'powershell.exe';
+  return process.env.SHELL ?? '/bin/zsh';
+}
+
+export function createTerminal(sender: WebContents, args: TerminalCreateArgs): void {
+  sessions.get(args.id)?.kill();
+
+  const proc = pty.spawn(defaultShell(), [], {
+    name: 'xterm-256color',
+    cols: Math.max(args.cols, 2),
+    rows: Math.max(args.rows, 1),
+    cwd: args.cwd ?? process.env.HOME ?? process.cwd(),
+    env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor' },
   });
-  processes.set(args.id, child);
+  sessions.set(args.id, proc);
 
-  const send = (chunk: string): void => {
+  proc.onData((chunk) => {
     if (!sender.isDestroyed()) sender.send(IpcChannels.terminalData, { id: args.id, chunk });
-  };
-
-  child.stdout?.on('data', (d: Buffer) => send(d.toString()));
-  child.stderr?.on('data', (d: Buffer) => send(d.toString()));
-  child.on('error', (e) => send(`\r\n${e.message}\r\n`));
-  child.on('exit', (code) => {
-    processes.delete(args.id);
+  });
+  proc.onExit(({ exitCode }) => {
+    sessions.delete(args.id);
     if (!sender.isDestroyed()) {
-      sender.send(IpcChannels.terminalExit, { id: args.id, code: code ?? 0 });
+      sender.send(IpcChannels.terminalExit, { id: args.id, code: exitCode });
     }
   });
 }
 
-export function killCommand(id: string): void {
-  processes.get(id)?.kill();
-  processes.delete(id);
+export function writeTerminal(id: string, data: string): void {
+  sessions.get(id)?.write(data);
+}
+
+export function resizeTerminal(id: string, cols: number, rows: number): void {
+  try {
+    sessions.get(id)?.resize(Math.max(cols, 2), Math.max(rows, 1));
+  } catch {
+    // resize can throw if the pty is mid-teardown; ignore.
+  }
+}
+
+export function killTerminal(id: string): void {
+  sessions.get(id)?.kill();
+  sessions.delete(id);
 }

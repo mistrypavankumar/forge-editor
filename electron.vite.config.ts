@@ -5,7 +5,13 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   main: {
-    build: { rollupOptions: { input: resolve(__dirname, 'src/main/index.ts') } },
+    build: {
+      rollupOptions: {
+        input: resolve(__dirname, 'src/main/index.ts'),
+        // Native module — keep external so it's require()d from node_modules at runtime.
+        external: ['node-pty'],
+      },
+    },
     resolve: { alias: { '@shared': resolve(__dirname, 'src/shared') } },
   },
   preload: {

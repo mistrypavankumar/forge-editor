@@ -16,7 +16,9 @@ export const IpcChannels = {
   mkdir: 'forge:fs:mkdir',
   loadSettings: 'forge:settings:load',
   saveSettings: 'forge:settings:save',
-  terminalRun: 'forge:terminal:run',
+  terminalCreate: 'forge:terminal:create',
+  terminalInput: 'forge:terminal:input',
+  terminalResize: 'forge:terminal:resize',
   terminalKill: 'forge:terminal:kill',
   terminalData: 'forge:terminal:data',
   terminalExit: 'forge:terminal:exit',
@@ -60,10 +62,11 @@ export interface ForgeSettings {
   recents?: RecentEntry[];
 }
 
-export interface TerminalRunArgs {
+export interface TerminalCreateArgs {
   id: string;
-  command: string;
   cwd?: string;
+  cols: number;
+  rows: number;
 }
 
 export interface TerminalDataEvent {
@@ -92,7 +95,9 @@ export interface ForgeApi {
   mkdir: (path: string) => Promise<Result<void>>;
   loadSettings: () => Promise<Result<ForgeSettings>>;
   saveSettings: (settings: ForgeSettings) => Promise<Result<void>>;
-  runCommand: (args: TerminalRunArgs) => Promise<Result<void>>;
+  createTerminal: (args: TerminalCreateArgs) => Promise<Result<void>>;
+  sendInput: (id: string, data: string) => void;
+  resizeTerminal: (id: string, cols: number, rows: number) => void;
   killCommand: (id: string) => Promise<Result<void>>;
   openExternal: (url: string) => Promise<Result<void>>;
   onTerminalData: (cb: (e: TerminalDataEvent) => void) => () => void;
