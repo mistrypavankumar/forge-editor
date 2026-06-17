@@ -1,0 +1,31 @@
+:root {
+  --forge-bg: #1e1e2e;
+  --forge-fg: #cdd6f4;
+  --forge-border: #313244;
+}
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  background: var(--forge-bg);
+  color: var(--forge-fg);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.region {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--forge-border);
+  box-sizing: border-box;
+}
+
+.statusbar {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 12px;
+  border-top: 1px solid var(--forge-border);
+}

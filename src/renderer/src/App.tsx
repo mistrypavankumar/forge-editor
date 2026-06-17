@@ -1,3 +1,5 @@
+import { AppShell } from './components/AppShell';
+
 export function App(): React.JSX.Element {
-  return <h1>Forge</h1>;
+  return <AppShell />;
 }
