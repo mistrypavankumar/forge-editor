@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
-import { join } from 'node:path';
-import type { DirEntry } from '@shared/ipc-contract';
+import { join, relative } from 'node:path';
+import type { DirEntry, FileItem } from '@shared/ipc-contract';
 
 export function sortDirEntries(entries: DirEntry[]): DirEntry[] {
   return [...entries].sort((a, b) => {
@@ -25,4 +25,24 @@ export async function readFileText(filePath: string): Promise<string> {
 
 export async function writeFileText(filePath: string, content: string): Promise<void> {
   await fs.writeFile(filePath, content, 'utf8');
+}
+
+const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'out']);
+
+export async function listFilesRecursive(rootPath: string): Promise<FileItem[]> {
+  const results: FileItem[] = [];
+  async function walk(dir: string): Promise<void> {
+    const dirents = await fs.readdir(dir, { withFileTypes: true });
+    for (const d of dirents) {
+      const full = join(dir, d.name);
+      if (d.isDirectory()) {
+        if (IGNORED_DIRS.has(d.name)) continue;
+        await walk(full);
+      } else {
+        results.push({ name: d.name, path: full, relPath: relative(rootPath, full) });
+      }
+    }
+  }
+  await walk(rootPath);
+  return results;
 }

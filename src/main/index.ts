@@ -2,7 +2,12 @@ import { join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { IpcChannels, pongOf } from '@shared/ipc-contract';
 import { ok, toResult } from '@shared/result';
-import { readDirectoryEntries, readFileText, writeFileText } from './fs/fs-service';
+import {
+  listFilesRecursive,
+  readDirectoryEntries,
+  readFileText,
+  writeFileText,
+} from './fs/fs-service';
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -43,6 +48,9 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannels.readFile, (_e, path: string) => toResult(() => readFileText(path)));
   ipcMain.handle(IpcChannels.writeFile, (_e, path: string, content: string) =>
     toResult(() => writeFileText(path, content)),
+  );
+  ipcMain.handle(IpcChannels.listFiles, (_e, rootPath: string) =>
+    toResult(() => listFilesRecursive(rootPath)),
   );
   createWindow();
   app.on('activate', () => {

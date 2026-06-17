@@ -7,4 +7,5 @@ export const api: ForgeApi = {
   readDirectory: (path) => ipcRenderer.invoke(IpcChannels.readDirectory, path),
   readFile: (path) => ipcRenderer.invoke(IpcChannels.readFile, path),
   writeFile: (path, content) => ipcRenderer.invoke(IpcChannels.writeFile, path, content),
+  listFiles: (rootPath) => ipcRenderer.invoke(IpcChannels.listFiles, rootPath),
 };

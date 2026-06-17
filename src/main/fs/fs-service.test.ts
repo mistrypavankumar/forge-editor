@@ -3,7 +3,13 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readDirectoryEntries, readFileText, sortDirEntries, writeFileText } from './fs-service';
+import {
+  listFilesRecursive,
+  readDirectoryEntries,
+  readFileText,
+  sortDirEntries,
+  writeFileText,
+} from './fs-service';
 
 describe('fs-service', () => {
   it('sortDirEntries lists directories before files, alphabetically', () => {
@@ -29,5 +35,16 @@ describe('fs-service', () => {
     const file = join(dir, 'note.txt');
     await writeFileText(file, 'hello');
     expect(await readFileText(file)).toBe('hello');
+  });
+
+  it('listFilesRecursive walks nested files and skips ignored dirs', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'forge-'));
+    mkdirSync(join(dir, 'src'));
+    mkdirSync(join(dir, 'node_modules'));
+    writeFileSync(join(dir, 'src', 'a.ts'), 'x');
+    writeFileSync(join(dir, 'readme.md'), 'y');
+    writeFileSync(join(dir, 'node_modules', 'ignored.js'), 'z');
+    const files = await listFilesRecursive(dir);
+    expect(files.map((f) => f.relPath).sort()).toEqual(['readme.md', 'src/a.ts']);
   });
 });
