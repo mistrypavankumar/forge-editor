@@ -70,7 +70,14 @@ export class DiffPeek {
     const heightInPx = HEADER_PX + BODY_PAD_PX + Math.min(rows, MAX_ROWS) * lineHeight;
 
     this.editor.changeViewZones((acc) => {
-      this.zoneId = acc.addZone({ afterLineNumber, heightInPx, domNode: node });
+      this.zoneId = acc.addZone({
+        afterLineNumber,
+        heightInPx,
+        domNode: node,
+        // Default (true) lays a transparent overlay over the zone that eats clicks;
+        // disable it so the toolbar buttons and body are interactive.
+        suppressMouseDown: false,
+      });
     });
     this.editor.revealLineInCenterIfOutsideViewport(afterLineNumber);
 
