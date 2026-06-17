@@ -1,11 +1,8 @@
-import { useEffect, useRef } from 'react';
-import { Play, TerminalSquare } from 'lucide-react';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import { useWorkspaceStore } from '../stores/workspace-store';
-import { useEditorStore } from '../stores/editor-store';
-import { useNavigatorStore } from '../stores/navigator-store';
+import { Play, Plus, SplitSquareHorizontal, X, TerminalSquare } from 'lucide-react';
+import { useTerminalStore } from '../stores/terminal-store';
+import { runInTerminal } from '../lib/terminal-exec';
+import { TerminalView } from './TerminalView';
+import { cn } from '../lib/cn';
 
 const QUICK_TASKS = [
   { id: 'dev', label: 'Dev', command: 'npm run dev' },
@@ -14,259 +11,112 @@ const QUICK_TASKS = [
   { id: 'lint', label: 'Lint', command: 'npm run lint' },
 ];
 
-const TERM_ID = 'main';
-
-// Truecolor ANSI helpers (match the app accent / semantic palette).
-const ACCENT = '\x1b[38;2;124;130;245m';
-const MUTED = '\x1b[38;2;124;124;135m';
-const GREEN = '\x1b[38;2;61;220;151m';
-const RED = '\x1b[38;2;248;113;113m';
-const RESET = '\x1b[0m';
-const BOLD = '\x1b[1m';
-
-function basename(p: string | null): string {
-  if (!p) return 'forge';
-  const parts = p.split('/').filter(Boolean);
-  return parts[parts.length - 1] ?? 'forge';
-}
-
 export function TerminalPanel(): React.JSX.Element {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const termRef = useRef<Terminal | null>(null);
-  const runningRef = useRef(false);
-  const lineRef = useRef('');
-  const execRef = useRef<(command: string) => void>(() => {});
-  const rootPath = useWorkspaceStore((s) => s.rootPath);
-  const rootRef = useRef(rootPath);
-  rootRef.current = rootPath;
+  const sessions = useTerminalStore((s) => s.sessions);
+  const activeId = useTerminalStore((s) => s.activeId);
+  const splitId = useTerminalStore((s) => s.splitId);
+  const setActive = useTerminalStore((s) => s.setActive);
+  const createSession = useTerminalStore((s) => s.createSession);
+  const closeSession = useTerminalStore((s) => s.closeSession);
+  const toggleSplit = useTerminalStore((s) => s.toggleSplit);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const term = new Terminal({
-      fontFamily: "'Fira Code', 'SF Mono', Menlo, monospace",
-      fontSize: 12,
-      lineHeight: 1.35,
-      cursorBlink: true,
-      cursorStyle: 'bar',
-      convertEol: true,
-      theme: {
-        background: '#0d0d11',
-        foreground: '#e7e7ea',
-        cursor: '#7c82f5',
-        cursorAccent: '#0d0d11',
-        selectionBackground: '#7c82f540',
-        black: '#1c1c21',
-        red: '#f87171',
-        green: '#3ddc97',
-        yellow: '#f5c451',
-        blue: '#5b9df0',
-        magenta: '#c792ea',
-        cyan: '#22d3ee',
-        white: '#cdcdd4',
-        brightBlack: '#5c5c66',
-        brightRed: '#fca5a5',
-        brightGreen: '#86efac',
-        brightYellow: '#fde68a',
-        brightBlue: '#93c5fd',
-        brightMagenta: '#d8b4fe',
-        brightCyan: '#67e8f9',
-        brightWhite: '#ffffff',
-      },
-    });
-    const fit = new FitAddon();
-    term.loadAddon(fit);
-    term.open(el);
-    fit.fit();
-    termRef.current = term;
-
-    // Link features must be registered AFTER open() — they attach to the DOM.
-    // URLs: Cmd/Ctrl+click opens in the external browser.
-    term.loadAddon(
-      new WebLinksAddon((event, uri) => {
-        if (event.metaKey || event.ctrlKey) void window.forge.openExternal(uri);
-      }),
-    );
-
-    // File paths: Cmd/Ctrl+click opens the file (or scopes the folder) in-editor.
-    const openPathLink = (token: string): void => {
-      const lc = /:(\d+)(?::(\d+))?$/.exec(token);
-      const path = lc ? token.slice(0, lc.index) : token;
-      const line = lc ? Number(lc[1]) : 0;
-      const col = lc && lc[2] ? Number(lc[2]) : 1;
-      void window.forge.readFile(path).then((res) => {
-        if (res.ok) {
-          const name = path.slice(path.lastIndexOf('/') + 1);
-          const store = useEditorStore.getState();
-          store.openFile({ path, name, content: res.data });
-          if (line > 0) store.requestReveal({ path, line, col });
-          return;
-        }
-        void window.forge.readDirectory(path).then((dr) => {
-          if (dr.ok) {
-            const ws = useWorkspaceStore.getState();
-            ws.setChildren(path, dr.data);
-            ws.setScope(path);
-            useNavigatorStore.getState().setTab('structure');
-          }
-        });
-      });
-    };
-
-    term.registerLinkProvider({
-      provideLinks(y, callback) {
-        const bufferLine = term.buffer.active.getLine(y - 1);
-        if (!bufferLine) {
-          callback(undefined);
-          return;
-        }
-        const text = bufferLine.translateToString(true);
-        const re = /(?<![\w:/])(\/[^\s:'"()[\]]+)(?::\d+)?(?::\d+)?/g;
-        const links = [];
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(text)) !== null) {
-          const full = m[0];
-          const startX = m.index + 1;
-          links.push({
-            text: full,
-            range: { start: { x: startX, y }, end: { x: startX + full.length - 1, y } },
-            activate: (event: MouseEvent) => {
-              if (event.metaKey || event.ctrlKey) openPathLink(full);
-            },
-          });
-        }
-        callback(links.length > 0 ? links : undefined);
-      },
-    });
-
-    const writePrompt = (): void => {
-      const folder = basename(rootRef.current);
-      term.write(`\r\n${ACCENT}╭─${RESET} ${BOLD}${folder}${RESET}\r\n${ACCENT}╰─❯${RESET} `);
-    };
-
-    // Banner
-    term.writeln(`${ACCENT}▌${RESET} ${BOLD}Forge${RESET} ${MUTED}terminal${RESET}`);
-    term.writeln(`${MUTED}  commands run in the open folder · Ctrl+C to cancel${RESET}`);
-    writePrompt();
-
-    const exec = (command: string): void => {
-      runningRef.current = true;
-      void window.forge.runCommand({ id: TERM_ID, command, cwd: rootRef.current ?? undefined });
-    };
-    execRef.current = (command) => {
-      if (runningRef.current) return;
-      term.write(command + '\r\n');
-      exec(command);
-    };
-
-    const erase = (n: number): void => {
-      if (n > 0) term.write('\b \b'.repeat(n));
-    };
-    const deleteWord = (): void => {
-      const line = lineRef.current;
-      let i = line.length;
-      while (i > 0 && line[i - 1] === ' ') i--;
-      while (i > 0 && line[i - 1] !== ' ') i--;
-      erase(line.length - i);
-      lineRef.current = line.slice(0, i);
-    };
-    const deleteLine = (): void => {
-      erase(lineRef.current.length);
-      lineRef.current = '';
-    };
-
-    // Option+Backspace = delete word, Cmd+Backspace = delete line.
-    term.attachCustomKeyEventHandler((e) => {
-      if (e.type !== 'keydown' || runningRef.current) return true;
-      if (e.key === 'Backspace' && (e.altKey || e.metaKey)) {
-        e.preventDefault();
-        if (e.metaKey) deleteLine();
-        else deleteWord();
-        return false;
-      }
-      return true;
-    });
-
-    const offData = window.forge.onTerminalData(({ chunk }) => term.write(chunk));
-    const offExit = window.forge.onTerminalExit(({ code }) => {
-      runningRef.current = false;
-      const dot = code === 0 ? `${GREEN}●${RESET}` : `${RED}●${RESET}`;
-      term.write(`\r\n${dot} ${MUTED}exited ${code}${RESET}\r\n`);
-      writePrompt();
-    });
-
-    const dataSub = term.onData((d) => {
-      if (runningRef.current) {
-        if (d === '\x03') window.forge.killCommand(TERM_ID); // Ctrl+C
-        return;
-      }
-      if (d === '\x0c') {
-        // Ctrl+L — clear
-        term.clear();
-        lineRef.current = '';
-        writePrompt();
-        return;
-      }
-      if (d === '\r') {
-        const cmd = lineRef.current.trim();
-        lineRef.current = '';
-        term.write('\r\n');
-        if (cmd === 'clear' || cmd === 'cls') {
-          term.clear();
-          writePrompt();
-        } else if (cmd) {
-          exec(cmd);
-        } else {
-          writePrompt();
-        }
-      } else if (d === '\x7f') {
-        if (lineRef.current.length > 0) {
-          lineRef.current = lineRef.current.slice(0, -1);
-          term.write('\b \b');
-        }
-      } else if (d >= ' ') {
-        lineRef.current += d;
-        term.write(d);
-      }
-    });
-
-    const resizeObs = new ResizeObserver(() => fit.fit());
-    resizeObs.observe(el);
-
-    return () => {
-      offData();
-      offExit();
-      dataSub.dispose();
-      resizeObs.disconnect();
-      window.forge.killCommand(TERM_ID);
-      term.dispose();
-    };
-  }, []);
+  const split = splitId !== null;
 
   return (
     <div className="flex h-full flex-col bg-[#0d0d11]">
       <div className="flex shrink-0 items-center gap-1.5 border-b border-line-soft bg-surface px-3 py-1.5">
         <TerminalSquare size={13} className="text-accent" />
-        <span className="mr-1.5 text-[11px] font-medium text-muted">zsh</span>
-        <span className="h-3 w-px bg-line" />
-        <span className="mx-1 text-[11px] text-faint">Tasks</span>
+        <span className="mr-1 text-[11px] text-faint">Tasks</span>
         {QUICK_TASKS.map((t) => (
           <button
             key={t.id}
             type="button"
-            title={t.command}
-            onClick={() => execRef.current(t.command)}
+            title={`${t.command} (in active terminal)`}
+            onClick={() => runInTerminal(activeId, t.command)}
             className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-fg"
           >
             <Play size={10} className="fill-current text-accent" />
             {t.label}
           </button>
         ))}
+
+        {/* Session tabs + controls */}
+        <div className="ml-auto flex items-center gap-1">
+          {sessions.map((s) => {
+            const isActive = s.id === activeId;
+            const isSplit = s.id === splitId;
+            return (
+              <span
+                key={s.id}
+                className={cn(
+                  'group flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px]',
+                  isActive
+                    ? 'bg-accent/15 text-accent'
+                    : isSplit
+                      ? 'bg-surface-3 text-fg'
+                      : 'text-faint hover:text-muted',
+                )}
+              >
+                <button type="button" onClick={() => setActive(s.id)} title={s.title}>
+                  {s.title}
+                </button>
+                {sessions.length > 1 ? (
+                  <button
+                    type="button"
+                    aria-label={`Close ${s.title}`}
+                    onClick={() => closeSession(s.id)}
+                    className="opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
+                  >
+                    <X size={11} />
+                  </button>
+                ) : null}
+              </span>
+            );
+          })}
+          <button
+            type="button"
+            aria-label="New terminal"
+            title="New terminal"
+            onClick={() => createSession()}
+            className="flex h-5 w-5 items-center justify-center rounded text-faint hover:bg-surface-3 hover:text-fg"
+          >
+            <Plus size={13} />
+          </button>
+          <button
+            type="button"
+            aria-label="Split terminal"
+            title="Split terminal"
+            onClick={toggleSplit}
+            className={cn(
+              'flex h-5 w-5 items-center justify-center rounded hover:bg-surface-3 hover:text-fg',
+              split ? 'text-accent' : 'text-faint',
+            )}
+          >
+            <SplitSquareHorizontal size={13} />
+          </button>
+        </div>
       </div>
-      <div className="relative min-h-0 flex-1 overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-accent/60 via-accent/20 to-transparent" />
-        <div ref={containerRef} className="h-full px-3 py-2" />
+
+      {/* Panes — all sessions stay mounted (preserving scrollback/process); hidden ones are display:none. */}
+      <div className="relative flex min-h-0 flex-1">
+        <div className="absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-accent/60 via-accent/20 to-transparent" />
+        {sessions.map((s) => {
+          const visible = s.id === activeId || s.id === splitId;
+          return (
+            <div
+              key={s.id}
+              onMouseDown={() => setActive(s.id)}
+              className={cn(
+                'h-full overflow-hidden',
+                visible ? (split ? 'w-1/2' : 'w-full') : 'hidden',
+                visible && split && 'border-l border-line first:border-l-0',
+                visible && split && s.id === activeId && 'ring-1 ring-inset ring-accent/30',
+              )}
+            >
+              <TerminalView sessionId={s.id} />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
