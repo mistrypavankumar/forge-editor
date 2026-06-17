@@ -67,7 +67,8 @@ export async function searchInFiles(rootPath: string, query: string): Promise<Se
   try {
     const { stdout } = await run(
       'git',
-      ['-C', rootPath, 'grep', '-n', '-I', '-F', '-i', '--no-color', '--', query],
+      // --untracked: also search new files, but git grep always skips .gitignore'd paths.
+      ['-C', rootPath, 'grep', '-n', '-I', '-F', '-i', '--no-color', '--untracked', '--', query],
       { maxBuffer: 8 * 1024 * 1024 },
     );
     const matches: SearchMatch[] = [];
