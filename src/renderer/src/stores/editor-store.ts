@@ -24,6 +24,10 @@ export interface EditorState {
   markSaved: (path: string) => void;
   requestReveal: (target: RevealTarget) => void;
   consumeReveal: () => void;
+  closeOthers: (path: string) => void;
+  closeToRight: (path: string) => void;
+  closeSaved: () => void;
+  closeAll: () => void;
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -58,4 +62,26 @@ export const useEditorStore = create<EditorState>((set) => ({
     })),
   requestReveal: (target) => set({ reveal: target }),
   consumeReveal: () => set({ reveal: null }),
+  closeOthers: (path) =>
+    set((s) => {
+      const tab = s.tabs.find((t) => t.path === path);
+      return tab ? { tabs: [tab], activePath: path } : s;
+    }),
+  closeToRight: (path) =>
+    set((s) => {
+      const idx = s.tabs.findIndex((t) => t.path === path);
+      if (idx === -1) return s;
+      const tabs = s.tabs.slice(0, idx + 1);
+      const activePath = tabs.some((t) => t.path === s.activePath) ? s.activePath : path;
+      return { tabs, activePath };
+    }),
+  closeSaved: () =>
+    set((s) => {
+      const tabs = s.tabs.filter((t) => t.dirty);
+      const activePath = tabs.some((t) => t.path === s.activePath)
+        ? s.activePath
+        : (tabs[tabs.length - 1]?.path ?? null);
+      return { tabs, activePath };
+    }),
+  closeAll: () => set({ tabs: [], activePath: null }),
 }));
