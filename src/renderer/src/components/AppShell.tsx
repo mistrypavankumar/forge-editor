@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Allotment } from 'allotment';
 import { useLayoutStore } from '../stores/layout-store';
+import { FileExplorer } from './FileExplorer';
+import { EditorPane } from './EditorPane';
 
 export function AppShell(): React.JSX.Element {
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
@@ -17,13 +19,13 @@ export function AppShell(): React.JSX.Element {
           {sidebarVisible && (
             <Allotment.Pane preferredSize={240} minSize={160}>
               <div className="region" data-testid="sidebar-region">
-                Explorer
+                <FileExplorer />
               </div>
             </Allotment.Pane>
           )}
           <Allotment.Pane>
-            <div className="region" data-testid="editor-region">
-              Editor
+            <div className="region" data-testid="editor-region" style={{ padding: 0 }}>
+              <EditorPane />
             </div>
           </Allotment.Pane>
         </Allotment>

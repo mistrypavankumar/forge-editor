@@ -70,3 +70,45 @@ html, body, #root {
 .tree-node:hover {
   background: var(--forge-border);
 }
+
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.tab-bar {
+  display: flex;
+  height: 32px;
+  border-bottom: 1px solid var(--forge-border);
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border-right: 1px solid var(--forge-border);
+  white-space: nowrap;
+}
+
+.tab-active {
+  background: var(--forge-border);
+}
+
+.tab-close {
+  opacity: 0.6;
+}
+
+.tab-close:hover {
+  opacity: 1;
+}
+
+.editor-host {
+  flex: 1;
+  min-height: 0;
+}
