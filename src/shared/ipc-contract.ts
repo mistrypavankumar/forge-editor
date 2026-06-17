@@ -3,6 +3,7 @@ import type { Result } from './result';
 export const IpcChannels = {
   ping: 'forge:ping',
   openFolder: 'forge:fs:openFolder',
+  openFileDialog: 'forge:fs:openFileDialog',
   readDirectory: 'forge:fs:readDirectory',
   readFile: 'forge:fs:readFile',
   writeFile: 'forge:fs:writeFile',
@@ -33,6 +34,12 @@ export interface FileItem {
   relPath: string;
 }
 
+export interface OpenedFile {
+  path: string;
+  name: string;
+  content: string;
+}
+
 export interface ForgeSettings {
   themeId?: string;
   sidebarVisible?: boolean;
@@ -58,6 +65,7 @@ export interface TerminalExitEvent {
 export interface ForgeApi {
   ping: (msg: string) => Promise<string>;
   openFolder: () => Promise<Result<WorkspaceData | null>>;
+  openFileDialog: () => Promise<Result<OpenedFile | null>>;
   readDirectory: (path: string) => Promise<Result<DirEntry[]>>;
   readFile: (path: string) => Promise<Result<string>>;
   writeFile: (path: string, content: string) => Promise<Result<void>>;

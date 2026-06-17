@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { IpcChannels, pongOf, type ForgeSettings, type TerminalRunArgs } from '@shared/ipc-contract';
 import { ok, toResult } from '@shared/result';
@@ -46,6 +46,12 @@ app.whenReady().then(() => {
     if (res.canceled || res.filePaths.length === 0) return ok(null);
     const rootPath = res.filePaths[0];
     return toResult(async () => ({ rootPath, tree: await readDirectoryEntries(rootPath) }));
+  });
+  ipcMain.handle(IpcChannels.openFileDialog, async () => {
+    const res = await dialog.showOpenDialog({ properties: ['openFile'] });
+    if (res.canceled || res.filePaths.length === 0) return ok(null);
+    const path = res.filePaths[0];
+    return toResult(async () => ({ path, name: basename(path), content: await readFileText(path) }));
   });
   ipcMain.handle(IpcChannels.readDirectory, (_e, path: string) =>
     toResult(() => readDirectoryEntries(path)),

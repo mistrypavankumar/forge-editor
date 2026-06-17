@@ -9,6 +9,7 @@ import {
 export const api: ForgeApi = {
   ping: (msg) => ipcRenderer.invoke(IpcChannels.ping, msg),
   openFolder: () => ipcRenderer.invoke(IpcChannels.openFolder),
+  openFileDialog: () => ipcRenderer.invoke(IpcChannels.openFileDialog),
   readDirectory: (path) => ipcRenderer.invoke(IpcChannels.readDirectory, path),
   readFile: (path) => ipcRenderer.invoke(IpcChannels.readFile, path),
   writeFile: (path, content) => ipcRenderer.invoke(IpcChannels.writeFile, path, content),

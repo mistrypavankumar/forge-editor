@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Allotment } from 'allotment';
 import { useLayoutStore } from '../stores/layout-store';
 import { useThemeStore } from '../stores/theme-store';
@@ -14,6 +14,8 @@ import { ProjectNavigator } from './ProjectNavigator';
 import { EditorTabs } from './EditorTabs';
 import { Breadcrumbs } from './Breadcrumbs';
 import { CodeEditor } from './CodeEditor';
+import { Landing } from './Landing';
+import { useEditorStore } from '../stores/editor-store';
 import { RightPanel } from './RightPanel';
 import { BottomPanel } from './BottomPanel';
 import { StatusBar } from './StatusBar';
@@ -25,8 +27,7 @@ export function AppShell(): React.JSX.Element {
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
   const themeId = useThemeStore((s) => s.currentId);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
-  const setWorkspace = useWorkspaceStore((s) => s.setWorkspace);
-  const promptedRef = useRef(false);
+  const tabCount = useEditorStore((s) => s.tabs.length);
 
   useKeybindings();
   useSettingsPersistence();
@@ -41,15 +42,18 @@ export function AppShell(): React.JSX.Element {
     if (rootPath) void loadFiles(rootPath);
   }, [rootPath]);
 
-  // On launch with no workspace, prompt to pick a folder (once). Cancelling
-  // leaves the welcome screen.
-  useEffect(() => {
-    if (promptedRef.current || rootPath) return;
-    promptedRef.current = true;
-    void window.forge.openFolder().then((res) => {
-      if (res.ok && res.data) setWorkspace(res.data.rootPath, res.data.tree);
-    });
-  }, [rootPath, setWorkspace]);
+  const showLanding = !rootPath && tabCount === 0;
+
+  if (showLanding) {
+    return (
+      <div className="flex h-screen flex-col overflow-hidden bg-bg text-fg">
+        <TopBar />
+        <Landing />
+        <StatusBar />
+        <Palette />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-bg text-fg">
