@@ -8,23 +8,23 @@ import { cn } from '../lib/cn';
 function Segment({
   children,
   onClick,
-  accent,
+  className,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
-  accent?: boolean;
+  className?: string;
 }): React.JSX.Element {
-  const className = cn(
-    'flex h-full items-center gap-1.5 px-2 text-[11px]',
-    accent ? 'text-accent-fg' : 'text-muted',
-    onClick && 'hover:bg-white/10',
+  const base = cn(
+    'flex h-full items-center gap-1.5 px-2.5 text-[11px] text-muted',
+    onClick && 'transition-colors hover:bg-surface-3 hover:text-fg',
+    className,
   );
   return onClick ? (
-    <button type="button" onClick={onClick} className={className}>
+    <button type="button" onClick={onClick} className={base}>
       {children}
     </button>
   ) : (
-    <span className={className}>{children}</span>
+    <span className={base}>{children}</span>
   );
 }
 
@@ -41,36 +41,37 @@ export function StatusBar(): React.JSX.Element {
   return (
     <footer
       data-testid="statusbar-region"
-      className="flex h-6 shrink-0 items-center justify-between bg-accent text-accent-fg"
+      className="flex h-6 shrink-0 items-center justify-between border-t border-line bg-surface"
     >
       <div className="flex h-full items-center">
-        <Segment accent>
+        <Segment onClick={() => openBottom('problems')} className="text-accent hover:text-accent">
           <GitBranch size={12} />
           {projectStatus.branch}
         </Segment>
-        <Segment accent onClick={() => openBottom('problems')}>
-          <CircleX size={12} />
+        <Segment onClick={() => openBottom('problems')}>
+          <CircleX size={12} className={counts.errors ? 'text-danger' : ''} />
           {counts.errors}
-          <TriangleAlert size={12} className="ml-1.5" />
+          <TriangleAlert size={12} className="ml-1" />
           {counts.warnings}
         </Segment>
       </div>
 
       <div className="flex h-full items-center">
-        <Segment accent>
-          <Check size={12} />
+        <Segment>
+          <Check size={12} className="text-success" />
           TypeScript
         </Segment>
-        <Segment accent onClick={() => openBottom('tests')}>
-          <FlaskConical size={12} />
-          {testSummary.passed}/{testSummary.passed + testSummary.failed} passing
+        <Segment onClick={() => openBottom('tests')}>
+          <FlaskConical size={12} className={testSummary.failed ? 'text-warning' : 'text-success'} />
+          {testSummary.passed}/{testSummary.passed + testSummary.failed}
         </Segment>
-        <Segment accent>Build: passing</Segment>
-        <Segment accent>Prettier</Segment>
-        <Segment accent>Ln 23, Col 32</Segment>
-        <Segment accent>Spaces: 2</Segment>
-        <Segment accent>{projectStatus.encoding}</Segment>
-        <Segment accent>
+        <Segment>Build passing</Segment>
+        <Segment>Prettier</Segment>
+        <span className="mx-1 h-3 w-px bg-line" />
+        <Segment>Ln 23, Col 32</Segment>
+        <Segment>Spaces: 2</Segment>
+        <Segment>{projectStatus.encoding}</Segment>
+        <Segment className="text-accent">
           <Sparkles size={12} />
           Indexed
         </Segment>

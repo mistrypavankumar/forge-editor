@@ -6,6 +6,7 @@ import { useEditorStore } from '../stores/editor-store';
 import { useThemeStore } from '../stores/theme-store';
 import { builtInThemes } from '../theme/themes';
 import { problemsForFile, type Severity } from '../data/problems';
+import { SAMPLE_FILE_PATH } from '../data/sample-code';
 
 function languageFor(name: string): string {
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
@@ -27,6 +28,7 @@ export function CodeEditor(): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const modelsRef = useRef<Map<string, editor.ITextModel>>(new Map());
+  const suggestionRef = useRef<editor.IContentWidget | null>(null);
 
   const tabs = useEditorStore((s) => s.tabs);
   const activePath = useEditorStore((s) => s.activePath);
@@ -120,6 +122,37 @@ export function CodeEditor(): React.JSX.Element {
         endColumn: p.col + 10,
       })),
     );
+  }, [activePath, tabs]);
+
+  // Inline AI suggestion — a content widget anchored in the sample file.
+  useEffect(() => {
+    const instance = editorRef.current;
+    if (!instance) return;
+    const monaco = getMonaco();
+    if (suggestionRef.current) {
+      instance.removeContentWidget(suggestionRef.current);
+      suggestionRef.current = null;
+    }
+    if (activePath !== SAMPLE_FILE_PATH) return;
+    const node = document.createElement('div');
+    node.className = 'forge-inline-suggestion';
+    node.innerHTML = '✦ Set <code>createdAt</code> before insert <kbd>Tab</kbd>';
+    const widget: editor.IContentWidget = {
+      getId: () => 'forge.inline.suggestion',
+      getDomNode: () => node,
+      getPosition: () => ({
+        position: { lineNumber: 23, column: 52 },
+        preference: [monaco.editor.ContentWidgetPositionPreference.EXACT],
+      }),
+    };
+    instance.addContentWidget(widget);
+    suggestionRef.current = widget;
+    return () => {
+      if (editorRef.current && suggestionRef.current) {
+        editorRef.current.removeContentWidget(suggestionRef.current);
+        suggestionRef.current = null;
+      }
+    };
   }, [activePath, tabs]);
 
   const hasTabs = tabs.length > 0;

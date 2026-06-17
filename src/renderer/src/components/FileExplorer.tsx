@@ -51,7 +51,7 @@ export function FileExplorer(): React.JSX.Element {
             {recentFiles.map((f) => (
               <div
                 key={f.id}
-                className="flex h-[26px] items-center gap-1.5 px-3 text-[13px] text-muted"
+                className="flex h-7 cursor-default items-center gap-1.5 px-3 text-[13px] text-muted hover:bg-surface-2"
               >
                 <FileTypeIcon name={f.name} />
                 <span className="truncate">{f.name}</span>

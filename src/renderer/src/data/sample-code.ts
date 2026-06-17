@@ -38,3 +38,38 @@ export class UserService {
 
 export const userService = new UserService();
 `;
+
+/** Symbol trail shown in the breadcrumb for the sample file. */
+export const SAMPLE_SYMBOLS = ['UserService', 'create'];
+
+interface SeedFile {
+  path: string;
+  name: string;
+  content: string;
+}
+
+const TYPES_CODE = `export interface User {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: Date;
+}
+
+export type NewUser = Omit<User, 'id' | 'createdAt'>;
+`;
+
+const PAGE_CODE = `import { userService } from '../services/user-service';
+
+export default async function ProfilePage({ params }: { params: { id: string } }) {
+  const user = await userService.findById(params.id);
+  if (!user) return <NotFound />;
+  return <Profile user={user} />;
+}
+`;
+
+/** Files seeded on first launch so the workspace looks lived-in. */
+export const SEED_FILES: SeedFile[] = [
+  { path: SAMPLE_FILE_PATH, name: SAMPLE_FILE_NAME, content: SAMPLE_CODE },
+  { path: '/forge/src/types/user.ts', name: 'user.ts', content: TYPES_CODE },
+  { path: '/forge/src/app/profile/page.tsx', name: 'page.tsx', content: PAGE_CODE },
+];

@@ -12,7 +12,7 @@ export function EditorTabs(): React.JSX.Element | null {
   if (tabs.length === 0) return null;
 
   return (
-    <div className="flex h-9 shrink-0 items-stretch overflow-x-auto border-b border-line bg-surface">
+    <div className="flex h-9 shrink-0 items-stretch overflow-x-auto bg-surface">
       {tabs.map((tab) => {
         const isActive = tab.path === activePath;
         return (
@@ -20,8 +20,10 @@ export function EditorTabs(): React.JSX.Element | null {
             key={tab.path}
             onClick={() => setActive(tab.path)}
             className={cn(
-              'group relative flex max-w-[200px] cursor-pointer items-center gap-2 border-r border-line-soft pl-3 pr-2 text-xs',
-              isActive ? 'bg-bg text-fg' : 'text-faint hover:text-muted',
+              'group relative flex max-w-[200px] cursor-pointer items-center gap-2 pl-3 pr-2 text-xs',
+              isActive
+                ? 'bg-bg text-fg'
+                : 'text-faint hover:bg-surface-2 hover:text-muted',
             )}
           >
             {isActive ? <span className="absolute inset-x-0 top-0 h-0.5 bg-accent" /> : null}

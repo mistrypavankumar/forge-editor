@@ -44,8 +44,10 @@ function TreeNode({ entry, depth }: { entry: DirEntry; depth: number }): React.J
         onClick={() => void onClick()}
         style={{ paddingLeft: depth * 12 + 8 }}
         className={cn(
-          'group flex h-[26px] w-full items-center gap-1.5 pr-2 text-[13px] transition-colors',
-          isActive ? 'bg-accent/10 text-fg' : 'text-muted hover:bg-surface-3 hover:text-fg',
+          'group flex h-7 w-full items-center gap-1.5 pr-2 text-[13px] transition-colors',
+          isActive
+            ? 'bg-accent/12 text-fg'
+            : 'text-muted hover:bg-surface-2 hover:text-fg',
         )}
       >
         <span className="flex w-3.5 shrink-0 justify-center text-faint">

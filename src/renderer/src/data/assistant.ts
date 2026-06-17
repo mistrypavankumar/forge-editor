@@ -19,6 +19,16 @@ export interface ChatMessage {
   text: string;
 }
 
+export const cannedReplies: Record<QuickAction['icon'], string> = {
+  explain:
+    '`UserService` wraps `db.users` and validates every row with a Zod schema before returning it. Public surface: `findById`, `create`, `list`.',
+  bug: 'Likely defect on line 23: `create()` passes `input` to `db.users.insert`, but the schema now requires `createdAt`. Add it before inserting.',
+  refactor:
+    'Safe refactor: extract a `toUser(row)` helper for the repeated `userSchema.parse(...)`. Impact preview shows 3 call sites — see the Context tab.',
+  test: 'I can scaffold 5 tests covering findById (hit/miss), create (dup/success), and list (limit). 4 already exist in user-service.test.ts.',
+  perf: '`list()` parses every row individually. For large pages, validate once with `z.array(userSchema)` to cut per-row overhead.',
+};
+
 export const seededChat: ChatMessage[] = [
   {
     id: 'm1',

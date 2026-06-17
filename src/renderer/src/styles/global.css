@@ -25,19 +25,19 @@
 
 /* Dark defaults — overridden at runtime by the theme store. */
 :root {
-  --bg: #0b0b0d;
-  --surface: #131316;
-  --surface-2: #1a1a1e;
-  --surface-3: #232329;
-  --line: #26262c;
-  --line-soft: #1d1d21;
-  --fg: #e7e7ea;
-  --muted: #a0a0a8;
-  --faint: #6a6a73;
-  --accent: #6366f1;
+  --bg: #0a0a0c;
+  --surface: #141417;
+  --surface-2: #1c1c21;
+  --surface-3: #272730;
+  --line: #2c2c34;
+  --line-soft: #1f1f25;
+  --fg: #ededf0;
+  --muted: #b2b2bb;
+  --faint: #7c7c87;
+  --accent: #7079f5;
   --accent-fg: #ffffff;
-  --success: #34d399;
-  --warning: #fbbf24;
+  --success: #3ddc97;
+  --warning: #f5c451;
   --danger: #f87171;
   --info: #60a5fa;
 
@@ -96,4 +96,27 @@ body {
 /* Allotment resizer color */
 .split-view-view {
   min-width: 0;
+}
+
+/* Inline AI suggestion widget rendered inside Monaco */
+.forge-inline-suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.forge-inline-suggestion kbd {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
 }
