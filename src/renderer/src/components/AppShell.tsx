@@ -1,7 +1,11 @@
+import { useEffect } from 'react';
 import { GitBranch } from 'lucide-react';
 import { Allotment } from 'allotment';
 import { useLayoutStore } from '../stores/layout-store';
 import { useEditorStore } from '../stores/editor-store';
+import { useThemeStore } from '../stores/theme-store';
+import { applyCssVariables } from '../theme/theme-service';
+import { builtInThemes } from '../theme/themes';
 import { useKeybindings } from '../keybindings/use-keybindings';
 import { TitleBar } from './TitleBar';
 import { ActivityBar } from './ActivityBar';
@@ -14,8 +18,14 @@ export function AppShell(): React.JSX.Element {
   const activePath = useEditorStore((s) => s.activePath);
   const tabs = useEditorStore((s) => s.tabs);
   const active = tabs.find((t) => t.path === activePath);
+  const themeId = useThemeStore((s) => s.currentId);
 
   useKeybindings();
+
+  useEffect(() => {
+    const theme = builtInThemes[themeId];
+    if (theme) applyCssVariables(theme);
+  }, [themeId]);
 
   return (
     <div className="app-shell">

@@ -3,6 +3,8 @@ import { X } from 'lucide-react';
 import type { editor } from 'monaco-editor';
 import { getMonaco } from '../editor/monaco-setup';
 import { useEditorStore } from '../stores/editor-store';
+import { useThemeStore } from '../stores/theme-store';
+import { builtInThemes } from '../theme/themes';
 import { FileTypeIcon } from './file-icon';
 
 function languageFor(name: string): string {
@@ -25,6 +27,7 @@ export function EditorPane(): React.JSX.Element {
   const setActive = useEditorStore((s) => s.setActive);
   const closeFile = useEditorStore((s) => s.closeFile);
   const updateContent = useEditorStore((s) => s.updateContent);
+  const themeId = useThemeStore((s) => s.currentId);
 
   // Create the Monaco instance once.
   useEffect(() => {
@@ -88,6 +91,12 @@ export function EditorPane(): React.JSX.Element {
       }
     }
   }, [tabs]);
+
+  // Keep the Monaco theme in sync with the app theme.
+  useEffect(() => {
+    const theme = builtInThemes[themeId];
+    getMonaco().editor.setTheme(theme?.type === 'light' ? 'forge-light' : 'forge-dark');
+  }, [themeId]);
 
   const hasTabs = tabs.length > 0;
 

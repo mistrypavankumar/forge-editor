@@ -43,6 +43,22 @@ export function getMonaco(): typeof monaco {
         'scrollbarSlider.activeBackground': '#3a3a4288',
       },
     });
+    monaco.editor.defineTheme('forge-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': '#ffffff',
+        'editor.foreground': '#1f1f23',
+        'editorLineNumber.foreground': '#9b9ba3',
+        'editorLineNumber.activeForeground': '#52525b',
+        'editor.lineHighlightBackground': '#f4f4f6',
+        'editor.selectionBackground': '#6950e833',
+        'editorCursor.foreground': '#6950e8',
+        'editorWidget.background': '#f6f6f8',
+        'editorWidget.border': '#d4d4d8',
+      },
+    });
     themeDefined = true;
   }
   return monaco;
