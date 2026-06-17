@@ -155,6 +155,20 @@ export function TerminalView({
       }
     });
 
+    // Map mac line-editing shortcuts to the control sequences the shell expects.
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type !== 'keydown') return true;
+      if (e.key === 'Backspace' && e.metaKey) {
+        window.forge.sendInput(sessionId, '\x15'); // Ctrl+U — kill line
+        return false;
+      }
+      if (e.key === 'Backspace' && e.altKey) {
+        window.forge.sendInput(sessionId, '\x1b\x7f'); // Alt+Backspace — kill word
+        return false;
+      }
+      return true;
+    });
+
     // Raw passthrough — the shell handles editing, history, programs like `claude`.
     const dataSub = term.onData((d) => window.forge.sendInput(sessionId, d));
 
