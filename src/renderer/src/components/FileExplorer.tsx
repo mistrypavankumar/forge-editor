@@ -1,65 +1,14 @@
-import { ChevronDown, ChevronRight, FolderOpen } from 'lucide-react';
+import { FolderOpen, Clock } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
-import { useEditorStore } from '../stores/editor-store';
-import { FileTypeIcon, FolderIcon } from './file-icon';
-import type { DirEntry } from '@shared/ipc-contract';
+import { FileTree } from './FileTree';
+import { FileTypeIcon } from './file-icon';
+import { PanelHeader, SectionLabel } from './ui/Panel';
+import { IconButton } from './ui/IconButton';
+import { recentFiles } from '../data/recent';
 
 function basename(p: string): string {
   const parts = p.split('/').filter(Boolean);
   return parts[parts.length - 1] ?? p;
-}
-
-function TreeNode({ entry, depth }: { entry: DirEntry; depth: number }): React.JSX.Element {
-  const expanded = useWorkspaceStore((s) => s.expandedPaths[entry.path] ?? false);
-  const children = useWorkspaceStore((s) => s.childrenByPath[entry.path]);
-  const setChildren = useWorkspaceStore((s) => s.setChildren);
-  const toggleExpanded = useWorkspaceStore((s) => s.toggleExpanded);
-  const openFile = useEditorStore((s) => s.openFile);
-  const activePath = useEditorStore((s) => s.activePath);
-
-  const onClick = async (): Promise<void> => {
-    if (entry.isDirectory) {
-      toggleExpanded(entry.path);
-      if (!expanded && children === undefined) {
-        const res = await window.forge.readDirectory(entry.path);
-        if (res.ok) setChildren(entry.path, res.data);
-      }
-      return;
-    }
-    const res = await window.forge.readFile(entry.path);
-    if (res.ok) openFile({ path: entry.path, name: entry.name, content: res.data });
-  };
-
-  const isActive = !entry.isDirectory && entry.path === activePath;
-
-  return (
-    <>
-      <div
-        className={`tree-node${isActive ? ' tree-node-active' : ''}`}
-        style={{ paddingLeft: depth * 12 + 6 }}
-        onClick={() => void onClick()}
-      >
-        <span className="tree-twisty">
-          {entry.isDirectory ? (
-            expanded ? (
-              <ChevronDown size={14} strokeWidth={2} />
-            ) : (
-              <ChevronRight size={14} strokeWidth={2} />
-            )
-          ) : null}
-        </span>
-        <span className="tree-icon">
-          {entry.isDirectory ? <FolderIcon open={expanded} /> : <FileTypeIcon name={entry.name} />}
-        </span>
-        <span className="tree-label">{entry.name}</span>
-      </div>
-      {entry.isDirectory && expanded
-        ? (children ?? []).map((child) => (
-            <TreeNode key={child.path} entry={child} depth={depth + 1} />
-          ))
-        : null}
-    </>
-  );
 }
 
 export function FileExplorer(): React.JSX.Element {
@@ -73,31 +22,52 @@ export function FileExplorer(): React.JSX.Element {
   };
 
   return (
-    <div className="explorer">
-      <div className="explorer-header">
-        <span className="explorer-title" title={rootPath ?? undefined}>
-          {rootPath ? basename(rootPath) : 'Explorer'}
-        </span>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => void onOpenFolder()}
-          aria-label="Change folder"
-          title="Change folder"
-        >
-          <FolderOpen size={15} strokeWidth={1.75} />
-        </button>
-      </div>
+    <div className="flex h-full flex-col">
+      <PanelHeader
+        title={rootPath ? basename(rootPath) : 'Explorer'}
+        actions={
+          <IconButton
+            label="Change folder"
+            className="h-6 w-6"
+            onClick={() => void onOpenFolder()}
+          >
+            <FolderOpen size={14} />
+          </IconButton>
+        }
+      />
+
       {rootPath ? (
-        <div className="explorer-tree">
-          {rootEntries.map((entry) => (
-            <TreeNode key={entry.path} entry={entry} depth={0} />
-          ))}
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-auto pb-2">
+            <FileTree entries={rootEntries} />
+          </div>
+
+          <div className="shrink-0 border-t border-line-soft pb-2">
+            <SectionLabel>
+              <span className="inline-flex items-center gap-1.5">
+                <Clock size={11} /> Recently edited
+              </span>
+            </SectionLabel>
+            {recentFiles.map((f) => (
+              <div
+                key={f.id}
+                className="flex h-[26px] items-center gap-1.5 px-3 text-[13px] text-muted"
+              >
+                <FileTypeIcon name={f.name} />
+                <span className="truncate">{f.name}</span>
+                <span className="ml-auto truncate text-[11px] text-faint">{f.dir}</span>
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
-        <div className="explorer-empty">
-          <p>No folder opened</p>
-          <button type="button" className="primary-button" onClick={() => void onOpenFolder()}>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+          <p className="text-sm text-faint">No folder opened</p>
+          <button
+            type="button"
+            onClick={() => void onOpenFolder()}
+            className="rounded-md bg-accent px-3.5 py-1.5 text-xs font-medium text-accent-fg transition-opacity hover:opacity-90"
+          >
             Open Folder
           </button>
         </div>

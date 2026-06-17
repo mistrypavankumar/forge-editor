@@ -1,0 +1,34 @@
+import { ChevronRight } from 'lucide-react';
+import { useEditorStore } from '../stores/editor-store';
+import { FileTypeIcon } from './file-icon';
+
+export function Breadcrumbs(): React.JSX.Element | null {
+  const activePath = useEditorStore((s) => s.activePath);
+  const tabs = useEditorStore((s) => s.tabs);
+  const active = tabs.find((t) => t.path === activePath);
+  if (!active || !activePath) return null;
+
+  const segments = activePath.split('/').filter(Boolean);
+  const crumbs = segments.slice(-4); // keep it short
+
+  return (
+    <div className="flex h-8 shrink-0 items-center gap-1 border-b border-line-soft bg-bg px-3 text-[11px] text-faint">
+      {crumbs.map((seg, i) => {
+        const isLast = i === crumbs.length - 1;
+        return (
+          <span key={`${seg}-${i}`} className="flex items-center gap-1">
+            {i > 0 ? <ChevronRight size={12} className="text-faint/60" /> : null}
+            {isLast ? (
+              <span className="inline-flex items-center gap-1.5 text-muted">
+                <FileTypeIcon name={seg} />
+                {seg}
+              </span>
+            ) : (
+              <span className="hover:text-muted">{seg}</span>
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+}

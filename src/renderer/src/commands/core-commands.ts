@@ -38,4 +38,16 @@ export function registerCoreCommands(): void {
     category: 'View',
     run: () => useLayoutStore.getState().togglePanel('sidebar'),
   });
+  commandRegistry.register({
+    id: 'view.toggleBottomPanel',
+    title: 'Toggle Bottom Panel',
+    category: 'View',
+    run: () => useLayoutStore.getState().togglePanel('bottom'),
+  });
+  commandRegistry.register({
+    id: 'view.toggleRightPanel',
+    title: 'Toggle Assistant Panel',
+    category: 'View',
+    run: () => useLayoutStore.getState().togglePanel('right'),
+  });
 }

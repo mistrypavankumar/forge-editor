@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
 import type { editor } from 'monaco-editor';
 import { getMonaco } from '../editor/monaco-setup';
 import { useEditorStore } from '../stores/editor-store';
 import { useThemeStore } from '../stores/theme-store';
 import { builtInThemes } from '../theme/themes';
-import { FileTypeIcon } from './file-icon';
+import { problemsForFile, type Severity } from '../data/problems';
 
 function languageFor(name: string): string {
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
@@ -17,35 +17,43 @@ function languageFor(name: string): string {
   return map[ext] ?? 'plaintext';
 }
 
-export function EditorPane(): React.JSX.Element {
+function severityLevel(monaco: ReturnType<typeof getMonaco>, sev: Severity): number {
+  if (sev === 'error') return monaco.MarkerSeverity.Error;
+  if (sev === 'warning') return monaco.MarkerSeverity.Warning;
+  return monaco.MarkerSeverity.Info;
+}
+
+export function CodeEditor(): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const modelsRef = useRef<Map<string, editor.ITextModel>>(new Map());
 
   const tabs = useEditorStore((s) => s.tabs);
   const activePath = useEditorStore((s) => s.activePath);
-  const setActive = useEditorStore((s) => s.setActive);
-  const closeFile = useEditorStore((s) => s.closeFile);
   const updateContent = useEditorStore((s) => s.updateContent);
   const themeId = useThemeStore((s) => s.currentId);
 
-  // Create the Monaco instance once.
   useEffect(() => {
     if (!containerRef.current) return;
     const monaco = getMonaco();
     const instance = monaco.editor.create(containerRef.current, {
       theme: 'forge-dark',
       automaticLayout: true,
-      minimap: { enabled: true },
+      minimap: { enabled: true, renderCharacters: false, maxColumn: 80 },
       fontSize: 13,
       fontFamily: "'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace",
       fontLigatures: true,
-      lineNumbersMinChars: 3,
-      padding: { top: 10 },
+      lineNumbersMinChars: 4,
+      padding: { top: 12 },
       smoothScrolling: true,
       cursorBlinking: 'smooth',
+      cursorSmoothCaretAnimation: 'on',
       renderLineHighlight: 'all',
       scrollBeyondLastLine: false,
+      roundedSelection: true,
+      guides: { indentation: false },
+      overviewRulerBorder: false,
+      scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     });
     editorRef.current = instance;
     const sub = instance.onDidChangeModelContent(() => {
@@ -58,7 +66,7 @@ export function EditorPane(): React.JSX.Element {
     };
   }, [updateContent]);
 
-  // Bind the active tab to a Monaco model (one model per path, preserving undo history).
+  // Bind the active tab to a per-path Monaco model (preserves undo + cursor).
   useEffect(() => {
     const instance = editorRef.current;
     if (!instance) return;
@@ -71,17 +79,13 @@ export function EditorPane(): React.JSX.Element {
     const monaco = getMonaco();
     let model = modelsRef.current.get(activePath);
     if (!model) {
-      model = monaco.editor.createModel(
-        tab.content,
-        languageFor(tab.name),
-        monaco.Uri.file(activePath),
-      );
+      model = monaco.editor.createModel(tab.content, languageFor(tab.name), monaco.Uri.file(activePath));
       modelsRef.current.set(activePath, model);
     }
     instance.setModel(model);
   }, [activePath, tabs]);
 
-  // Dispose models for tabs that have been closed.
+  // Dispose models for closed tabs.
   useEffect(() => {
     const openPaths = new Set(tabs.map((t) => t.path));
     for (const [path, model] of modelsRef.current) {
@@ -92,65 +96,59 @@ export function EditorPane(): React.JSX.Element {
     }
   }, [tabs]);
 
-  // Keep the Monaco theme in sync with the app theme.
+  // Sync Monaco theme with the app theme.
   useEffect(() => {
     const theme = builtInThemes[themeId];
     getMonaco().editor.setTheme(theme?.type === 'light' ? 'forge-light' : 'forge-dark');
   }, [themeId]);
 
+  // Project mock problems onto the active model as real Monaco markers (squiggles + hover).
+  useEffect(() => {
+    const monaco = getMonaco();
+    const model = editorRef.current?.getModel();
+    if (!model) return;
+    const probs = problemsForFile(activePath);
+    monaco.editor.setModelMarkers(
+      model,
+      'forge',
+      probs.map((p) => ({
+        severity: severityLevel(monaco, p.severity),
+        message: `${p.message}  ${p.code}`,
+        startLineNumber: p.line,
+        startColumn: p.col,
+        endLineNumber: p.line,
+        endColumn: p.col + 10,
+      })),
+    );
+  }, [activePath, tabs]);
+
   const hasTabs = tabs.length > 0;
 
   return (
-    <div className="editor-pane">
-      {hasTabs && (
-        <div className="tab-bar">
-          {tabs.map((tab) => (
-            <div
-              key={tab.path}
-              className={`tab${tab.path === activePath ? ' tab-active' : ''}`}
-              onClick={() => setActive(tab.path)}
-            >
-              <span className="tab-icon">
-                <FileTypeIcon name={tab.name} />
-              </span>
-              <span className="tab-name">{tab.name}</span>
-              <button
-                type="button"
-                className={`tab-close${tab.dirty ? ' tab-close-dirty' : ''}`}
-                aria-label={`Close ${tab.name}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeFile(tab.path);
-                }}
-              >
-                {tab.dirty ? <span className="dirty-dot" /> : <X size={14} strokeWidth={2} />}
-              </button>
-            </div>
-          ))}
+    <div className="relative h-full w-full bg-bg">
+      <div ref={containerRef} className="absolute inset-0" />
+      {!hasTabs ? (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-6">
+          <div className="text-5xl font-bold tracking-tight text-surface-3">Forge</div>
+          <ul className="flex flex-col gap-2.5 text-xs text-faint">
+            {[
+              ['Open Folder', '⌘O'],
+              ['Command Palette', '⌘K'],
+              ['Go to File', '⌘P'],
+              ['Toggle Terminal', '⌘J'],
+            ].map(([label, key]) => (
+              <li key={label} className="flex items-center justify-between gap-10">
+                <span className="inline-flex items-center gap-2">
+                  <FolderOpen size={13} /> {label}
+                </span>
+                <kbd className="rounded-md border border-line bg-surface-2 px-2 py-0.5 font-mono text-faint">
+                  {key}
+                </kbd>
+              </li>
+            ))}
+          </ul>
         </div>
-      )}
-      <div className="editor-body">
-        <div className="editor-host" ref={containerRef} />
-        {!hasTabs && (
-          <div className="editor-empty">
-            <div className="editor-empty-mark">Forge</div>
-            <ul className="editor-empty-hints">
-              <li>
-                <span>Open Folder</span>
-                <kbd>⌘O</kbd>
-              </li>
-              <li>
-                <span>Find in File</span>
-                <kbd>⌘F</kbd>
-              </li>
-              <li>
-                <span>Save</span>
-                <kbd>⌘S</kbd>
-              </li>
-            </ul>
-          </div>
-        )}
-      </div>
+      ) : null}
     </div>
   );
 }

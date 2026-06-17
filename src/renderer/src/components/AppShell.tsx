@@ -1,24 +1,26 @@
 import { useEffect } from 'react';
-import { GitBranch } from 'lucide-react';
 import { Allotment } from 'allotment';
 import { useLayoutStore } from '../stores/layout-store';
-import { useEditorStore } from '../stores/editor-store';
 import { useThemeStore } from '../stores/theme-store';
 import { applyCssVariables } from '../theme/theme-service';
 import { builtInThemes } from '../theme/themes';
 import { useKeybindings } from '../keybindings/use-keybindings';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
-import { TitleBar } from './TitleBar';
-import { ActivityBar } from './ActivityBar';
+import { TopBar } from './TopBar';
+import { ActivitySidebar } from './ActivitySidebar';
 import { FileExplorer } from './FileExplorer';
-import { EditorPane } from './EditorPane';
+import { EditorTabs } from './EditorTabs';
+import { Breadcrumbs } from './Breadcrumbs';
+import { CodeEditor } from './CodeEditor';
+import { RightPanel } from './RightPanel';
+import { BottomPanel } from './BottomPanel';
+import { StatusBar } from './StatusBar';
 import { Palette } from './Palette';
 
 export function AppShell(): React.JSX.Element {
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
-  const activePath = useEditorStore((s) => s.activePath);
-  const tabs = useEditorStore((s) => s.tabs);
-  const active = tabs.find((t) => t.path === activePath);
+  const rightVisible = useLayoutStore((s) => s.rightVisible);
+  const bottomVisible = useLayoutStore((s) => s.bottomVisible);
   const themeId = useThemeStore((s) => s.currentId);
 
   useKeybindings();
@@ -30,39 +32,48 @@ export function AppShell(): React.JSX.Element {
   }, [themeId]);
 
   return (
-    <div className="app-shell">
-      <TitleBar />
-      <div className="app-body">
-        <ActivityBar />
-        <div className="app-main">
+    <div className="flex h-screen flex-col overflow-hidden bg-bg text-fg">
+      <TopBar />
+      <div className="flex min-h-0 flex-1">
+        <ActivitySidebar />
+        <div className="min-w-0 flex-1">
           <Allotment proportionalLayout={false}>
-            {sidebarVisible && (
-              <Allotment.Pane preferredSize={260} minSize={180}>
-                <div className="sidebar" data-testid="sidebar-region">
+            {sidebarVisible ? (
+              <Allotment.Pane preferredSize={260} minSize={200} maxSize={460} snap>
+                <div data-testid="sidebar-region" className="h-full bg-surface">
                   <FileExplorer />
                 </div>
               </Allotment.Pane>
-            )}
-            <Allotment.Pane>
-              <div className="editor-region" data-testid="editor-region">
-                <EditorPane />
-              </div>
+            ) : null}
+
+            <Allotment.Pane minSize={420}>
+              <Allotment vertical proportionalLayout={false}>
+                <Allotment.Pane minSize={160}>
+                  <div data-testid="editor-region" className="flex h-full flex-col bg-bg">
+                    <EditorTabs />
+                    <Breadcrumbs />
+                    <div className="min-h-0 flex-1">
+                      <CodeEditor />
+                    </div>
+                  </div>
+                </Allotment.Pane>
+                {bottomVisible ? (
+                  <Allotment.Pane preferredSize={240} minSize={120} snap>
+                    <BottomPanel />
+                  </Allotment.Pane>
+                ) : null}
+              </Allotment>
             </Allotment.Pane>
+
+            {rightVisible ? (
+              <Allotment.Pane preferredSize={340} minSize={280} maxSize={520} snap>
+                <RightPanel />
+              </Allotment.Pane>
+            ) : null}
           </Allotment>
         </div>
       </div>
-      <div className="statusbar" data-testid="statusbar-region">
-        <div className="statusbar-left">
-          <span className="statusbar-item statusbar-branch">
-            <GitBranch size={13} strokeWidth={1.75} />
-            main
-          </span>
-        </div>
-        <div className="statusbar-right">
-          {active && <span className="statusbar-item">{active.dirty ? 'Unsaved' : 'Saved'}</span>}
-          <span className="statusbar-item">Forge</span>
-        </div>
-      </div>
+      <StatusBar />
       <Palette />
     </div>
   );

@@ -4,6 +4,7 @@ import { fuzzyMatch } from '../util/fuzzy';
 import { usePaletteStore } from '../stores/palette-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { cn } from '../lib/cn';
 import type { FileItem } from '@shared/ipc-contract';
 
 interface Row {
@@ -95,10 +96,16 @@ export function Palette(): React.JSX.Element | null {
   };
 
   return (
-    <div className="palette-overlay" onClick={close}>
-      <div className="palette" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[12vh]"
+      onClick={close}
+    >
+      <div
+        className="w-[640px] max-w-[90vw] overflow-hidden rounded-xl border border-line bg-surface-2 shadow-2xl shadow-black/50"
+        onClick={(e) => e.stopPropagation()}
+      >
         <input
-          className="palette-input"
+          className="w-full border-b border-line bg-transparent px-4 py-3.5 text-sm text-fg outline-none placeholder:text-faint"
           autoFocus
           value={query}
           placeholder={mode === 'commands' ? 'Type a command…' : 'Go to file…'}
@@ -108,19 +115,26 @@ export function Palette(): React.JSX.Element | null {
           }}
           onKeyDown={onKeyDown}
         />
-        <div className="palette-list">
+        <div className="max-h-[360px] overflow-y-auto p-1.5">
           {filtered.map((row, i) => (
             <div
               key={row.id}
-              className={`palette-row${i === activeIndex ? ' palette-row-active' : ''}`}
+              className={cn(
+                'flex cursor-pointer items-baseline gap-2.5 rounded-lg px-3 py-2',
+                i === activeIndex ? 'bg-accent/15' : 'hover:bg-surface-3',
+              )}
               onMouseEnter={() => setActiveIndex(i)}
               onClick={() => runAt(i)}
             >
-              <span className="palette-primary">{row.primary}</span>
-              {row.secondary ? <span className="palette-secondary">{row.secondary}</span> : null}
+              <span className="text-[13px] text-fg">{row.primary}</span>
+              {row.secondary ? (
+                <span className="ml-auto truncate text-[11px] text-faint">{row.secondary}</span>
+              ) : null}
             </div>
           ))}
-          {filtered.length === 0 ? <div className="palette-empty">No results</div> : null}
+          {filtered.length === 0 ? (
+            <div className="px-3 py-3 text-center text-[13px] text-faint">No results</div>
+          ) : null}
         </div>
       </div>
     </div>

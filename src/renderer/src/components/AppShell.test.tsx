@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { AppShell } from './AppShell';
 
-vi.mock('./EditorPane', () => ({ EditorPane: () => null }));
+vi.mock('./CodeEditor', () => ({ CodeEditor: () => null }));
 
 beforeAll(() => {
   (window as unknown as { forge: Record<string, unknown> }).forge = {
