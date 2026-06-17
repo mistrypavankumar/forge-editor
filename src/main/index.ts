@@ -1,5 +1,6 @@
 import { join } from 'node:path';
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
+import { IpcChannels, pongOf } from '@shared/ipc-contract';
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -24,6 +25,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  ipcMain.handle(IpcChannels.ping, (_event, msg: string) => pongOf(msg));
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
