@@ -65,7 +65,7 @@ export function TerminalView({
       convertEol: true,
       theme: {
         background: '#080B12',
-        foreground: '#E6EDF7',
+        foreground: '#C7D2E3',
         cursor: '#8B73FF',
         cursorAccent: '#080B12',
         selectionBackground: '#7C5CFF40',
@@ -84,7 +84,7 @@ export function TerminalView({
         brightBlue: '#7cccff',
         brightMagenta: '#a48bff',
         brightCyan: '#6fe0ee',
-        brightWhite: '#E6EDF7',
+        brightWhite: '#D7DEEC',
       },
     });
     const fit = new FitAddon();
