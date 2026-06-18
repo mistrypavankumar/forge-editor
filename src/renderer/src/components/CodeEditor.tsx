@@ -11,6 +11,7 @@ import { commandForKeyEvent, defaultKeybindings, mergeKeybindings } from '../key
 import { useKeybindingsStore } from '../stores/keybindings-store';
 import { registerFormatProvider } from '../editor/format-provider';
 import { registerAutoCloseTag } from '../editor/auto-close-tag';
+import { registerTabOut } from '../editor/tab-out';
 import { setActiveEditor } from '../editor/active-editor';
 import { saveAllFiles } from '../lib/save-actions';
 import { useFormatterStore } from '../stores/formatter-store';
@@ -172,6 +173,9 @@ export function CodeEditor(): React.JSX.Element {
 
     // Auto-close HTML/XML tags as you type.
     disposables.push(registerAutoCloseTag(instance, monaco));
+
+    // Tab jumps out of a closing bracket/quote when the cursor sits right before one.
+    disposables.push(registerTabOut(instance));
 
     // Click the change gutter (colored bar / deletion marker) to open the diff peek.
     disposables.push(
