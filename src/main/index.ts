@@ -24,6 +24,7 @@ import {
 import { readSettings, writeSettings } from './settings/settings-service';
 import { runFormatter, formatText } from './format/format-service';
 import { runDiagnostics } from './diagnostics/diagnostics-service';
+import { resolveImport } from './navigation/resolve-import';
 import {
   getGitBlame,
   getGitChanges,
@@ -229,6 +230,9 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.runDiagnostics, (_e, rootPath: string) =>
     toResult(() => runDiagnostics(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.resolveImport, (_e, rootPath: string, fromFile: string, spec: string) =>
+    toResult(() => resolveImport(rootPath, fromFile, spec)),
   );
   ipcMain.handle(IpcChannels.terminalCreate, (e, args: TerminalCreateArgs) =>
     toResult(async () => createTerminal(e.sender, args)),

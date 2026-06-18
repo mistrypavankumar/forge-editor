@@ -42,6 +42,7 @@ export const IpcChannels = {
   runFormatter: 'forge:format:run',
   formatText: 'forge:format:text',
   runDiagnostics: 'forge:diagnostics:run',
+  resolveImport: 'forge:nav:resolveImport',
   terminalCreate: 'forge:terminal:create',
   terminalInput: 'forge:terminal:input',
   terminalResize: 'forge:terminal:resize',
@@ -253,6 +254,7 @@ export interface ForgeApi {
     input: string,
   ) => Promise<Result<FormatTextResult>>;
   runDiagnostics: (rootPath: string) => Promise<Result<ProjectDiagnostic[]>>;
+  resolveImport: (rootPath: string, fromFile: string, spec: string) => Promise<Result<string | null>>;
   createTerminal: (args: TerminalCreateArgs) => Promise<Result<void>>;
   sendInput: (id: string, data: string) => void;
   resizeTerminal: (id: string, cols: number, rows: number) => void;

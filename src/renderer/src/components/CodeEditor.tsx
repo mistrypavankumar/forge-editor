@@ -13,6 +13,8 @@ import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { registerFormatProvider } from '../editor/format-provider';
 import { registerAutoCloseTag } from '../editor/auto-close-tag';
 import { registerTabOut } from '../editor/tab-out';
+import { openFilePath } from '../lib/workspace-actions';
+import { importSpecForName, moduleSpecAtColumn, localDeclarationLine } from '../lib/go-to-definition';
 import { setActiveEditor } from '../editor/active-editor';
 import { saveAllFiles } from '../lib/save-actions';
 import { useFormatterStore } from '../stores/formatter-store';
@@ -181,6 +183,56 @@ export function CodeEditor(): React.JSX.Element {
 
     // Tab jumps out of a closing bracket/quote when the cursor sits right before one.
     disposables.push(registerTabOut(instance));
+
+    // Cmd/Ctrl+Click: go to definition — open the imported module (or jump to a local
+    // declaration) for the symbol or import path under the cursor.
+    disposables.push(
+      instance.onMouseDown((e) => {
+        if ((!e.event.metaKey && !e.event.ctrlKey) || !e.event.leftButton) return;
+        const model = instance.getModel();
+        const pos = e.target.position;
+        if (!model || !pos) return;
+        const lineText = model.getLineContent(pos.lineNumber);
+        const fullText = model.getValue();
+        const fromPath = model.uri.path;
+        const rootPath = useWorkspaceStore.getState().rootPath;
+
+        let spec = moduleSpecAtColumn(lineText, pos.column);
+        let symbol: string | null = null;
+        if (!spec) {
+          const word = model.getWordAtPosition(pos);
+          if (word) {
+            symbol = word.word;
+            spec = importSpecForName(fullText, word.word);
+          }
+        }
+
+        if (spec && rootPath) {
+          e.event.preventDefault();
+          const name = symbol;
+          void window.forge.resolveImport(rootPath, fromPath, spec).then((res) => {
+            if (!res.ok || !res.data) return;
+            const target = res.data;
+            void openFilePath(target, target.slice(target.lastIndexOf('/') + 1)).then(() => {
+              const tab = useEditorStore.getState().tabs.find((t) => t.path === target);
+              const ln = tab && name ? localDeclarationLine(tab.content, name) : null;
+              useEditorStore.getState().requestReveal({ path: target, line: ln ?? 1, col: 1 });
+            });
+          });
+          return;
+        }
+
+        // Same-file declaration jump.
+        if (symbol) {
+          const line = localDeclarationLine(fullText, symbol);
+          if (line && line !== pos.lineNumber) {
+            e.event.preventDefault();
+            instance.revealLineInCenter(line);
+            instance.setPosition({ lineNumber: line, column: 1 });
+          }
+        }
+      }),
+    );
 
     // Click the change gutter (colored bar / deletion marker) to open the diff peek.
     disposables.push(
