@@ -9,6 +9,7 @@ import { computeDiff, type DiffHunk } from '../lib/line-diff';
 import { commandRegistry } from '../commands/command-registry';
 import { commandForKeyEvent, defaultKeybindings, mergeKeybindings } from '../keybindings/keybinding-service';
 import { useKeybindingsStore } from '../stores/keybindings-store';
+import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { registerFormatProvider } from '../editor/format-provider';
 import { registerAutoCloseTag } from '../editor/auto-close-tag';
 import { registerTabOut } from '../editor/tab-out';
@@ -57,6 +58,7 @@ export function CodeEditor(): React.JSX.Element {
   const reveal = useEditorStore((s) => s.reveal);
   const pendingRevert = useEditorStore((s) => s.pendingRevert);
   const fontSize = useEditorStore((s) => s.fontSize);
+  const projectDiagnostics = useDiagnosticsStore((s) => s.diagnostics);
   const themeId = useThemeStore((s) => s.currentId);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const syncTick = useWorkspaceStore((s) => s.syncTick);
@@ -330,6 +332,29 @@ export function CodeEditor(): React.JSX.Element {
   useEffect(() => {
     editorRef.current?.updateOptions({ fontSize });
   }, [fontSize]);
+
+  // Project the workspace-wide `tsc` diagnostics onto open files as markers, so they show
+  // as inline squiggles with hover tooltips (Monaco's own TS worker is single-file only).
+  useEffect(() => {
+    const monaco = getMonaco();
+    for (const [path, model] of modelsRef.current) {
+      const rel = rootPath && path.startsWith(`${rootPath}/`) ? path.slice(rootPath.length + 1) : path;
+      const markers = projectDiagnostics
+        .filter((d) => d.file === rel)
+        .map((d) => {
+          const word = model.getWordAtPosition({ lineNumber: d.line, column: d.col });
+          return {
+            severity: d.severity === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning,
+            message: `${d.message} (${d.code})`,
+            startLineNumber: d.line,
+            startColumn: word ? word.startColumn : d.col,
+            endLineNumber: d.line,
+            endColumn: word ? word.endColumn : d.col + 1,
+          };
+        });
+      monaco.editor.setModelMarkers(model, 'forge-tsc', markers);
+    }
+  }, [projectDiagnostics, rootPath, activePath, tabs]);
 
   // Reveal a requested line/column (e.g. from a terminal path:line:col link).
   useEffect(() => {
