@@ -1,5 +1,6 @@
 import type * as monacoNs from 'monaco-editor';
 import { useFormatterStore } from '../stores/formatter-store';
+import { resolveFormatterForFile } from '../lib/detect-formatters';
 import { formatTextWith } from '../lib/format-text';
 
 /** Languages our CLI formatters (prettier/eslint/biome/dprint) can handle. */
@@ -35,11 +36,9 @@ export function registerFormatProvider(monaco: typeof monacoNs): void {
     displayName: 'Forge',
     async provideDocumentFormattingEdits(model) {
       const text = model.getValue();
-      const formatted = await formatTextWith(
-        useFormatterStore.getState().selectedId,
-        model.uri.path,
-        text,
-      );
+      const { selectedId, available } = useFormatterStore.getState();
+      const formatter = resolveFormatterForFile(selectedId, model.uri.path, available);
+      const formatted = await formatTextWith(formatter, model.uri.path, text);
       if (formatted == null || formatted === text) return [];
       return [{ range: model.getFullModelRange(), text: formatted }];
     },

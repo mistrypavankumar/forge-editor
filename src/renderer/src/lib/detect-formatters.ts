@@ -98,3 +98,23 @@ export function detectFormatters(rootEntryNames: string[]): FormatterId[] {
     return FORMATTERS[id].configFiles.some((f) => names.has(f));
   });
 }
+
+/** File extensions ESLint can format (it only handles JS/TS). */
+const ESLINT_EXTENSIONS = new Set(['js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'mts', 'cts']);
+
+/**
+ * Pick the formatter to actually use for a file. ESLint can't format HTML/CSS/JSON/etc.,
+ * so for non-JS/TS files we fall back to Prettier when it's available — otherwise the
+ * selected formatter is a no-op and "Format Document" appears to do nothing.
+ */
+export function resolveFormatterForFile(
+  selectedId: FormatterId,
+  filePath: string,
+  available: FormatterId[],
+): FormatterId {
+  if (selectedId === 'eslint') {
+    const ext = filePath.slice(filePath.lastIndexOf('.') + 1).toLowerCase();
+    if (!ESLINT_EXTENSIONS.has(ext) && available.includes('prettier')) return 'prettier';
+  }
+  return selectedId;
+}

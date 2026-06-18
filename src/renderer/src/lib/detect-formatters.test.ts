@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectFormatters, FORMATTERS } from './detect-formatters';
+import { detectFormatters, resolveFormatterForFile, FORMATTERS } from './detect-formatters';
 
 describe('detectFormatters', () => {
   it('always includes eslint as the default, even with no config', () => {
@@ -24,6 +24,28 @@ describe('detectFormatters', () => {
 
   it('does not add a formatter for an unrelated eslint config (eslint already default)', () => {
     expect(detectFormatters(['eslint.config.js'])).toEqual(['eslint']);
+  });
+});
+
+describe('resolveFormatterForFile', () => {
+  it('keeps ESLint for JS/TS files', () => {
+    expect(resolveFormatterForFile('eslint', '/a.ts', ['eslint', 'prettier'])).toBe('eslint');
+    expect(resolveFormatterForFile('eslint', '/a.tsx', ['eslint', 'prettier'])).toBe('eslint');
+  });
+
+  it('falls back to Prettier for non-JS/TS files when available', () => {
+    expect(resolveFormatterForFile('eslint', '/a.html', ['eslint', 'prettier'])).toBe('prettier');
+    expect(resolveFormatterForFile('eslint', '/a.css', ['eslint', 'prettier'])).toBe('prettier');
+    expect(resolveFormatterForFile('eslint', '/a.json', ['eslint', 'prettier'])).toBe('prettier');
+  });
+
+  it('stays on ESLint for non-JS/TS files when Prettier is not available', () => {
+    expect(resolveFormatterForFile('eslint', '/a.html', ['eslint'])).toBe('eslint');
+  });
+
+  it('never overrides a non-ESLint selection', () => {
+    expect(resolveFormatterForFile('prettier', '/a.ts', ['eslint', 'prettier'])).toBe('prettier');
+    expect(resolveFormatterForFile('biome', '/a.html', ['eslint', 'biome'])).toBe('biome');
   });
 });
 

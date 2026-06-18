@@ -36,14 +36,9 @@ export function useAutoFormat(): void {
     if (!isFormattable(tab)) return;
     const baseline = baselineRef.current.get(activePath);
     // No baseline yet (the seeding effect runs first on mount) or unchanged since last format.
-    if (baseline === undefined || baseline === tab.content) {
-      console.log('[forge-format] no schedule', { hasBaseline: baseline !== undefined, unchanged: baseline === tab.content });
-      return;
-    }
+    if (baseline === undefined || baseline === tab.content) return;
 
-    console.log('[forge-format] scheduling format in', AUTO_FORMAT_DELAY_MS, 'ms for', activePath);
     const id = setTimeout(() => {
-      console.log('[forge-format] timer fired → formatActiveFile()');
       void formatActiveFile().then(() => {
         const latest = useEditorStore.getState().tabs.find((t) => t.path === activePath);
         baselineRef.current.set(activePath, latest ? latest.content : tab.content);

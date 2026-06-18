@@ -1,7 +1,7 @@
 import { useEditorStore, type OpenFile } from '../stores/editor-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useFormatterStore } from '../stores/formatter-store';
-import { FORMATTERS } from './detect-formatters';
+import { FORMATTERS, resolveFormatterForFile } from './detect-formatters';
 
 /** Only real, editable on-disk files can be formatted — not diffs, read-only views, or untitled buffers. */
 export function isFormattable(tab: OpenFile | undefined): tab is OpenFile {
@@ -25,11 +25,10 @@ export async function maybeFormatOnSave(path: string): Promise<void> {
 
 async function formatPath(path: string): Promise<void> {
   const rootPath = useWorkspaceStore.getState().rootPath;
-  console.log('[forge-format] formatPath', { path, rootPath, runFormatter: typeof window.forge?.runFormatter });
   if (!rootPath) return;
 
   const formatter = useFormatterStore.getState();
-  const def = FORMATTERS[formatter.selectedId];
+  const def = FORMATTERS[resolveFormatterForFile(formatter.selectedId, path, formatter.available)];
 
   // Formatters read from disk, so flush any unsaved buffer first to avoid formatting stale content.
   const editor = useEditorStore.getState();
@@ -44,9 +43,7 @@ async function formatPath(path: string): Promise<void> {
   }
 
   try {
-    console.log('[forge-format] runFormatter →', def.tool, def.args(path));
     const res = await window.forge.runFormatter(rootPath, def.tool, def.args(path));
-    console.log('[forge-format] runFormatter result', res);
     if (!res.ok) {
       formatter.setError(res.error);
       return;
@@ -58,7 +55,6 @@ async function formatPath(path: string): Promise<void> {
 
     formatter.setError(res.data.code === 0 ? null : res.data.stderr || `exit code ${res.data.code}`);
   } catch (e) {
-    console.error('[forge-format] threw', e);
     formatter.setError(e instanceof Error ? e.message : String(e));
   }
 }
