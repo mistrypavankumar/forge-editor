@@ -90,6 +90,8 @@ export function CodeEditor(): React.JSX.Element {
       fontSize: 13,
       fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, monospace",
       fontLigatures: true,
+      // Type-over: typing a closing bracket/quote skips an existing one instead of duplicating.
+      autoClosingOvertype: 'always',
       lineNumbersMinChars: 4,
       padding: { top: 12 },
       smoothScrolling: true,
