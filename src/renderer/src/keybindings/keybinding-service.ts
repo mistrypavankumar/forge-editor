@@ -35,6 +35,7 @@ export const defaultKeybindings: Record<string, string> = {
   'mod+shift+p': 'workbench.commandPalette',
   'mod+k': 'workbench.commandPalette',
   'mod+p': 'workbench.quickOpen',
+  'mod+,': 'workbench.openSettings',
 };
 
 export function mergeKeybindings(

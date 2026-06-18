@@ -197,6 +197,12 @@ export function registerCoreCommands(): void {
     run: findInFiles,
   });
   commandRegistry.register({
+    id: 'workbench.openSettings',
+    title: 'Open Settings',
+    category: 'Preferences',
+    run: () => useLayoutStore.getState().setSettingsOpen(true),
+  });
+  commandRegistry.register({
     id: 'file.newTextFile',
     title: 'New Text File',
     category: 'File',

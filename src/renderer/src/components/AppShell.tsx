@@ -36,6 +36,7 @@ import { RightPanel } from './RightPanel';
 import { BottomPanel } from './BottomPanel';
 import { StatusBar } from './StatusBar';
 import { Palette } from './Palette';
+import { SettingsView } from './SettingsView';
 import { ContextMenu } from './ui/ContextMenu';
 
 export function AppShell(): React.JSX.Element {
@@ -149,6 +150,7 @@ export function AppShell(): React.JSX.Element {
         <Landing />
         <StatusBar />
         <Palette />
+        <SettingsView />
       </div>
     );
   }
@@ -235,6 +237,7 @@ export function AppShell(): React.JSX.Element {
       </div>
       <StatusBar />
       <Palette />
+      <SettingsView />
       {menu ? (
         <ContextMenu
           x={menu.x}
