@@ -4,7 +4,7 @@ import { useFormatterStore } from '../stores/formatter-store';
 import { FORMATTERS } from './detect-formatters';
 
 /** Only real, editable on-disk files can be formatted — not diffs, read-only views, or untitled buffers. */
-function isFormattable(tab: OpenFile | undefined): tab is OpenFile {
+export function isFormattable(tab: OpenFile | undefined): tab is OpenFile {
   return !!tab && !tab.readOnly && tab.original === undefined && tab.path.startsWith('/');
 }
 
@@ -42,15 +42,19 @@ async function formatPath(path: string): Promise<void> {
     editor.markSaved(path);
   }
 
-  const res = await window.forge.runFormatter(rootPath, def.tool, def.args(path));
-  if (!res.ok) {
-    formatter.setError(res.error);
-    return;
+  try {
+    const res = await window.forge.runFormatter(rootPath, def.tool, def.args(path));
+    if (!res.ok) {
+      formatter.setError(res.error);
+      return;
+    }
+
+    // Pull the formatted content back into the editor and mark the buffer clean.
+    const read = await window.forge.readFile(path);
+    if (read.ok) useEditorStore.getState().requestRevert(path, read.data);
+
+    formatter.setError(res.data.code === 0 ? null : res.data.stderr || `exit code ${res.data.code}`);
+  } catch (e) {
+    formatter.setError(e instanceof Error ? e.message : String(e));
   }
-
-  // Pull the formatted content back into the editor and mark the buffer clean.
-  const read = await window.forge.readFile(path);
-  if (read.ok) useEditorStore.getState().requestRevert(path, read.data);
-
-  formatter.setError(res.data.code === 0 ? null : res.data.stderr || `exit code ${res.data.code}`);
 }
