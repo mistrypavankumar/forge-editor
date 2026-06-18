@@ -5,6 +5,7 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 import { openFolderDialog, openFileDialog } from '../lib/workspace-actions';
 import { newFile } from '../lib/fs-actions';
 import { formatActiveFile, maybeFormatOnSave } from '../lib/format-actions';
+import { saveAllFiles } from '../lib/save-actions';
 import { getActiveEditor } from '../editor/active-editor';
 import { getMonaco } from '../editor/monaco-setup';
 
@@ -54,18 +55,6 @@ export async function revertActiveFile(): Promise<void> {
 function closeActiveEditor(): void {
   const state = useEditorStore.getState();
   if (state.activePath) state.closeFile(state.activePath);
-}
-
-export async function saveAllFiles(): Promise<void> {
-  const state = useEditorStore.getState();
-  const dirty = state.tabs.filter((t) => t.dirty && !t.readOnly && t.path.startsWith('/'));
-  for (const tab of dirty) {
-    const res = await window.forge.writeFile(tab.path, tab.content);
-    if (res.ok) {
-      state.markSaved(tab.path);
-      await maybeFormatOnSave(tab.path);
-    }
-  }
 }
 
 async function reopenClosedEditor(): Promise<void> {

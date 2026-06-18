@@ -1,26 +1,19 @@
 import { useEffect } from 'react';
 import { useEditorStore } from '../stores/editor-store';
-import { maybeFormatOnSave } from '../lib/format-actions';
+import { saveAllFiles } from '../lib/save-actions';
 
-/** When Auto Save is on, write dirty (real-path) files shortly after edits stop. */
+/**
+ * When Auto Save is on, persist dirty files when focus leaves the window (e.g. switching
+ * apps). Losing focus *within* the app (clicking the sidebar, etc.) is handled by the
+ * editor's own blur handler in CodeEditor.
+ */
 export function useAutoSave(): void {
   const autoSave = useEditorStore((s) => s.autoSave);
-  const tabs = useEditorStore((s) => s.tabs);
 
   useEffect(() => {
     if (!autoSave) return;
-    const dirty = tabs.filter((t) => t.dirty && t.path.startsWith('/'));
-    if (dirty.length === 0) return;
-    const id = setTimeout(() => {
-      for (const tab of dirty) {
-        void window.forge.writeFile(tab.path, tab.content).then((res) => {
-          if (res.ok) {
-            useEditorStore.getState().markSaved(tab.path);
-            void maybeFormatOnSave(tab.path);
-          }
-        });
-      }
-    }, 800);
-    return () => clearTimeout(id);
-  }, [autoSave, tabs]);
+    const onBlur = (): void => void saveAllFiles();
+    window.addEventListener('blur', onBlur);
+    return () => window.removeEventListener('blur', onBlur);
+  }, [autoSave]);
 }

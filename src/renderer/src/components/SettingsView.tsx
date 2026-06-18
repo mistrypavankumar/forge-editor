@@ -171,7 +171,7 @@ export function SettingsView(): React.JSX.Element | null {
           ))}
         </select>
       </SettingRow>
-      <SettingRow label="Auto save" hint="Write changes to disk shortly after you stop typing" last>
+      <SettingRow label="Auto save" hint="Write changes to disk when the editor loses focus" last>
         <Toggle on={autoSave} onChange={(v) => useEditorStore.getState().setAutoSave(v)} />
       </SettingRow>
     </Card>

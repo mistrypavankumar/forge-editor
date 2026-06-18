@@ -11,6 +11,7 @@ import { commandForKeyEvent, defaultKeybindings, mergeKeybindings } from '../key
 import { useKeybindingsStore } from '../stores/keybindings-store';
 import { registerFormatProvider } from '../editor/format-provider';
 import { setActiveEditor } from '../editor/active-editor';
+import { saveAllFiles } from '../lib/save-actions';
 import { useFormatterStore } from '../stores/formatter-store';
 import type { FormatterId } from '../lib/detect-formatters';
 import { FormatterPicker } from './FormatterPicker';
@@ -158,6 +159,13 @@ export function CodeEditor(): React.JSX.Element {
         if (model) updateContent(model.uri.path, instance.getValue());
         clearTimeout(diffTimer.current);
         diffTimer.current = setTimeout(recomputeDiff, 250);
+      }),
+    );
+
+    // Auto Save on focus loss: persist dirty files when the editor text loses focus.
+    disposables.push(
+      instance.onDidBlurEditorText(() => {
+        if (useEditorStore.getState().autoSave) void saveAllFiles();
       }),
     );
 
