@@ -23,6 +23,7 @@ import {
 } from './fs/fs-service';
 import { readSettings, writeSettings } from './settings/settings-service';
 import { runFormatter, formatText } from './format/format-service';
+import { runDiagnostics } from './diagnostics/diagnostics-service';
 import {
   getGitBlame,
   getGitChanges,
@@ -225,6 +226,9 @@ app.whenReady().then(() => {
     IpcChannels.formatText,
     (_e, rootPath: string, tool: string, args: string[], input: string) =>
       toResult(() => formatText(rootPath, tool, args, input)),
+  );
+  ipcMain.handle(IpcChannels.runDiagnostics, (_e, rootPath: string) =>
+    toResult(() => runDiagnostics(rootPath)),
   );
   ipcMain.handle(IpcChannels.terminalCreate, (e, args: TerminalCreateArgs) =>
     toResult(async () => createTerminal(e.sender, args)),

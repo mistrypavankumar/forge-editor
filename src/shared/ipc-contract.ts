@@ -41,6 +41,7 @@ export const IpcChannels = {
   saveSettings: 'forge:settings:save',
   runFormatter: 'forge:format:run',
   formatText: 'forge:format:text',
+  runDiagnostics: 'forge:diagnostics:run',
   terminalCreate: 'forge:terminal:create',
   terminalInput: 'forge:terminal:input',
   terminalResize: 'forge:terminal:resize',
@@ -128,6 +129,17 @@ export interface ReplaceResult {
   files: number;
   /** Total occurrences replaced. */
   replacements: number;
+}
+
+export interface ProjectDiagnostic {
+  /** Path relative to the workspace root. */
+  file: string;
+  line: number;
+  col: number;
+  severity: 'error' | 'warning';
+  /** Diagnostic code, e.g. "TS2322". */
+  code: string;
+  message: string;
 }
 
 export interface RecentEntry {
@@ -238,6 +250,7 @@ export interface ForgeApi {
     args: string[],
     input: string,
   ) => Promise<Result<FormatTextResult>>;
+  runDiagnostics: (rootPath: string) => Promise<Result<ProjectDiagnostic[]>>;
   createTerminal: (args: TerminalCreateArgs) => Promise<Result<void>>;
   sendInput: (id: string, data: string) => void;
   resizeTerminal: (id: string, cols: number, rows: number) => void;
