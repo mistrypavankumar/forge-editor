@@ -1,8 +1,8 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import type { FormatRunResult } from '@shared/ipc-contract';
+import type { FormatRunResult, FormatTextResult } from '@shared/ipc-contract';
 
 const pExecFile = promisify(execFile);
 
@@ -55,4 +55,34 @@ export async function runFormatter(
       stderr: ex.stderr ?? ex.message ?? '',
     };
   }
+}
+
+/**
+ * Run a project-local formatter in stdin mode: pipe `input` in, capture formatted stdout.
+ * Used for in-editor formatting (Monaco provider) so the buffer is formatted without
+ * touching disk. Rejects only on a missing binary or unsafe input.
+ */
+export async function formatText(
+  rootPath: string,
+  tool: string,
+  args: string[],
+  input: string,
+): Promise<FormatTextResult> {
+  assertSafeTool(tool);
+  const bin = await resolveBin(rootPath, tool);
+  const useShell = process.platform === 'win32' && bin.endsWith('.cmd');
+  return new Promise<FormatTextResult>((resolve) => {
+    const child = spawn(bin, args, { cwd: rootPath, shell: useShell });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (d) => (stdout += d.toString()));
+    child.stderr.on('data', (d) => (stderr += d.toString()));
+    child.on('error', (e) => resolve({ stdout: '', stderr: e.message, code: 1 }));
+    child.on('close', (code) => resolve({ stdout, stderr, code: code ?? 1 }));
+    child.stdin.on('error', () => {
+      /* ignore EPIPE if the tool exits before reading all input */
+    });
+    child.stdin.write(input);
+    child.stdin.end();
+  });
 }

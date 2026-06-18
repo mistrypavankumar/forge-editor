@@ -32,6 +32,7 @@ export const IpcChannels = {
   loadSettings: 'forge:settings:load',
   saveSettings: 'forge:settings:save',
   runFormatter: 'forge:format:run',
+  formatText: 'forge:format:text',
   terminalCreate: 'forge:terminal:create',
   terminalInput: 'forge:terminal:input',
   terminalResize: 'forge:terminal:resize',
@@ -117,6 +118,13 @@ export interface FormatRunResult {
   stderr: string;
 }
 
+/** Outcome of running a formatter in stdin mode (formatted text on stdout). */
+export interface FormatTextResult {
+  stdout: string;
+  stderr: string;
+  code: number;
+}
+
 export interface TerminalCreateArgs {
   id: string;
   cwd?: string;
@@ -167,6 +175,12 @@ export interface ForgeApi {
   loadSettings: () => Promise<Result<ForgeSettings>>;
   saveSettings: (settings: ForgeSettings) => Promise<Result<void>>;
   runFormatter: (rootPath: string, tool: string, args: string[]) => Promise<Result<FormatRunResult>>;
+  formatText: (
+    rootPath: string,
+    tool: string,
+    args: string[],
+    input: string,
+  ) => Promise<Result<FormatTextResult>>;
   createTerminal: (args: TerminalCreateArgs) => Promise<Result<void>>;
   sendInput: (id: string, data: string) => void;
   resizeTerminal: (id: string, cols: number, rows: number) => void;

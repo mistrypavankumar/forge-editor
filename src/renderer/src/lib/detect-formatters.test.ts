@@ -35,3 +35,26 @@ describe('FORMATTERS argv', () => {
     expect(FORMATTERS.dprint.args('/r/a.ts')).toEqual(['fmt', '/r/a.ts']);
   });
 });
+
+describe('FORMATTERS stdin', () => {
+  it('builds stdin argv that reads the buffer and emits formatted output', () => {
+    expect(FORMATTERS.prettier.stdin.args('/r/a.ts')).toEqual(['--stdin-filepath', '/r/a.ts']);
+    expect(FORMATTERS.eslint.stdin.args('/r/a.ts')).toEqual([
+      '--stdin', '--stdin-filename', '/r/a.ts', '--fix-dry-run', '--format', 'json',
+    ]);
+  });
+
+  it('prettier stdout is the formatted text directly', () => {
+    expect(FORMATTERS.prettier.stdin.parse('const x = 1;\n', 'const x=1;')).toBe('const x = 1;\n');
+  });
+
+  it('eslint parses the fixed source from JSON output', () => {
+    const json = JSON.stringify([{ output: 'const x = 1;\n' }]);
+    expect(FORMATTERS.eslint.stdin.parse(json, 'const x=1;')).toBe('const x = 1;\n');
+  });
+
+  it('eslint falls back to the input when there is no fix or invalid JSON', () => {
+    expect(FORMATTERS.eslint.stdin.parse(JSON.stringify([{}]), 'const x=1;')).toBe('const x=1;');
+    expect(FORMATTERS.eslint.stdin.parse('not json', 'const x=1;')).toBe('const x=1;');
+  });
+});

@@ -21,7 +21,7 @@ import {
   writeFileText,
 } from './fs/fs-service';
 import { readSettings, writeSettings } from './settings/settings-service';
-import { runFormatter } from './format/format-service';
+import { runFormatter, formatText } from './format/format-service';
 import {
   getGitBlame,
   getGitChanges,
@@ -192,6 +192,11 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.runFormatter, (_e, rootPath: string, tool: string, args: string[]) =>
     toResult(() => runFormatter(rootPath, tool, args)),
+  );
+  ipcMain.handle(
+    IpcChannels.formatText,
+    (_e, rootPath: string, tool: string, args: string[], input: string) =>
+      toResult(() => formatText(rootPath, tool, args, input)),
   );
   ipcMain.handle(IpcChannels.terminalCreate, (e, args: TerminalCreateArgs) =>
     toResult(async () => createTerminal(e.sender, args)),

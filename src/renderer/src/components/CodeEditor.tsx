@@ -8,6 +8,10 @@ import { DiffPeek } from '../editor/diff-peek';
 import { computeDiff, type DiffHunk } from '../lib/line-diff';
 import { commandRegistry } from '../commands/command-registry';
 import { commandForKeyEvent, defaultKeybindings } from '../keybindings/keybinding-service';
+import { registerFormatProvider } from '../editor/format-provider';
+import { useFormatterStore } from '../stores/formatter-store';
+import type { FormatterId } from '../lib/detect-formatters';
+import { FormatterPicker } from './FormatterPicker';
 import { relativeTime } from '../lib/relative-time';
 import type { BlameLine } from '@shared/ipc-contract';
 import { useEditorStore } from '../stores/editor-store';
@@ -73,6 +77,7 @@ export function CodeEditor(): React.JSX.Element {
   useEffect(() => {
     if (!containerRef.current) return;
     const monaco = getMonaco();
+    registerFormatProvider(monaco);
     const instance = monaco.editor.create(containerRef.current, {
       theme: 'forge-dark',
       automaticLayout: true,
@@ -122,7 +127,7 @@ export function CodeEditor(): React.JSX.Element {
     // Monaco swallows some app shortcuts when focused (e.g. Cmd+K is a Monaco chord
     // prefix), so they never reach the window listener. Resolve app bindings here first
     // and intercept before Monaco acts, keeping shortcuts working while editing.
-    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    const isMac = window.forge.isMac;
     disposables.push(
       instance.onKeyDown((e) => {
         const id = commandForKeyEvent(e.browserEvent, isMac, defaultKeybindings);
@@ -132,6 +137,16 @@ export function CodeEditor(): React.JSX.Element {
         void commandRegistry.run(id);
       }),
     );
+
+    // "Format Document With…" — open the formatter picker; the chosen formatter becomes
+    // the default and the native format action (above provider) runs with it.
+    instance.addAction({
+      id: 'forge.formatDocumentWith',
+      label: 'Format Document With…',
+      contextMenuGroupId: '1_modification',
+      contextMenuOrder: 1.4,
+      run: () => useFormatterStore.getState().setPickerOpen(true),
+    });
 
     disposables.push(
       instance.onDidChangeModelContent(() => {
@@ -314,9 +329,15 @@ export function CodeEditor(): React.JSX.Element {
 
   const hasTabs = tabs.length > 0;
 
+  const onPickFormatter = (id: FormatterId): void => {
+    useFormatterStore.getState().setSelected(id);
+    void editorRef.current?.getAction('editor.action.formatDocument')?.run();
+  };
+
   return (
     <div className="relative h-full w-full bg-bg">
       <div ref={containerRef} className="absolute inset-0" />
+      <FormatterPicker onPick={onPickFormatter} />
       {!hasTabs ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-6">
           <div className="text-5xl font-bold tracking-tight text-surface-3">Forge</div>

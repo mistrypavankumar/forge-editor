@@ -4,7 +4,7 @@ import { commandForKeyEvent, defaultKeybindings, mergeKeybindings } from './keyb
 
 export function useKeybindings(overrides: Record<string, string> = {}): void {
   useEffect(() => {
-    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    const isMac = window.forge.isMac;
     const bindings = mergeKeybindings(defaultKeybindings, overrides);
     const onKeyDown = (e: KeyboardEvent): void => {
       const id = commandForKeyEvent(e, isMac, bindings);
