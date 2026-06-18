@@ -16,6 +16,7 @@ import { useKeybindingsStore } from '../stores/keybindings-store';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
 import { useAutoSave } from '../settings/use-auto-save';
 import { useAutoFormat } from '../settings/use-auto-format';
+import { useAutoDiagnostics } from '../settings/use-auto-diagnostics';
 import { commandRegistry } from '../commands/command-registry';
 import { TopBar } from './TopBar';
 import { ActivitySidebar } from './ActivitySidebar';
@@ -63,6 +64,7 @@ export function AppShell(): React.JSX.Element {
   useSettingsPersistence();
   useAutoSave();
   useAutoFormat();
+  useAutoDiagnostics();
 
   const autoSave = useEditorStore((s) => s.autoSave);
   const tabs = useEditorStore((s) => s.tabs);

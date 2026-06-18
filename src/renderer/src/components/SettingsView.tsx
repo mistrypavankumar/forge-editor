@@ -6,6 +6,7 @@ import { useEditorStore } from '../stores/editor-store';
 import { useFormatterStore } from '../stores/formatter-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { useKeybindingsStore } from '../stores/keybindings-store';
+import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { commandRegistry } from '../commands/command-registry';
 import { defaultKeybindings, eventToKeystroke, mergeKeybindings } from '../keybindings/keybinding-service';
 import { builtInThemes } from '../theme/themes';
@@ -132,6 +133,7 @@ export function SettingsView(): React.JSX.Element | null {
   const themeId = useThemeStore((s) => s.currentId);
   const autoSave = useEditorStore((s) => s.autoSave);
   const fontSize = useEditorStore((s) => s.fontSize);
+  const autoCheckProblems = useDiagnosticsStore((s) => s.autoRun);
   const selectedFormatter = useFormatterStore((s) => s.selectedId);
   const available = useFormatterStore((s) => s.available);
   const formatOnSave = useFormatterStore((s) => s.formatOnSave);
@@ -211,8 +213,11 @@ export function SettingsView(): React.JSX.Element | null {
           onChange={(v) => useEditorStore.getState().setFontSize(v)}
         />
       </SettingRow>
-      <SettingRow label="Auto save" hint="Write changes to disk when the editor loses focus" last>
+      <SettingRow label="Auto save" hint="Write changes to disk when the editor loses focus">
         <Toggle on={autoSave} onChange={(v) => useEditorStore.getState().setAutoSave(v)} />
+      </SettingRow>
+      <SettingRow label="Auto-check problems" hint="Re-run a project-wide type-check after changes (can be slow on large repos)" last>
+        <Toggle on={autoCheckProblems} onChange={(v) => useDiagnosticsStore.getState().setAutoRun(v)} />
       </SettingRow>
     </Card>
   );

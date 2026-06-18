@@ -8,6 +8,7 @@ import { formatActiveFile, maybeFormatOnSave } from '../lib/format-actions';
 import { saveAllFiles } from '../lib/save-actions';
 import { getActiveEditor } from '../editor/active-editor';
 import { getMonaco } from '../editor/monaco-setup';
+import { useDiagnosticsStore } from '../stores/diagnostics-store';
 
 let untitledSeq = 0;
 
@@ -104,6 +105,13 @@ function findInFiles(): void {
   l.setPanelVisible('sidebar', true);
 }
 
+function checkProblems(): void {
+  const l = useLayoutStore.getState();
+  l.setBottomTab('problems');
+  l.setPanelVisible('bottom', true);
+  void useDiagnosticsStore.getState().run();
+}
+
 export function registerCoreCommands(): void {
   commandRegistry.register({
     id: 'file.save',
@@ -190,6 +198,12 @@ export function registerCoreCommands(): void {
     title: 'Open Settings',
     category: 'Preferences',
     run: () => useLayoutStore.getState().setSettingsOpen(true),
+  });
+  commandRegistry.register({
+    id: 'workbench.checkProblems',
+    title: 'Check Problems (project-wide)',
+    category: 'View',
+    run: checkProblems,
   });
   commandRegistry.register({
     id: 'file.newTextFile',

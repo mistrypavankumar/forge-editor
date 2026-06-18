@@ -165,6 +165,8 @@ export interface ForgeSettings {
   formatOnSave?: boolean;
   /** Run the active formatter automatically 5s after edits stop. */
   autoFormat?: boolean;
+  /** Run a project-wide type-check automatically after changes settle. */
+  autoCheckProblems?: boolean;
 }
 
 /** Outcome of running a formatter CLI against a file. */

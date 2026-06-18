@@ -6,6 +6,7 @@ import { useTasksStore, type TaskId } from '../stores/tasks-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useFormatterStore } from '../stores/formatter-store';
 import { useKeybindingsStore } from '../stores/keybindings-store';
+import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import type { FormatterId } from '../lib/detect-formatters';
 
 export function useSettingsPersistence(): void {
@@ -22,6 +23,7 @@ export function useSettingsPersistence(): void {
   const formatOnSave = useFormatterStore((s) => s.formatOnSave);
   const autoFormat = useFormatterStore((s) => s.autoFormat);
   const keybindings = useKeybindingsStore((s) => s.overrides);
+  const autoCheckProblems = useDiagnosticsStore((s) => s.autoRun);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -56,6 +58,9 @@ export function useSettingsPersistence(): void {
         if (res.data.keybindings) {
           useKeybindingsStore.getState().setOverrides(res.data.keybindings);
         }
+        if (typeof res.data.autoCheckProblems === 'boolean') {
+          useDiagnosticsStore.getState().setAutoRun(res.data.autoCheckProblems);
+        }
       }
       hydrated.current = true;
     });
@@ -77,6 +82,7 @@ export function useSettingsPersistence(): void {
       formatOnSave,
       autoFormat,
       keybindings,
+      autoCheckProblems,
     });
-  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings]);
+  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems]);
 }

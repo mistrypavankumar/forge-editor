@@ -2,6 +2,7 @@ import { CircleX, TriangleAlert, Sparkles, GitBranch, GitCommitVertical } from '
 import { useLayoutStore } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useWorkbenchStatusStore, markerCounts } from '../stores/workbench-status-store';
+import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { FormatterSegment } from './FormatterSegment';
 import { cn } from '../lib/cn';
 
@@ -42,7 +43,16 @@ export function StatusBar(): React.JSX.Element {
   const branch = useWorkspaceStore((s) => s.branch);
   const setBottomTab = useLayoutStore((s) => s.setBottomTab);
   const setPanelVisible = useLayoutStore((s) => s.setPanelVisible);
-  const counts = markerCounts(markers);
+  const projectDiagnostics = useDiagnosticsStore((s) => s.diagnostics);
+  const hasRun = useDiagnosticsStore((s) => s.hasRun);
+  // After a project-wide check, show its codebase counts; otherwise the open-file markers.
+  const counts = hasRun
+    ? {
+        errors: projectDiagnostics.filter((d) => d.severity === 'error').length,
+        warnings: projectDiagnostics.filter((d) => d.severity === 'warning').length,
+        infos: 0,
+      }
+    : markerCounts(markers);
 
   const openProblems = (): void => {
     setBottomTab('problems');
