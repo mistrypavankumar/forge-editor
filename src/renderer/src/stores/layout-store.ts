@@ -22,6 +22,7 @@ export interface LayoutState {
   rightTab: RightTab;
   bottomTab: BottomTab;
   settingsOpen: boolean;
+  featuresOpen: boolean;
   togglePanel: (id: PanelId) => void;
   setPanelVisible: (id: PanelId, visible: boolean) => void;
   setSidebarSide: (side: SidebarSide) => void;
@@ -29,6 +30,7 @@ export interface LayoutState {
   setRightTab: (tab: RightTab) => void;
   setBottomTab: (tab: BottomTab) => void;
   setSettingsOpen: (open: boolean) => void;
+  setFeaturesOpen: (open: boolean) => void;
 }
 
 const visKey = (id: PanelId): 'sidebarVisible' | 'rightVisible' | 'bottomVisible' =>
@@ -43,6 +45,7 @@ export const useLayoutStore = create<LayoutState>((set) => ({
   rightTab: 'assistant',
   bottomTab: 'terminal',
   settingsOpen: false,
+  featuresOpen: false,
   togglePanel: (id) => set((s) => ({ [visKey(id)]: !s[visKey(id)] }) as Partial<LayoutState>),
   setPanelVisible: (id, visible) => set({ [visKey(id)]: visible } as Partial<LayoutState>),
   setSidebarSide: (side) => set({ sidebarSide: side }),
@@ -50,4 +53,5 @@ export const useLayoutStore = create<LayoutState>((set) => ({
   setRightTab: (tab) => set({ rightTab: tab }),
   setBottomTab: (tab) => set({ bottomTab: tab }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
+  setFeaturesOpen: (open) => set({ featuresOpen: open }),
 }));

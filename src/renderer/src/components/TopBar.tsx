@@ -6,6 +6,7 @@ import {
   PanelBottom,
   Search,
   Sparkles,
+  Sparkle,
 } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
 import { usePaletteStore } from '../stores/palette-store';
@@ -63,6 +64,15 @@ export function TopBar(): React.JSX.Element {
 
       {/* Actions */}
       <div className="no-drag flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => useLayoutStore.getState().setFeaturesOpen(true)}
+          className="flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-xs font-medium text-muted transition-colors hover:border-line-strong hover:text-fg"
+        >
+          <Sparkle size={12} className="text-accent" />
+          Features
+        </button>
+
         <button
           type="button"
           onClick={() => void commandRegistry.run('file.save')}
