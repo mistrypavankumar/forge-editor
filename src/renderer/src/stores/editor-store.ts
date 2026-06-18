@@ -17,6 +17,9 @@ export interface RevealTarget {
   path: string;
   line: number;
   col: number;
+  /** Optional end of the target range — when present, the symbol is briefly highlighted. */
+  endLine?: number;
+  endColumn?: number;
 }
 
 export interface EditorState {

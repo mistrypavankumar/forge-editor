@@ -11,10 +11,15 @@ import { commandForKeyEvent, defaultKeybindings, mergeKeybindings } from '../key
 import { useKeybindingsStore } from '../stores/keybindings-store';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { registerFormatProvider } from '../editor/format-provider';
+import { registerLanguageProviders } from '../editor/monaco-providers';
+import {
+  initLanguageProject,
+  openLanguageDocument,
+  syncLanguageDocument,
+  closeLanguageDocument,
+} from '../editor/language-bridge';
 import { registerAutoCloseTag } from '../editor/auto-close-tag';
 import { registerTabOut } from '../editor/tab-out';
-import { openFilePath } from '../lib/workspace-actions';
-import { importSpecForName, moduleSpecAtColumn, localDeclarationLine } from '../lib/go-to-definition';
 import { setActiveEditor } from '../editor/active-editor';
 import { saveAllFiles } from '../lib/save-actions';
 import { useFormatterStore } from '../stores/formatter-store';
@@ -88,6 +93,8 @@ export function CodeEditor(): React.JSX.Element {
     if (!containerRef.current) return;
     const monaco = getMonaco();
     registerFormatProvider(monaco);
+    // LS-backed IDE intelligence (definitions, hover, refs, rename, completion, signature help).
+    registerLanguageProviders(monaco);
     const instance = monaco.editor.create(containerRef.current, {
       theme: 'forge-dark',
       automaticLayout: true,
@@ -165,7 +172,11 @@ export function CodeEditor(): React.JSX.Element {
     disposables.push(
       instance.onDidChangeModelContent(() => {
         const model = instance.getModel();
-        if (model) updateContent(model.uri.path, instance.getValue());
+        if (model) {
+          updateContent(model.uri.path, instance.getValue());
+          // Push the live buffer to the Language Service (debounced) + refresh inline diagnostics.
+          syncLanguageDocument(monaco, model);
+        }
         clearTimeout(diffTimer.current);
         diffTimer.current = setTimeout(recomputeDiff, 250);
       }),
@@ -184,55 +195,9 @@ export function CodeEditor(): React.JSX.Element {
     // Tab jumps out of a closing bracket/quote when the cursor sits right before one.
     disposables.push(registerTabOut(instance));
 
-    // Cmd/Ctrl+Click: go to definition — open the imported module (or jump to a local
-    // declaration) for the symbol or import path under the cursor.
-    disposables.push(
-      instance.onMouseDown((e) => {
-        if ((!e.event.metaKey && !e.event.ctrlKey) || !e.event.leftButton) return;
-        const model = instance.getModel();
-        const pos = e.target.position;
-        if (!model || !pos) return;
-        const lineText = model.getLineContent(pos.lineNumber);
-        const fullText = model.getValue();
-        const fromPath = model.uri.path;
-        const rootPath = useWorkspaceStore.getState().rootPath;
-
-        let spec = moduleSpecAtColumn(lineText, pos.column);
-        let symbol: string | null = null;
-        if (!spec) {
-          const word = model.getWordAtPosition(pos);
-          if (word) {
-            symbol = word.word;
-            spec = importSpecForName(fullText, word.word);
-          }
-        }
-
-        if (spec && rootPath) {
-          e.event.preventDefault();
-          const name = symbol;
-          void window.forge.resolveImport(rootPath, fromPath, spec).then((res) => {
-            if (!res.ok || !res.data) return;
-            const target = res.data;
-            void openFilePath(target, target.slice(target.lastIndexOf('/') + 1)).then(() => {
-              const tab = useEditorStore.getState().tabs.find((t) => t.path === target);
-              const ln = tab && name ? localDeclarationLine(tab.content, name) : null;
-              useEditorStore.getState().requestReveal({ path: target, line: ln ?? 1, col: 1 });
-            });
-          });
-          return;
-        }
-
-        // Same-file declaration jump.
-        if (symbol) {
-          const line = localDeclarationLine(fullText, symbol);
-          if (line && line !== pos.lineNumber) {
-            e.event.preventDefault();
-            instance.revealLineInCenter(line);
-            instance.setPosition({ lineNumber: line, column: 1 });
-          }
-        }
-      }),
-    );
+    // Cmd/Ctrl+Click "Go to Definition" is handled by the LS-backed definition provider plus the
+    // editor opener registered in registerLanguageProviders(), which routes the target file into
+    // this tab system and reveals/highlights the symbol (see the `reveal` effect below).
 
     // Click the change gutter (colored bar / deletion marker) to open the diff peek.
     disposables.push(
@@ -299,6 +264,8 @@ export function CodeEditor(): React.JSX.Element {
     if (!model) {
       model = monaco.editor.createModel(tab.content, languageFor(tab.name), monaco.Uri.file(activePath));
       modelsRef.current.set(activePath, model);
+      // Register the new buffer with the Language Service and run a first diagnostics pass.
+      openLanguageDocument(monaco, model);
     }
     instance.setModel(model);
     instance.updateOptions({ readOnly: tab.readOnly ?? false });
@@ -370,6 +337,7 @@ export function CodeEditor(): React.JSX.Element {
     const openPaths = new Set(tabs.map((t) => t.path));
     for (const [path, model] of modelsRef.current) {
       if (!openPaths.has(path)) {
+        closeLanguageDocument(path);
         model.dispose();
         modelsRef.current.delete(path);
       }
@@ -384,6 +352,17 @@ export function CodeEditor(): React.JSX.Element {
   useEffect(() => {
     editorRef.current?.updateOptions({ fontSize });
   }, [fontSize]);
+
+  // Spin up (or switch to) the main-process TypeScript Language Service for this workspace, then
+  // (re-)register every already-open buffer so the project sees their live, possibly-dirty content.
+  useEffect(() => {
+    if (!rootPath) return;
+    initLanguageProject(rootPath);
+    const monaco = getMonaco();
+    for (const model of modelsRef.current.values()) {
+      if (!model.isDisposed()) openLanguageDocument(monaco, model);
+    }
+  }, [rootPath]);
 
   // Project the workspace-wide `tsc` diagnostics onto open files as markers, so they show
   // as inline squiggles with hover tooltips (Monaco's own TS worker is single-file only).
@@ -408,7 +387,8 @@ export function CodeEditor(): React.JSX.Element {
     }
   }, [projectDiagnostics, rootPath, activePath, tabs]);
 
-  // Reveal a requested line/column (e.g. from a terminal path:line:col link).
+  // Reveal a requested line/column (terminal path:line:col links, and Go to Definition targets).
+  // When the reveal carries an end position, briefly highlight the target symbol.
   useEffect(() => {
     const instance = editorRef.current;
     if (!instance || !reveal) return;
@@ -417,6 +397,16 @@ export function CodeEditor(): React.JSX.Element {
       instance.revealLineInCenter(reveal.line);
       instance.setPosition({ lineNumber: reveal.line, column: reveal.col });
       instance.focus();
+      if (reveal.endLine != null && reveal.endColumn != null) {
+        const monaco = getMonaco();
+        const collection = instance.createDecorationsCollection([
+          {
+            range: new monaco.Range(reveal.line, reveal.col, reveal.endLine, reveal.endColumn),
+            options: { className: 'forge-goto-highlight', isWholeLine: false },
+          },
+        ]);
+        setTimeout(() => collection.clear(), 1200);
+      }
       useEditorStore.getState().consumeReveal();
     }
   }, [reveal, activePath, tabs]);

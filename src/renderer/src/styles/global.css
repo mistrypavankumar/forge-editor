@@ -357,3 +357,10 @@ body {
   padding: 0 4px;
   font-family: var(--font-mono);
 }
+
+/* Brief flash on a Go to Definition target symbol */
+.forge-goto-highlight {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 3px;
+  transition: background 0.6s ease-out;
+}

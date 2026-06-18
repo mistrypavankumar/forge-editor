@@ -1,0 +1,261 @@
+import type * as monacoNs from 'monaco-editor';
+import type { editor, languages, Position } from 'monaco-editor';
+import type { LsLocation } from '@shared/ipc-contract';
+import { useWorkspaceStore } from '../stores/workspace-store';
+import { useEditorStore } from '../stores/editor-store';
+import { openFilePath } from '../lib/workspace-actions';
+import { importSpecForName, moduleSpecAtColumn, localDeclarationLine } from '../lib/go-to-definition';
+
+let registered = false;
+
+const lang = window.forge.editorLanguage;
+const SELECTOR = ['typescript', 'javascript'];
+
+function fileOf(model: editor.ITextModel): string {
+  return model.uri.path;
+}
+
+function toRange(monaco: typeof monacoNs, loc: LsLocation): monacoNs.IRange {
+  return new monaco.Range(loc.line, loc.column, loc.endLine, loc.endColumn);
+}
+
+function toMonacoLocation(monaco: typeof monacoNs, loc: LsLocation): languages.Location {
+  return { uri: monaco.Uri.file(loc.file), range: toRange(monaco, loc) };
+}
+
+/** Map a TS ScriptElementKind to the closest Monaco completion-item kind. */
+function completionKind(monaco: typeof monacoNs, kind: string): languages.CompletionItemKind {
+  const K = monaco.languages.CompletionItemKind;
+  switch (kind) {
+    case 'method':
+    case 'construct':
+    case 'call':
+      return K.Method;
+    case 'function':
+    case 'local function':
+      return K.Function;
+    case 'property':
+    case 'getter':
+    case 'setter':
+      return K.Property;
+    case 'class':
+    case 'local class':
+      return K.Class;
+    case 'interface':
+      return K.Interface;
+    case 'type':
+      return K.TypeParameter;
+    case 'enum':
+      return K.Enum;
+    case 'enum member':
+      return K.EnumMember;
+    case 'module':
+    case 'external module name':
+      return K.Module;
+    case 'var':
+    case 'let':
+    case 'const':
+    case 'parameter':
+      return K.Variable;
+    case 'keyword':
+      return K.Keyword;
+    case 'string':
+      return K.Constant;
+    default:
+      return K.Field;
+  }
+}
+
+/**
+ * Regex fallback for definitions when the Language Service returns nothing — resolves an import
+ * specifier under the cursor to its file (via the existing main-process resolver), or jumps to a
+ * same-file declaration. The LS is always tried first; this only fills gaps.
+ */
+async function fallbackDefinition(
+  monaco: typeof monacoNs,
+  model: editor.ITextModel,
+  position: Position,
+): Promise<languages.Definition | null> {
+  const rootPath = useWorkspaceStore.getState().rootPath;
+  const fromPath = fileOf(model);
+  const lineText = model.getLineContent(position.lineNumber);
+  const fullText = model.getValue();
+
+  let spec = moduleSpecAtColumn(lineText, position.column);
+  let symbol: string | null = null;
+  if (!spec) {
+    const word = model.getWordAtPosition(position);
+    if (word) {
+      symbol = word.word;
+      spec = importSpecForName(fullText, word.word);
+    }
+  }
+
+  if (spec && rootPath) {
+    const res = await window.forge.resolveImport(rootPath, fromPath, spec);
+    if (res.ok && res.data) {
+      return { uri: monaco.Uri.file(res.data), range: new monaco.Range(1, 1, 1, 1) };
+    }
+  }
+  if (symbol) {
+    const line = localDeclarationLine(fullText, symbol);
+    if (line) return { uri: model.uri, range: new monaco.Range(line, 1, line, 1) };
+  }
+  return null;
+}
+
+/**
+ * Register all Language-Service-backed Monaco providers and route cross-file navigation into the
+ * app's existing tab system. Call once. Disables the overlapping Monaco TS-worker features first
+ * so the in-process LS (which sees the whole project, tsconfig aliases, and node_modules) is the
+ * single source of truth — the browser worker can't resolve real project files.
+ */
+export function registerLanguageProviders(monaco: typeof monacoNs): void {
+  if (registered) return;
+  registered = true;
+
+  // Hand these features to our LS providers; keep the worker only for tokenization/bracket logic.
+  for (const defaults of [
+    monaco.languages.typescript.typescriptDefaults,
+    monaco.languages.typescript.javascriptDefaults,
+  ]) {
+    defaults.setModeConfiguration({
+      ...defaults.modeConfiguration,
+      completionItems: false,
+      hovers: false,
+      definitions: false,
+      references: false,
+      rename: false,
+      signatureHelp: false,
+      documentSymbols: false,
+      diagnostics: false,
+    });
+  }
+
+  monaco.languages.registerDefinitionProvider(SELECTOR, {
+    async provideDefinition(model, position) {
+      const res = await lang.getDefinition(fileOf(model), position.lineNumber, position.column);
+      if (res.ok && res.data.length > 0) return res.data.map((l) => toMonacoLocation(monaco, l));
+      return fallbackDefinition(monaco, model, position);
+    },
+  });
+
+  monaco.languages.registerReferenceProvider(SELECTOR, {
+    async provideReferences(model, position) {
+      const res = await lang.getReferences(fileOf(model), position.lineNumber, position.column);
+      if (!res.ok) return [];
+      return res.data.map((l) => toMonacoLocation(monaco, l));
+    },
+  });
+
+  monaco.languages.registerHoverProvider(SELECTOR, {
+    async provideHover(model, position) {
+      const res = await lang.getHover(fileOf(model), position.lineNumber, position.column);
+      if (!res.ok || !res.data) return null;
+      const { contents, range } = res.data;
+      return {
+        contents: [{ value: contents }],
+        range: range
+          ? new monaco.Range(range.line, range.column, range.endLine, range.endColumn)
+          : undefined,
+      };
+    },
+  });
+
+  monaco.languages.registerCompletionItemProvider(SELECTOR, {
+    triggerCharacters: ['.', '"', "'", '`', '/', '@', '<', ' '],
+    async provideCompletionItems(model, position) {
+      const res = await lang.getCompletions(fileOf(model), position.lineNumber, position.column);
+      if (!res.ok) return { suggestions: [] };
+      const word = model.getWordUntilPosition(position);
+      const range = new monaco.Range(
+        position.lineNumber,
+        word.startColumn,
+        position.lineNumber,
+        word.endColumn,
+      );
+      return {
+        suggestions: res.data.items.map((item) => ({
+          label: item.label,
+          kind: completionKind(monaco, item.kind),
+          insertText: item.insertText ?? item.label,
+          sortText: item.sortText,
+          detail: item.detail,
+          range,
+        })),
+      };
+    },
+  });
+
+  monaco.languages.registerSignatureHelpProvider(SELECTOR, {
+    signatureHelpTriggerCharacters: ['(', ','],
+    signatureHelpRetriggerCharacters: [')'],
+    async provideSignatureHelp(model, position) {
+      const res = await lang.getSignatureHelp(fileOf(model), position.lineNumber, position.column);
+      if (!res.ok || !res.data) return undefined;
+      const help = res.data;
+      return {
+        value: {
+          signatures: help.signatures.map((s) => ({
+            label: s.label,
+            documentation: s.documentation,
+            parameters: s.parameters.map((p) => ({ label: p.label, documentation: p.documentation })),
+          })),
+          activeSignature: help.activeSignature,
+          activeParameter: help.activeParameter,
+        },
+        dispose: () => {},
+      };
+    },
+  });
+
+  monaco.languages.registerRenameProvider(SELECTOR, {
+    async provideRenameEdits(model, position, newName) {
+      const res = await lang.renameSymbol(
+        fileOf(model),
+        position.lineNumber,
+        position.column,
+        newName,
+      );
+      if (!res.ok) return { edits: [] };
+      return {
+        edits: res.data.edits.map((e) => ({
+          resource: monaco.Uri.file(e.file),
+          versionId: undefined,
+          textEdit: {
+            range: new monaco.Range(e.line, e.column, e.endLine, e.endColumn),
+            text: e.newText,
+          },
+        })),
+      };
+    },
+  });
+
+  // Route every go-to/peek "open" (Cmd/Ctrl+Click, F12, references) into the app's tab system.
+  monaco.editor.registerEditorOpener({
+    openCodeEditor(_source, resource, selectionOrPosition) {
+      const path = resource.path;
+      if (!path || !path.startsWith('/')) return false;
+      let line = 1;
+      let col = 1;
+      let endLine: number | undefined;
+      let endColumn: number | undefined;
+      if (selectionOrPosition) {
+        if ('startLineNumber' in selectionOrPosition) {
+          line = selectionOrPosition.startLineNumber;
+          col = selectionOrPosition.startColumn;
+          endLine = selectionOrPosition.endLineNumber;
+          endColumn = selectionOrPosition.endColumn;
+        } else {
+          line = selectionOrPosition.lineNumber;
+          col = selectionOrPosition.column;
+        }
+      }
+      const name = path.slice(path.lastIndexOf('/') + 1);
+      void openFilePath(path, name).then(() => {
+        useEditorStore.getState().requestReveal({ path, line, col, endLine, endColumn });
+      });
+      return true;
+    },
+  });
+}

@@ -19,9 +19,10 @@ let configured = false;
 
 export function getMonaco(): typeof monaco {
   if (!configured) {
-    // Real, low-noise diagnostics: surface genuine syntax errors but skip
-    // module-resolution errors (we have no node_modules type info here).
-    const tsDiagnostics = { noSemanticValidation: true, noSyntaxValidation: false };
+    // Diagnostics now come from the main-process TypeScript Language Service (project-aware,
+    // resolves tsconfig aliases + node_modules). Silence the browser worker entirely so we don't
+    // get duplicate or misleading single-file squiggles.
+    const tsDiagnostics = { noSemanticValidation: true, noSyntaxValidation: true };
     monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(tsDiagnostics);
     monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(tsDiagnostics);
   }
