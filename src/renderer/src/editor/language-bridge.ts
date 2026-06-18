@@ -7,6 +7,8 @@ const TS_MARKER_OWNER = 'forge-ts';
 const LANG_IDS = new Set(['typescript', 'javascript']);
 /** Time to wait after edits stop before re-syncing the buffer + recomputing diagnostics. */
 const SYNC_DEBOUNCE_MS = 300;
+/** Skip whole-file diagnostics above this size — a full type-check pass gets too costly. */
+export const LARGE_FILE_CHARS = 500_000;
 
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -68,6 +70,10 @@ export async function refreshDiagnostics(
   model: editor.ITextModel,
 ): Promise<void> {
   if (model.isDisposed() || !isTsModel(model)) return;
+  if (model.getValueLength() > LARGE_FILE_CHARS) {
+    monaco.editor.setModelMarkers(model, TS_MARKER_OWNER, []);
+    return;
+  }
   const res = await window.forge.editorLanguage.getDiagnostics(model.uri.path);
   if (!res.ok || model.isDisposed()) return;
   monaco.editor.setModelMarkers(

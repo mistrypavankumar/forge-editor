@@ -2,6 +2,7 @@ import type * as monacoNs from 'monaco-editor';
 import type { editor, languages, Position } from 'monaco-editor';
 import type { LsLocation } from '@shared/ipc-contract';
 import { SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS } from '@shared/ipc-contract';
+import { LARGE_FILE_CHARS } from './language-bridge';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { openFilePath } from '../lib/workspace-actions';
@@ -242,6 +243,9 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
   monaco.languages.registerDocumentSemanticTokensProvider(SELECTOR, {
     getLegend: () => legend,
     async provideDocumentSemanticTokens(model) {
+      // Whole-file classification gets too costly on very large buffers; let basic
+      // tokenization handle those rather than round-tripping a huge token array.
+      if (model.getValueLength() > LARGE_FILE_CHARS) return null;
       const res = await lang.getSemanticTokens(fileOf(model));
       if (!res.ok) return null;
       return { data: new Uint32Array(res.data.data), resultId: undefined };

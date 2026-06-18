@@ -371,26 +371,32 @@ export function CodeEditor(): React.JSX.Element {
 
   // Project the workspace-wide `tsc` diagnostics onto open files as markers, so they show
   // as inline squiggles with hover tooltips (Monaco's own TS worker is single-file only).
+  // Group by file once (O(diagnostics)) instead of re-filtering per open model.
   useEffect(() => {
     const monaco = getMonaco();
+    const byFile = new Map<string, typeof projectDiagnostics>();
+    for (const d of projectDiagnostics) {
+      const list = byFile.get(d.file);
+      if (list) list.push(d);
+      else byFile.set(d.file, [d]);
+    }
     for (const [path, model] of modelsRef.current) {
       const rel = rootPath && path.startsWith(`${rootPath}/`) ? path.slice(rootPath.length + 1) : path;
-      const markers = projectDiagnostics
-        .filter((d) => d.file === rel)
-        .map((d) => {
-          const word = model.getWordAtPosition({ lineNumber: d.line, column: d.col });
-          return {
-            severity: d.severity === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning,
-            message: `${d.message} (${d.code})`,
-            startLineNumber: d.line,
-            startColumn: word ? word.startColumn : d.col,
-            endLineNumber: d.line,
-            endColumn: word ? word.endColumn : d.col + 1,
-          };
-        });
+      const fileDiags = byFile.get(rel) ?? [];
+      const markers = fileDiags.map((d) => {
+        const word = model.getWordAtPosition({ lineNumber: d.line, column: d.col });
+        return {
+          severity: d.severity === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning,
+          message: `${d.message} (${d.code})`,
+          startLineNumber: d.line,
+          startColumn: word ? word.startColumn : d.col,
+          endLineNumber: d.line,
+          endColumn: word ? word.endColumn : d.col + 1,
+        };
+      });
       monaco.editor.setModelMarkers(model, 'forge-tsc', markers);
     }
-  }, [projectDiagnostics, rootPath, activePath, tabs]);
+  }, [projectDiagnostics, rootPath, tabs]);
 
   // Reveal a requested line/column (terminal path:line:col links, and Go to Definition targets).
   // When the reveal carries an end position, briefly highlight the target symbol.
