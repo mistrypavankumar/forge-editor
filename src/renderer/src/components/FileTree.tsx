@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
@@ -70,6 +71,17 @@ function TreeNode({
   };
 
   const isActive = !entry.isDirectory && entry.path === activePath;
+  const rowRef = useRef<HTMLButtonElement>(null);
+
+  // Once this row becomes the active file (e.g. after reveal expands its folders), bring it into
+  // view. `block: 'nearest'` is a no-op when it's already visible, so manual scrolling is left be.
+  useEffect(() => {
+    // Guarded: scrollIntoView exists in Chromium but not in the jsdom test environment.
+    if (isActive && typeof rowRef.current?.scrollIntoView === 'function') {
+      rowRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [isActive]);
+
   const indent = depth * 12 + 6;
   const icon = entry.isDirectory ? (
     <FolderIcon open={expanded} name={entry.name} />
@@ -97,6 +109,7 @@ function TreeNode({
         </div>
       ) : (
         <button
+          ref={rowRef}
           type="button"
           onClick={() => void onClick()}
           onKeyDown={(e) => {

@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, FilePlus, FolderPlus, RefreshCw, ChevronsDownUp } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { useEditorStore } from '../stores/editor-store';
 import { useFileClipboard } from '../stores/file-clipboard';
 import { openFolderDialog } from '../lib/workspace-actions';
+import { revealInTree } from '../lib/reveal-in-tree';
 import { deleteEntry, pasteInto, newFile, newFolder, refreshDir } from '../lib/fs-actions';
 import { FileTree } from './FileTree';
 import { IconButton } from './ui/IconButton';
@@ -33,10 +35,17 @@ export function FileExplorer(): React.JSX.Element {
   const collapseAll = useWorkspaceStore((s) => s.collapseAll);
   const setClipboard = useFileClipboard((s) => s.set);
   const clipboardItem = useFileClipboard((s) => s.item);
+  const activePath = useEditorStore((s) => s.activePath);
 
   const [menu, setMenu] = useState<{ x: number; y: number; entry: DirEntry } | null>(null);
 
   const onOpenFolder = (): void => void openFolderDialog();
+
+  // Reveal the active file: expand its ancestor folders so its row shows in the tree. Runs when
+  // the active tab changes and when this view first mounts (e.g. switching to the Structure tab).
+  useEffect(() => {
+    if (activePath) void revealInTree(activePath);
+  }, [activePath]);
 
   if (!rootPath) {
     return (
