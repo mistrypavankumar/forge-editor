@@ -18,6 +18,7 @@ export function useSettingsPersistence(): void {
   const autoSave = useEditorStore((s) => s.autoSave);
   const formatterId = useFormatterStore((s) => s.selectedId);
   const formatOnSave = useFormatterStore((s) => s.formatOnSave);
+  const autoFormat = useFormatterStore((s) => s.autoFormat);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -43,6 +44,9 @@ export function useSettingsPersistence(): void {
         if (typeof res.data.formatOnSave === 'boolean') {
           useFormatterStore.getState().setFormatOnSave(res.data.formatOnSave);
         }
+        if (typeof res.data.autoFormat === 'boolean') {
+          useFormatterStore.getState().setAutoFormat(res.data.autoFormat);
+        }
       }
       hydrated.current = true;
     });
@@ -61,6 +65,7 @@ export function useSettingsPersistence(): void {
       autoSave,
       formatterId,
       formatOnSave,
+      autoFormat,
     });
-  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, formatterId, formatOnSave]);
+  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, formatterId, formatOnSave, autoFormat]);
 }

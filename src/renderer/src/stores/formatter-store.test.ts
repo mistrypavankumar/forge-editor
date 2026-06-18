@@ -7,6 +7,7 @@ describe('formatter-store', () => {
       selectedId: 'eslint',
       available: ['eslint'],
       formatOnSave: false,
+      autoFormat: false,
       lastError: null,
     });
   });
@@ -29,9 +30,11 @@ describe('formatter-store', () => {
     expect(useFormatterStore.getState().selectedId).toBe('eslint');
   });
 
-  it('toggles format-on-save and records errors', () => {
+  it('toggles format-on-save and auto-format and records errors', () => {
     useFormatterStore.getState().setFormatOnSave(true);
     expect(useFormatterStore.getState().formatOnSave).toBe(true);
+    useFormatterStore.getState().setAutoFormat(true);
+    expect(useFormatterStore.getState().autoFormat).toBe(true);
     useFormatterStore.getState().setError('boom');
     expect(useFormatterStore.getState().lastError).toBe('boom');
   });

@@ -106,6 +106,8 @@ export interface ForgeSettings {
   formatterId?: string;
   /** Run the active formatter automatically after each save. */
   formatOnSave?: boolean;
+  /** Run the active formatter automatically 5s after edits stop. */
+  autoFormat?: boolean;
 }
 
 /** Outcome of running a formatter CLI against a file. */

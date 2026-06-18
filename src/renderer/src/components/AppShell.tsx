@@ -14,6 +14,7 @@ import { useTasksStore } from '../stores/tasks-store';
 import { useKeybindings } from '../keybindings/use-keybindings';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
 import { useAutoSave } from '../settings/use-auto-save';
+import { useAutoFormat } from '../settings/use-auto-format';
 import { commandRegistry } from '../commands/command-registry';
 import { TopBar } from './TopBar';
 import { ActivitySidebar } from './ActivitySidebar';
@@ -57,6 +58,7 @@ export function AppShell(): React.JSX.Element {
   useKeybindings();
   useSettingsPersistence();
   useAutoSave();
+  useAutoFormat();
 
   const autoSave = useEditorStore((s) => s.autoSave);
   const tabs = useEditorStore((s) => s.tabs);
