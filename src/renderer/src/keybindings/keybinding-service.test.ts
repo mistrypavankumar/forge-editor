@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  commandForKeyEvent,
   defaultKeybindings,
   eventToKeystroke,
   mergeKeybindings,
@@ -43,5 +44,15 @@ describe('keybinding-service', () => {
   it('resolveCommandId looks up a binding', () => {
     expect(resolveCommandId('mod+s', { 'mod+s': 'file.save' })).toBe('file.save');
     expect(resolveCommandId('mod+x', { 'mod+s': 'file.save' })).toBeUndefined();
+  });
+
+  it('commandForKeyEvent resolves Cmd+K to the command palette', () => {
+    expect(commandForKeyEvent(ev({ key: 'k', metaKey: true }), true, defaultKeybindings)).toBe(
+      'workbench.commandPalette',
+    );
+  });
+
+  it('commandForKeyEvent ignores keys with no modifier', () => {
+    expect(commandForKeyEvent(ev({ key: 'k' }), true, defaultKeybindings)).toBeUndefined();
   });
 });

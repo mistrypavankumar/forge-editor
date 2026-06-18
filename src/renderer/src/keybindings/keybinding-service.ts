@@ -41,3 +41,17 @@ export function resolveCommandId(
 ): string | undefined {
   return bindings[keystroke];
 }
+
+/**
+ * Resolve the command bound to a keyboard event, or undefined if none.
+ * Shared by the window listener and the Monaco editor so shortcuts behave
+ * identically whether or not the editor has focus.
+ */
+export function commandForKeyEvent(
+  e: KeyEventLike,
+  isMac: boolean,
+  bindings: Record<string, string>,
+): string | undefined {
+  if (!e.metaKey && !e.ctrlKey && !e.altKey) return undefined;
+  return resolveCommandId(eventToKeystroke(e, isMac), bindings);
+}

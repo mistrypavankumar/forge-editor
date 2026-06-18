@@ -6,6 +6,8 @@ import { languageFor } from '../editor/language';
 import { hunkAtLine, hunkToDecoration, revertHunk } from '../editor/git-gutter';
 import { DiffPeek } from '../editor/diff-peek';
 import { computeDiff, type DiffHunk } from '../lib/line-diff';
+import { commandRegistry } from '../commands/command-registry';
+import { commandForKeyEvent, defaultKeybindings } from '../keybindings/keybinding-service';
 import { relativeTime } from '../lib/relative-time';
 import type { BlameLine } from '@shared/ipc-contract';
 import { useEditorStore } from '../stores/editor-store';
@@ -116,6 +118,20 @@ export function CodeEditor(): React.JSX.Element {
 
     const status = useWorkbenchStatusStore.getState();
     const disposables: IDisposable[] = [];
+
+    // Monaco swallows some app shortcuts when focused (e.g. Cmd+K is a Monaco chord
+    // prefix), so they never reach the window listener. Resolve app bindings here first
+    // and intercept before Monaco acts, keeping shortcuts working while editing.
+    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    disposables.push(
+      instance.onKeyDown((e) => {
+        const id = commandForKeyEvent(e.browserEvent, isMac, defaultKeybindings);
+        if (!id) return;
+        e.preventDefault();
+        e.stopPropagation();
+        void commandRegistry.run(id);
+      }),
+    );
 
     disposables.push(
       instance.onDidChangeModelContent(() => {
