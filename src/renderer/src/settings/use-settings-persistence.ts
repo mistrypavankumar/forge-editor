@@ -17,6 +17,7 @@ export function useSettingsPersistence(): void {
   const taskCommands = useTasksStore((s) => s.overrides);
   const customTasks = useTasksStore((s) => s.custom);
   const autoSave = useEditorStore((s) => s.autoSave);
+  const fontSize = useEditorStore((s) => s.fontSize);
   const formatterId = useFormatterStore((s) => s.selectedId);
   const formatOnSave = useFormatterStore((s) => s.formatOnSave);
   const autoFormat = useFormatterStore((s) => s.autoFormat);
@@ -38,6 +39,9 @@ export function useSettingsPersistence(): void {
         if (res.data.customTasks) useTasksStore.getState().setCustom(res.data.customTasks);
         if (typeof res.data.autoSave === 'boolean') {
           useEditorStore.getState().setAutoSave(res.data.autoSave);
+        }
+        if (typeof res.data.fontSize === 'number') {
+          useEditorStore.getState().setFontSize(res.data.fontSize);
         }
         if (res.data.formatterId) {
           // Detection (setAvailable) reconciles this later if the formatter isn't in the project.
@@ -68,10 +72,11 @@ export function useSettingsPersistence(): void {
       taskCommands,
       customTasks,
       autoSave,
+      fontSize,
       formatterId,
       formatOnSave,
       autoFormat,
       keybindings,
     });
-  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, formatterId, formatOnSave, autoFormat, keybindings]);
+  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings]);
 }

@@ -145,6 +145,8 @@ export interface ForgeSettings {
   taskCommands?: Record<string, string>;
   customTasks?: { id: string; label: string; command: string }[];
   autoSave?: boolean;
+  /** Editor font size in px. */
+  fontSize?: number;
   /** The active document formatter (e.g. 'eslint', 'prettier'). */
   formatterId?: string;
   /** Run the active formatter automatically after each save. */

@@ -24,6 +24,8 @@ export interface EditorState {
   activePath: string | null;
   reveal: RevealTarget | null;
   autoSave: boolean;
+  /** Editor font size in px. */
+  fontSize: number;
   pendingRevert: { path: string; content: string } | null;
   mdPreview: boolean;
   /** Paths of recently closed real files, most-recent last (for Reopen Closed Editor). */
@@ -43,6 +45,7 @@ export interface EditorState {
   requestReveal: (target: RevealTarget) => void;
   consumeReveal: () => void;
   setAutoSave: (on: boolean) => void;
+  setFontSize: (size: number) => void;
   toggleMdPreview: () => void;
   requestRevert: (path: string, content: string) => void;
   consumeRevert: () => void;
@@ -62,6 +65,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   activePath: null,
   reveal: null,
   autoSave: false,
+  fontSize: 13,
   pendingRevert: null,
   mdPreview: false,
   closedStack: [],
@@ -98,6 +102,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   requestReveal: (target) => set({ reveal: target }),
   consumeReveal: () => set({ reveal: null }),
   setAutoSave: (on) => set({ autoSave: on }),
+  setFontSize: (size) => set({ fontSize: Math.min(32, Math.max(8, Math.round(size))) }),
   toggleMdPreview: () => set((s) => ({ mdPreview: !s.mdPreview })),
   requestRevert: (path, content) => set({ pendingRevert: { path, content } }),
   consumeRevert: () => set({ pendingRevert: null }),

@@ -56,6 +56,7 @@ export function CodeEditor(): React.JSX.Element {
   const updateContent = useEditorStore((s) => s.updateContent);
   const reveal = useEditorStore((s) => s.reveal);
   const pendingRevert = useEditorStore((s) => s.pendingRevert);
+  const fontSize = useEditorStore((s) => s.fontSize);
   const themeId = useThemeStore((s) => s.currentId);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const syncTick = useWorkspaceStore((s) => s.syncTick);
@@ -87,7 +88,7 @@ export function CodeEditor(): React.JSX.Element {
       theme: 'forge-dark',
       automaticLayout: true,
       minimap: { enabled: true, renderCharacters: false, maxColumn: 80 },
-      fontSize: 13,
+      fontSize: useEditorStore.getState().fontSize,
       fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, monospace",
       fontLigatures: true,
       // Type-over: typing a closing bracket/quote skips an existing one instead of duplicating.
@@ -325,6 +326,10 @@ export function CodeEditor(): React.JSX.Element {
     const theme = builtInThemes[themeId];
     getMonaco().editor.setTheme(theme?.type === 'light' ? 'forge-light' : 'forge-dark');
   }, [themeId]);
+
+  useEffect(() => {
+    editorRef.current?.updateOptions({ fontSize });
+  }, [fontSize]);
 
   // Reveal a requested line/column (e.g. from a terminal path:line:col link).
   useEffect(() => {

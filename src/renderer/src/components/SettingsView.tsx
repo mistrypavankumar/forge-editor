@@ -70,6 +70,36 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 const selectCls =
   'cursor-pointer rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[12px] text-fg outline-none transition-colors hover:border-line-strong focus:border-accent/70';
 
+function Stepper({
+  value,
+  onChange,
+  min,
+  max,
+  suffix,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  suffix?: string;
+}): React.JSX.Element {
+  const btn = 'flex h-7 w-7 items-center justify-center text-muted hover:bg-surface-3 hover:text-fg disabled:opacity-30';
+  return (
+    <div className="flex items-center overflow-hidden rounded-lg border border-line bg-surface">
+      <button type="button" className={btn} disabled={value <= min} onClick={() => onChange(value - 1)} aria-label="Decrease">
+        −
+      </button>
+      <span className="min-w-[52px] border-x border-line px-2 py-1 text-center font-mono text-[12px] text-fg">
+        {value}
+        {suffix}
+      </span>
+      <button type="button" className={btn} disabled={value >= max} onClick={() => onChange(value + 1)} aria-label="Increase">
+        +
+      </button>
+    </div>
+  );
+}
+
 function SettingRow({
   label,
   hint,
@@ -101,6 +131,7 @@ export function SettingsView(): React.JSX.Element | null {
   const close = (): void => useLayoutStore.getState().setSettingsOpen(false);
   const themeId = useThemeStore((s) => s.currentId);
   const autoSave = useEditorStore((s) => s.autoSave);
+  const fontSize = useEditorStore((s) => s.fontSize);
   const selectedFormatter = useFormatterStore((s) => s.selectedId);
   const available = useFormatterStore((s) => s.available);
   const formatOnSave = useFormatterStore((s) => s.formatOnSave);
@@ -170,6 +201,15 @@ export function SettingsView(): React.JSX.Element | null {
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>
+      </SettingRow>
+      <SettingRow label="Font size" hint="Editor font size in pixels">
+        <Stepper
+          value={fontSize}
+          min={8}
+          max={32}
+          suffix="px"
+          onChange={(v) => useEditorStore.getState().setFontSize(v)}
+        />
       </SettingRow>
       <SettingRow label="Auto save" hint="Write changes to disk when the editor loses focus" last>
         <Toggle on={autoSave} onChange={(v) => useEditorStore.getState().setAutoSave(v)} />
