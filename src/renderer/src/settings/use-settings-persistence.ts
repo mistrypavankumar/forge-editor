@@ -4,6 +4,8 @@ import { useLayoutStore } from '../stores/layout-store';
 import { useRecentsStore } from '../stores/recents-store';
 import { useTasksStore, type TaskId } from '../stores/tasks-store';
 import { useEditorStore } from '../stores/editor-store';
+import { useFormatterStore } from '../stores/formatter-store';
+import type { FormatterId } from '../lib/detect-formatters';
 
 export function useSettingsPersistence(): void {
   const hydrated = useRef(false);
@@ -14,6 +16,8 @@ export function useSettingsPersistence(): void {
   const taskCommands = useTasksStore((s) => s.overrides);
   const customTasks = useTasksStore((s) => s.custom);
   const autoSave = useEditorStore((s) => s.autoSave);
+  const formatterId = useFormatterStore((s) => s.selectedId);
+  const formatOnSave = useFormatterStore((s) => s.formatOnSave);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -32,6 +36,13 @@ export function useSettingsPersistence(): void {
         if (typeof res.data.autoSave === 'boolean') {
           useEditorStore.getState().setAutoSave(res.data.autoSave);
         }
+        if (res.data.formatterId) {
+          // Detection (setAvailable) reconciles this later if the formatter isn't in the project.
+          useFormatterStore.getState().setSelected(res.data.formatterId as FormatterId);
+        }
+        if (typeof res.data.formatOnSave === 'boolean') {
+          useFormatterStore.getState().setFormatOnSave(res.data.formatOnSave);
+        }
       }
       hydrated.current = true;
     });
@@ -48,6 +59,8 @@ export function useSettingsPersistence(): void {
       taskCommands,
       customTasks,
       autoSave,
+      formatterId,
+      formatOnSave,
     });
-  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave]);
+  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, formatterId, formatOnSave]);
 }

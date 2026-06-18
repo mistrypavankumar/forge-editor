@@ -2,6 +2,7 @@ import { CircleX, TriangleAlert, Sparkles, GitBranch, GitCommitVertical } from '
 import { useLayoutStore } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useWorkbenchStatusStore, markerCounts } from '../stores/workbench-status-store';
+import { FormatterSegment } from './FormatterSegment';
 import { cn } from '../lib/cn';
 
 function basename(p: string): string {
@@ -75,6 +76,7 @@ export function StatusBar(): React.JSX.Element {
             {blame}
           </Segment>
         ) : null}
+        <FormatterSegment />
         <Segment className="uppercase">{language}</Segment>
         <Segment>
           Ln {cursor.line}, Col {cursor.column}

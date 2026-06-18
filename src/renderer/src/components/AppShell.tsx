@@ -8,6 +8,8 @@ import { builtInThemes } from '../theme/themes';
 import { loadFiles } from '../lib/quickopen-cache';
 import { refreshTree } from '../lib/fs-actions';
 import { detectPackageManager } from '../lib/detect-pm';
+import { detectFormatters } from '../lib/detect-formatters';
+import { useFormatterStore } from '../stores/formatter-store';
 import { useTasksStore } from '../stores/tasks-store';
 import { useKeybindings } from '../keybindings/use-keybindings';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
@@ -113,6 +115,11 @@ export function AppShell(): React.JSX.Element {
     if (rootEntries.length > 0) {
       useTasksStore.getState().setPm(detectPackageManager(rootEntries.map((e) => e.name)));
     }
+  }, [rootEntries]);
+
+  // Detect available document formatters (ESLint plus any configured at the repo root).
+  useEffect(() => {
+    useFormatterStore.getState().setAvailable(detectFormatters(rootEntries.map((e) => e.name)));
   }, [rootEntries]);
 
   // Watch the workspace and auto-sync the tree, git status, and branch on external changes.

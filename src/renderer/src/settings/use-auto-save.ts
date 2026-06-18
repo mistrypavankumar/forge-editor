@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useEditorStore } from '../stores/editor-store';
+import { maybeFormatOnSave } from '../lib/format-actions';
 
 /** When Auto Save is on, write dirty (real-path) files shortly after edits stop. */
 export function useAutoSave(): void {
@@ -13,7 +14,10 @@ export function useAutoSave(): void {
     const id = setTimeout(() => {
       for (const tab of dirty) {
         void window.forge.writeFile(tab.path, tab.content).then((res) => {
-          if (res.ok) useEditorStore.getState().markSaved(tab.path);
+          if (res.ok) {
+            useEditorStore.getState().markSaved(tab.path);
+            void maybeFormatOnSave(tab.path);
+          }
         });
       }
     }, 800);
