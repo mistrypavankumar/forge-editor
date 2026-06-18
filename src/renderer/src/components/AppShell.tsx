@@ -12,6 +12,7 @@ import { detectFormatters } from '../lib/detect-formatters';
 import { useFormatterStore } from '../stores/formatter-store';
 import { useTasksStore } from '../stores/tasks-store';
 import { useKeybindings } from '../keybindings/use-keybindings';
+import { useKeybindingsStore } from '../stores/keybindings-store';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
 import { useAutoSave } from '../settings/use-auto-save';
 import { useAutoFormat } from '../settings/use-auto-format';
@@ -55,7 +56,8 @@ export function AppShell(): React.JSX.Element {
     setMenu({ x: e.clientX, y: e.clientY });
   };
 
-  useKeybindings();
+  const keybindingOverrides = useKeybindingsStore((s) => s.overrides);
+  useKeybindings(keybindingOverrides);
   useSettingsPersistence();
   useAutoSave();
   useAutoFormat();

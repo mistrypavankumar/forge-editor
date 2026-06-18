@@ -7,7 +7,8 @@ import { hunkAtLine, hunkToDecoration, revertHunk } from '../editor/git-gutter';
 import { DiffPeek } from '../editor/diff-peek';
 import { computeDiff, type DiffHunk } from '../lib/line-diff';
 import { commandRegistry } from '../commands/command-registry';
-import { commandForKeyEvent, defaultKeybindings } from '../keybindings/keybinding-service';
+import { commandForKeyEvent, defaultKeybindings, mergeKeybindings } from '../keybindings/keybinding-service';
+import { useKeybindingsStore } from '../stores/keybindings-store';
 import { registerFormatProvider } from '../editor/format-provider';
 import { setActiveEditor } from '../editor/active-editor';
 import { useFormatterStore } from '../stores/formatter-store';
@@ -132,7 +133,8 @@ export function CodeEditor(): React.JSX.Element {
     const isMac = window.forge.isMac;
     disposables.push(
       instance.onKeyDown((e) => {
-        const id = commandForKeyEvent(e.browserEvent, isMac, defaultKeybindings);
+        const bindings = mergeKeybindings(defaultKeybindings, useKeybindingsStore.getState().overrides);
+        const id = commandForKeyEvent(e.browserEvent, isMac, bindings);
         if (!id) return;
         e.preventDefault();
         e.stopPropagation();
