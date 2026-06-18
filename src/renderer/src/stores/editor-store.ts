@@ -26,6 +26,8 @@ export interface EditorState {
   autoSave: boolean;
   pendingRevert: { path: string; content: string } | null;
   mdPreview: boolean;
+  /** Paths of recently closed real files, most-recent last (for Reopen Closed Editor). */
+  closedStack: string[];
   openFile: (file: {
     path: string;
     name: string;
@@ -49,6 +51,10 @@ export interface EditorState {
   closeToRight: (path: string) => void;
   closeSaved: () => void;
   closeAll: () => void;
+  /** Remove and return the most recently closed real-file path, or null. */
+  takeClosed: () => string | null;
+  /** Move the active tab by `delta` (wraps around). */
+  cycleTab: (delta: number) => void;
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -58,6 +64,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   autoSave: false,
   pendingRevert: null,
   mdPreview: false,
+  closedStack: [],
   openFile: (file) =>
     set((s) => {
       if (s.tabs.some((t) => t.path === file.path)) return { activePath: file.path };
@@ -73,7 +80,11 @@ export const useEditorStore = create<EditorState>((set) => ({
         const neighbor = tabs[idx] ?? tabs[idx - 1] ?? null;
         activePath = neighbor ? neighbor.path : null;
       }
-      return { tabs, activePath };
+      // Remember real on-disk files so they can be reopened.
+      const closedStack = path.startsWith('/')
+        ? [...s.closedStack.filter((p) => p !== path), path].slice(-20)
+        : s.closedStack;
+      return { tabs, activePath, closedStack };
     }),
   setActive: (path) => set({ activePath: path }),
   updateContent: (path, content) =>
@@ -117,4 +128,21 @@ export const useEditorStore = create<EditorState>((set) => ({
       return { tabs, activePath };
     }),
   closeAll: () => set({ tabs: [], activePath: null }),
+  takeClosed: () => {
+    let popped: string | null = null;
+    set((s) => {
+      if (s.closedStack.length === 0) return s;
+      const closedStack = [...s.closedStack];
+      popped = closedStack.pop() ?? null;
+      return { closedStack };
+    });
+    return popped;
+  },
+  cycleTab: (delta) =>
+    set((s) => {
+      if (s.tabs.length === 0) return s;
+      const idx = s.tabs.findIndex((t) => t.path === s.activePath);
+      const next = (idx + delta + s.tabs.length) % s.tabs.length;
+      return { activePath: s.tabs[next].path };
+    }),
 }));

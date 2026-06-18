@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useEditorStore } from './editor-store';
 
-const reset = () => useEditorStore.setState({ tabs: [], activePath: null });
+const reset = () => useEditorStore.setState({ tabs: [], activePath: null, closedStack: [] });
 const sample = { path: '/p/a.ts', name: 'a.ts', content: 'x' };
 
 describe('editor-store', () => {
@@ -51,5 +51,31 @@ describe('editor-store', () => {
     useEditorStore.getState().openFile(sample);
     useEditorStore.getState().closeFile('/p/a.ts');
     expect(useEditorStore.getState().activePath).toBeNull();
+  });
+
+  it('records closed real files and takeClosed pops the most recent', () => {
+    useEditorStore.getState().openFile(sample);
+    useEditorStore.getState().openFile({ path: '/p/b.ts', name: 'b.ts', content: 'y' });
+    useEditorStore.getState().closeFile('/p/a.ts');
+    useEditorStore.getState().closeFile('/p/b.ts');
+    expect(useEditorStore.getState().takeClosed()).toBe('/p/b.ts');
+    expect(useEditorStore.getState().takeClosed()).toBe('/p/a.ts');
+    expect(useEditorStore.getState().takeClosed()).toBeNull();
+  });
+
+  it('does not record untitled (non-disk) files as closable', () => {
+    useEditorStore.getState().openFile({ path: 'Untitled-1', name: 'Untitled-1', content: '' });
+    useEditorStore.getState().closeFile('Untitled-1');
+    expect(useEditorStore.getState().closedStack).toEqual([]);
+  });
+
+  it('cycleTab wraps around the open tabs', () => {
+    useEditorStore.getState().openFile(sample);
+    useEditorStore.getState().openFile({ path: '/p/b.ts', name: 'b.ts', content: 'y' });
+    useEditorStore.getState().setActive('/p/b.ts');
+    useEditorStore.getState().cycleTab(1);
+    expect(useEditorStore.getState().activePath).toBe('/p/a.ts');
+    useEditorStore.getState().cycleTab(-1);
+    expect(useEditorStore.getState().activePath).toBe('/p/b.ts');
   });
 });

@@ -33,6 +33,13 @@ import {
   gitUnstage,
   gitDiscard,
   gitStageAll,
+  getBranches,
+  checkoutBranch,
+  createBranch,
+  gitPush,
+  gitPull,
+  gitFetch,
+  getGitLog,
 } from './git/git-service';
 import { searchInFiles, replaceInFiles } from './search/search-service';
 import { watchWorkspace } from './fs/watcher';
@@ -165,6 +172,21 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IpcChannels.gitBlame, (_e, rootPath: string, path: string) =>
     toResult(() => getGitBlame(rootPath, path)),
+  );
+  ipcMain.handle(IpcChannels.gitBranches, (_e, rootPath: string) =>
+    toResult(() => getBranches(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.gitCheckout, (_e, rootPath: string, name: string) =>
+    toResult(() => checkoutBranch(rootPath, name)),
+  );
+  ipcMain.handle(IpcChannels.gitCreateBranch, (_e, rootPath: string, name: string) =>
+    toResult(() => createBranch(rootPath, name)),
+  );
+  ipcMain.handle(IpcChannels.gitPush, (_e, rootPath: string) => toResult(() => gitPush(rootPath)));
+  ipcMain.handle(IpcChannels.gitPull, (_e, rootPath: string) => toResult(() => gitPull(rootPath)));
+  ipcMain.handle(IpcChannels.gitFetch, (_e, rootPath: string) => toResult(() => gitFetch(rootPath)));
+  ipcMain.handle(IpcChannels.gitLog, (_e, rootPath: string, limit?: number) =>
+    toResult(() => getGitLog(rootPath, limit)),
   );
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, options: SearchOptions) =>
     toResult(() => searchInFiles(rootPath, options)),

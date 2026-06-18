@@ -9,6 +9,8 @@ export interface KeyEventLike {
 export function eventToKeystroke(e: KeyEventLike, isMac: boolean): string {
   const parts: string[] = [];
   if (isMac ? e.metaKey : e.ctrlKey) parts.push('mod');
+  // On mac, the Control key is distinct from the "mod" (Command) key.
+  if (isMac && e.ctrlKey) parts.push('ctrl');
   if (e.altKey) parts.push('alt');
   if (e.shiftKey) parts.push('shift');
   parts.push(e.key.toLowerCase());
@@ -17,11 +19,19 @@ export function eventToKeystroke(e: KeyEventLike, isMac: boolean): string {
 
 export const defaultKeybindings: Record<string, string> = {
   'mod+s': 'file.save',
+  'mod+alt+s': 'file.saveAll',
   'mod+n': 'file.newTextFile',
   'mod+w': 'file.closeEditor',
+  'mod+shift+t': 'file.reopenClosedEditor',
   'mod+o': 'file.openFolder',
   'mod+b': 'view.toggleSidebar',
   'mod+j': 'view.toggleBottomPanel',
+  'ctrl+`': 'view.toggleTerminal',
+  'mod+`': 'view.toggleTerminal',
+  'mod+g': 'editor.gotoLine',
+  'mod+shift+f': 'workbench.findInFiles',
+  'mod+alt+arrowright': 'editor.nextTab',
+  'mod+alt+arrowleft': 'editor.prevTab',
   'mod+shift+p': 'workbench.commandPalette',
   'mod+k': 'workbench.commandPalette',
   'mod+p': 'workbench.quickOpen',

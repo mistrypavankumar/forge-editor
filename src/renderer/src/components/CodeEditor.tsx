@@ -9,6 +9,7 @@ import { computeDiff, type DiffHunk } from '../lib/line-diff';
 import { commandRegistry } from '../commands/command-registry';
 import { commandForKeyEvent, defaultKeybindings } from '../keybindings/keybinding-service';
 import { registerFormatProvider } from '../editor/format-provider';
+import { setActiveEditor } from '../editor/active-editor';
 import { useFormatterStore } from '../stores/formatter-store';
 import type { FormatterId } from '../lib/detect-formatters';
 import { FormatterPicker } from './FormatterPicker';
@@ -100,6 +101,7 @@ export function CodeEditor(): React.JSX.Element {
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     });
     editorRef.current = instance;
+    setActiveEditor(instance);
     decoRef.current = instance.createDecorationsCollection();
     peekRef.current = new DiffPeek(instance, monaco, {
       getHunks: () => hunksRef.current,
@@ -201,6 +203,7 @@ export function CodeEditor(): React.JSX.Element {
       clearTimeout(diffTimer.current);
       peekRef.current?.dispose();
       disposables.forEach((d) => d.dispose());
+      setActiveEditor(null);
       instance.dispose();
     };
   }, [updateContent, recomputeDiff]);

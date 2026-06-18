@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw, GitCommitVertical, Plus, Minus, Undo2, FileSymlink } from 'lucide-react';
+import { RefreshCw, GitCommitVertical, Plus, Minus, Undo2, FileSymlink, ChevronRight, ChevronDown } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { openFilePath, openGitStagedDiff } from '../lib/workspace-actions';
 import { deleteEntry } from '../lib/fs-actions';
 import { PanelHeader } from './ui/Panel';
 import { ModernFileIcon } from './ModernFileIcon';
+import { GitBranchBar } from './GitBranchBar';
 import { cn } from '../lib/cn';
-import type { GitChange } from '@shared/ipc-contract';
+import type { GitChange, GitCommit } from '@shared/ipc-contract';
 
 const STATUS_CLS: Record<GitChange['status'], string> = {
   M: 'text-warning',
@@ -85,6 +86,8 @@ export function SourceControlPanel(): React.JSX.Element {
   const branch = useWorkspaceStore((s) => s.branch);
   const syncTick = useWorkspaceStore((s) => s.syncTick);
   const [changes, setChanges] = useState<GitChange[]>([]);
+  const [commits, setCommits] = useState<GitCommit[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [message, setMessage] = useState('');
   const [committing, setCommitting] = useState(false);
 
@@ -92,6 +95,9 @@ export function SourceControlPanel(): React.JSX.Element {
     if (!rootPath) return;
     void window.forge.gitChangedFiles(rootPath).then((res) => {
       if (res.ok) setChanges(res.data);
+    });
+    void window.forge.gitLog(rootPath, 50).then((res) => {
+      if (res.ok) setCommits(res.data);
     });
   }, [rootPath]);
 
@@ -153,7 +159,8 @@ export function SourceControlPanel(): React.JSX.Element {
           </button>
         }
       />
-      <div className="flex flex-col gap-2 px-2 pb-2">
+      <GitBranchBar root={root} onChanged={refresh} />
+      <div className="flex flex-col gap-2 px-2 pb-2 pt-2">
         <textarea
           rows={2}
           value={message}
@@ -225,6 +232,29 @@ export function SourceControlPanel(): React.JSX.Element {
               />
             ))}
           </>
+        ) : null}
+
+        {commits.length > 0 ? (
+          <div className="mt-2 border-t border-line-soft pt-1">
+            <button
+              type="button"
+              onClick={() => setShowHistory((v) => !v)}
+              className="flex w-full items-center gap-1 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-faint hover:text-muted"
+            >
+              {showHistory ? <ChevronDown size={12} /> : <ChevronRight size={12} />} Commits
+            </button>
+            {showHistory
+              ? commits.map((c) => (
+                  <div key={c.hash} className="flex items-baseline gap-2 px-3 py-0.5">
+                    <span className="shrink-0 font-mono text-[11px] text-accent">{c.hash}</span>
+                    <span className="truncate text-[12px] text-muted" title={`${c.subject} — ${c.author}, ${c.date}`}>
+                      {c.subject}
+                    </span>
+                    <span className="ml-auto shrink-0 text-[10px] text-faint">{c.date}</span>
+                  </div>
+                ))
+              : null}
+          </div>
         ) : null}
       </div>
     </div>

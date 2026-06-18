@@ -19,6 +19,13 @@ export const IpcChannels = {
   gitOriginal: 'forge:git:original',
   gitStaged: 'forge:git:staged',
   gitBlame: 'forge:git:blame',
+  gitBranches: 'forge:git:branches',
+  gitCheckout: 'forge:git:checkout',
+  gitCreateBranch: 'forge:git:createBranch',
+  gitPush: 'forge:git:push',
+  gitPull: 'forge:git:pull',
+  gitFetch: 'forge:git:fetch',
+  gitLog: 'forge:git:log',
   search: 'forge:search',
   replaceInFiles: 'forge:search:replace',
   watchWorkspace: 'forge:fs:watch',
@@ -74,6 +81,18 @@ export interface GitChange {
   status: 'M' | 'A' | 'D' | 'R' | 'U';
   staged: boolean;
   unstaged: boolean;
+}
+
+export interface GitBranches {
+  current: string | null;
+  all: string[];
+}
+
+export interface GitCommit {
+  hash: string;
+  author: string;
+  date: string;
+  subject: string;
 }
 
 export interface BlameLine {
@@ -184,6 +203,13 @@ export interface ForgeApi {
   gitOriginal: (rootPath: string, path: string) => Promise<Result<string | null>>;
   gitStaged: (rootPath: string, path: string) => Promise<Result<string | null>>;
   gitBlame: (rootPath: string, path: string) => Promise<Result<BlameLine[]>>;
+  gitBranches: (rootPath: string) => Promise<Result<GitBranches>>;
+  gitCheckout: (rootPath: string, name: string) => Promise<Result<void>>;
+  gitCreateBranch: (rootPath: string, name: string) => Promise<Result<void>>;
+  gitPush: (rootPath: string) => Promise<Result<void>>;
+  gitPull: (rootPath: string) => Promise<Result<void>>;
+  gitFetch: (rootPath: string) => Promise<Result<void>>;
+  gitLog: (rootPath: string, limit?: number) => Promise<Result<GitCommit[]>>;
   search: (rootPath: string, options: SearchOptions) => Promise<Result<SearchMatch[]>>;
   replaceInFiles: (
     rootPath: string,

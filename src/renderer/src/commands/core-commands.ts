@@ -5,6 +5,8 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 import { openFolderDialog, openFileDialog } from '../lib/workspace-actions';
 import { newFile } from '../lib/fs-actions';
 import { formatActiveFile, maybeFormatOnSave } from '../lib/format-actions';
+import { getActiveEditor } from '../editor/active-editor';
+import { getMonaco } from '../editor/monaco-setup';
 
 let untitledSeq = 0;
 
@@ -54,6 +56,65 @@ function closeActiveEditor(): void {
   if (state.activePath) state.closeFile(state.activePath);
 }
 
+export async function saveAllFiles(): Promise<void> {
+  const state = useEditorStore.getState();
+  const dirty = state.tabs.filter((t) => t.dirty && !t.readOnly && t.path.startsWith('/'));
+  for (const tab of dirty) {
+    const res = await window.forge.writeFile(tab.path, tab.content);
+    if (res.ok) {
+      state.markSaved(tab.path);
+      await maybeFormatOnSave(tab.path);
+    }
+  }
+}
+
+async function reopenClosedEditor(): Promise<void> {
+  const path = useEditorStore.getState().takeClosed();
+  if (!path) return;
+  const res = await window.forge.readFile(path);
+  if (res.ok) {
+    const name = path.slice(path.lastIndexOf('/') + 1);
+    useEditorStore.getState().openFile({ path, name, content: res.data });
+  }
+}
+
+function gotoLine(): void {
+  const editor = getActiveEditor();
+  if (!editor) return;
+  editor.focus();
+  void editor.getAction('editor.action.gotoLine')?.run();
+}
+
+function toggleWordWrap(): void {
+  const editor = getActiveEditor();
+  if (!editor) return;
+  const current = editor.getOption(getMonaco().editor.EditorOption.wordWrap);
+  editor.updateOptions({ wordWrap: current === 'on' ? 'off' : 'on' });
+}
+
+function toggleMinimap(): void {
+  const editor = getActiveEditor();
+  if (!editor) return;
+  const current = editor.getOption(getMonaco().editor.EditorOption.minimap);
+  editor.updateOptions({ minimap: { enabled: !current.enabled } });
+}
+
+function toggleTerminal(): void {
+  const l = useLayoutStore.getState();
+  if (l.bottomVisible && l.bottomTab === 'terminal') {
+    l.setPanelVisible('bottom', false);
+    return;
+  }
+  l.setBottomTab('terminal');
+  l.setPanelVisible('bottom', true);
+}
+
+function findInFiles(): void {
+  const l = useLayoutStore.getState();
+  l.setActivity('search');
+  l.setPanelVisible('sidebar', true);
+}
+
 export function registerCoreCommands(): void {
   commandRegistry.register({
     id: 'file.save',
@@ -68,6 +129,72 @@ export function registerCoreCommands(): void {
     category: 'Editor',
     run: formatActiveFile,
     isEnabled: () => useEditorStore.getState().activePath !== null,
+  });
+  commandRegistry.register({
+    id: 'file.saveAll',
+    title: 'Save All',
+    category: 'File',
+    run: saveAllFiles,
+    isEnabled: () => useEditorStore.getState().tabs.some((t) => t.dirty),
+  });
+  commandRegistry.register({
+    id: 'file.closeAllEditors',
+    title: 'Close All Editors',
+    category: 'File',
+    run: () => useEditorStore.getState().closeAll(),
+    isEnabled: () => useEditorStore.getState().tabs.length > 0,
+  });
+  commandRegistry.register({
+    id: 'file.reopenClosedEditor',
+    title: 'Reopen Closed Editor',
+    category: 'File',
+    run: reopenClosedEditor,
+    isEnabled: () => useEditorStore.getState().closedStack.length > 0,
+  });
+  commandRegistry.register({
+    id: 'editor.nextTab',
+    title: 'Next Editor Tab',
+    category: 'Editor',
+    run: () => useEditorStore.getState().cycleTab(1),
+    isEnabled: () => useEditorStore.getState().tabs.length > 1,
+  });
+  commandRegistry.register({
+    id: 'editor.prevTab',
+    title: 'Previous Editor Tab',
+    category: 'Editor',
+    run: () => useEditorStore.getState().cycleTab(-1),
+    isEnabled: () => useEditorStore.getState().tabs.length > 1,
+  });
+  commandRegistry.register({
+    id: 'editor.gotoLine',
+    title: 'Go to Line/Column…',
+    category: 'Go',
+    run: gotoLine,
+    isEnabled: () => useEditorStore.getState().activePath !== null,
+  });
+  commandRegistry.register({
+    id: 'editor.toggleWordWrap',
+    title: 'Toggle Word Wrap',
+    category: 'View',
+    run: toggleWordWrap,
+  });
+  commandRegistry.register({
+    id: 'editor.toggleMinimap',
+    title: 'Toggle Minimap',
+    category: 'View',
+    run: toggleMinimap,
+  });
+  commandRegistry.register({
+    id: 'view.toggleTerminal',
+    title: 'Toggle Terminal',
+    category: 'View',
+    run: toggleTerminal,
+  });
+  commandRegistry.register({
+    id: 'workbench.findInFiles',
+    title: 'Find in Files',
+    category: 'Search',
+    run: findInFiles,
   });
   commandRegistry.register({
     id: 'file.newTextFile',
