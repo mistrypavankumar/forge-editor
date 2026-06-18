@@ -4,6 +4,7 @@ import { useLayoutStore } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { openFolderDialog, openFileDialog } from '../lib/workspace-actions';
 import { newFile } from '../lib/fs-actions';
+import { formatActiveFile, maybeFormatOnSave } from '../lib/format-actions';
 
 let untitledSeq = 0;
 
@@ -21,11 +22,17 @@ export async function saveActiveFile(): Promise<void> {
     const path = res.data;
     const name = path.slice(path.lastIndexOf('/') + 1);
     const w = await window.forge.writeFile(path, tab.content);
-    if (w.ok) state.renameTab(tab.path, path, name);
+    if (w.ok) {
+      state.renameTab(tab.path, path, name);
+      await maybeFormatOnSave(path);
+    }
     return;
   }
   const res = await window.forge.writeFile(tab.path, tab.content);
-  if (res.ok) state.markSaved(tab.path);
+  if (res.ok) {
+    state.markSaved(tab.path);
+    await maybeFormatOnSave(tab.path);
+  }
 }
 
 export function newTextFile(): void {
@@ -53,6 +60,13 @@ export function registerCoreCommands(): void {
     title: 'Save File',
     category: 'File',
     run: saveActiveFile,
+    isEnabled: () => useEditorStore.getState().activePath !== null,
+  });
+  commandRegistry.register({
+    id: 'editor.formatDocument',
+    title: 'Format Document',
+    category: 'Editor',
+    run: formatActiveFile,
     isEnabled: () => useEditorStore.getState().activePath !== null,
   });
   commandRegistry.register({

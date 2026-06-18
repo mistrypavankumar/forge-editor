@@ -31,6 +31,7 @@ export const IpcChannels = {
   mkdir: 'forge:fs:mkdir',
   loadSettings: 'forge:settings:load',
   saveSettings: 'forge:settings:save',
+  runFormatter: 'forge:format:run',
   terminalCreate: 'forge:terminal:create',
   terminalInput: 'forge:terminal:input',
   terminalResize: 'forge:terminal:resize',
@@ -101,6 +102,17 @@ export interface ForgeSettings {
   taskCommands?: Record<string, string>;
   customTasks?: { id: string; label: string; command: string }[];
   autoSave?: boolean;
+  /** The active document formatter (e.g. 'eslint', 'prettier'). */
+  formatterId?: string;
+  /** Run the active formatter automatically after each save. */
+  formatOnSave?: boolean;
+}
+
+/** Outcome of running a formatter CLI against a file. */
+export interface FormatRunResult {
+  /** Process exit code (0 = clean). Non-zero may still mean the file was reformatted. */
+  code: number;
+  stderr: string;
 }
 
 export interface TerminalCreateArgs {
@@ -152,6 +164,7 @@ export interface ForgeApi {
   mkdir: (path: string) => Promise<Result<void>>;
   loadSettings: () => Promise<Result<ForgeSettings>>;
   saveSettings: (settings: ForgeSettings) => Promise<Result<void>>;
+  runFormatter: (rootPath: string, tool: string, args: string[]) => Promise<Result<FormatRunResult>>;
   createTerminal: (args: TerminalCreateArgs) => Promise<Result<void>>;
   sendInput: (id: string, data: string) => void;
   resizeTerminal: (id: string, cols: number, rows: number) => void;

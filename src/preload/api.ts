@@ -46,6 +46,8 @@ export const api: ForgeApi = {
   mkdir: (path) => ipcRenderer.invoke(IpcChannels.mkdir, path),
   loadSettings: () => ipcRenderer.invoke(IpcChannels.loadSettings),
   saveSettings: (settings) => ipcRenderer.invoke(IpcChannels.saveSettings, settings),
+  runFormatter: (rootPath, tool, args) =>
+    ipcRenderer.invoke(IpcChannels.runFormatter, rootPath, tool, args),
   createTerminal: (args) => ipcRenderer.invoke(IpcChannels.terminalCreate, args),
   sendInput: (id, data) => ipcRenderer.send(IpcChannels.terminalInput, id, data),
   resizeTerminal: (id, cols, rows) => ipcRenderer.send(IpcChannels.terminalResize, id, cols, rows),
