@@ -31,8 +31,6 @@ export function ProblemList(): React.JSX.Element {
   const error = useDiagnosticsStore((s) => s.error);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const requestReveal = useEditorStore((s) => s.requestReveal);
-  const setActive = useEditorStore((s) => s.setActive);
-  const tabs = useEditorStore((s) => s.tabs);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const errors = diagnostics.filter((d) => d.severity === 'error').length;
@@ -44,6 +42,12 @@ export function ProblemList(): React.JSX.Element {
     void openFilePath(full, basename(d.file)).then(() =>
       requestReveal({ path: full, line: d.line, col: d.col }),
     );
+  };
+
+  // Live marker from an open file — its `path` is already the absolute file path.
+  // Open (or re-focus) the file, then jump the cursor to the marker's line/column.
+  const openMarker = (path: string, file: string, line: number, col: number): void => {
+    void openFilePath(path, file).then(() => requestReveal({ path, line, col }));
   };
 
   // Group project diagnostics by file.
@@ -93,12 +97,11 @@ export function ProblemList(): React.JSX.Element {
       return (
         <div className="h-full overflow-auto py-1">
           {markers.map((m) => {
-            const tab = tabs.find((t) => t.path === m.path);
             return (
               <button
                 key={m.id}
                 type="button"
-                onClick={() => tab && setActive(tab.path)}
+                onClick={() => openMarker(m.path, m.file, m.line, m.col)}
                 className="flex w-full items-start gap-2.5 px-3 py-1.5 text-left hover:bg-surface-2"
               >
                 <span className="mt-0.5 shrink-0">
