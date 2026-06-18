@@ -20,6 +20,7 @@ export const IpcChannels = {
   gitStaged: 'forge:git:staged',
   gitBlame: 'forge:git:blame',
   search: 'forge:search',
+  replaceInFiles: 'forge:search:replace',
   watchWorkspace: 'forge:fs:watch',
   fsChanged: 'forge:fs:changed',
   menuAction: 'forge:menu:action',
@@ -86,6 +87,28 @@ export interface SearchMatch {
   name: string;
   line: number;
   preview: string;
+  /** 1-based column of the first match on the line (for highlighting). */
+  col: number;
+  /** Length of the matched text. */
+  length: number;
+}
+
+export interface SearchOptions {
+  query: string;
+  regex: boolean;
+  caseSensitive: boolean;
+  wholeWord: boolean;
+  /** Comma/space-separated globs to include (empty = all). */
+  include?: string;
+  /** Comma/space-separated globs to exclude. */
+  exclude?: string;
+}
+
+export interface ReplaceResult {
+  /** Number of files modified. */
+  files: number;
+  /** Total occurrences replaced. */
+  replacements: number;
 }
 
 export interface RecentEntry {
@@ -161,7 +184,13 @@ export interface ForgeApi {
   gitOriginal: (rootPath: string, path: string) => Promise<Result<string | null>>;
   gitStaged: (rootPath: string, path: string) => Promise<Result<string | null>>;
   gitBlame: (rootPath: string, path: string) => Promise<Result<BlameLine[]>>;
-  search: (rootPath: string, query: string) => Promise<Result<SearchMatch[]>>;
+  search: (rootPath: string, options: SearchOptions) => Promise<Result<SearchMatch[]>>;
+  replaceInFiles: (
+    rootPath: string,
+    options: SearchOptions,
+    replacement: string,
+    files: string[],
+  ) => Promise<Result<ReplaceResult>>;
   watchWorkspace: (rootPath: string) => void;
   onFsChanged: (cb: () => void) => () => void;
   onMenuAction: (cb: (id: string) => void) => () => void;

@@ -25,7 +25,9 @@ export const api: ForgeApi = {
   gitOriginal: (rootPath, path) => ipcRenderer.invoke(IpcChannels.gitOriginal, rootPath, path),
   gitStaged: (rootPath, path) => ipcRenderer.invoke(IpcChannels.gitStaged, rootPath, path),
   gitBlame: (rootPath, path) => ipcRenderer.invoke(IpcChannels.gitBlame, rootPath, path),
-  search: (rootPath, query) => ipcRenderer.invoke(IpcChannels.search, rootPath, query),
+  search: (rootPath, options) => ipcRenderer.invoke(IpcChannels.search, rootPath, options),
+  replaceInFiles: (rootPath, options, replacement, files) =>
+    ipcRenderer.invoke(IpcChannels.replaceInFiles, rootPath, options, replacement, files),
   watchWorkspace: (rootPath) => ipcRenderer.send(IpcChannels.watchWorkspace, rootPath),
   onFsChanged: (cb) => {
     const listener = (): void => cb();

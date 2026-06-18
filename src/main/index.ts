@@ -5,6 +5,7 @@ import {
   IpcChannels,
   pongOf,
   type ForgeSettings,
+  type SearchOptions,
   type TerminalCreateArgs,
 } from '@shared/ipc-contract';
 import { ok, toResult } from '@shared/result';
@@ -32,8 +33,8 @@ import {
   gitUnstage,
   gitDiscard,
   gitStageAll,
-  searchInFiles,
 } from './git/git-service';
+import { searchInFiles, replaceInFiles } from './search/search-service';
 import { watchWorkspace } from './fs/watcher';
 import {
   createTerminal,
@@ -165,8 +166,13 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannels.gitBlame, (_e, rootPath: string, path: string) =>
     toResult(() => getGitBlame(rootPath, path)),
   );
-  ipcMain.handle(IpcChannels.search, (_e, rootPath: string, query: string) =>
-    toResult(() => searchInFiles(rootPath, query)),
+  ipcMain.handle(IpcChannels.search, (_e, rootPath: string, options: SearchOptions) =>
+    toResult(() => searchInFiles(rootPath, options)),
+  );
+  ipcMain.handle(
+    IpcChannels.replaceInFiles,
+    (_e, rootPath: string, options: SearchOptions, replacement: string, files: string[]) =>
+      toResult(() => replaceInFiles(rootPath, options, replacement, files)),
   );
   ipcMain.on(IpcChannels.watchWorkspace, (e, rootPath: string) =>
     watchWorkspace(e.sender, rootPath),
