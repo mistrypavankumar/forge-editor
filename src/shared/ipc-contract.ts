@@ -63,6 +63,7 @@ export const IpcChannels = {
   langSignatureHelp: 'forge:lang:signatureHelp',
   langRename: 'forge:lang:rename',
   langFormat: 'forge:lang:format',
+  langSemanticTokens: 'forge:lang:semanticTokens',
 } as const;
 
 export interface DirEntry {
@@ -157,6 +158,42 @@ export interface ProjectDiagnostic {
 }
 
 // ---- TypeScript Language Service types --------------------------------------
+
+/**
+ * Semantic-token legend, shared by the main-process classifier and the renderer's Monaco
+ * provider so their indices stay in lockstep. Order matches TypeScript's classifier v2020
+ * token-type / token-modifier enums exactly, so a TS classification index maps straight through.
+ * The type names double as Monaco theme token scopes (see DARK_PLUS_RULES in monaco-setup).
+ */
+export const SEMANTIC_TOKEN_TYPES = [
+  'class',
+  'enum',
+  'interface',
+  'namespace',
+  'typeParameter',
+  'type',
+  'parameter',
+  'variable',
+  'enumMember',
+  'property',
+  'function',
+  'member',
+] as const;
+
+export const SEMANTIC_TOKEN_MODIFIERS = [
+  'declaration',
+  'static',
+  'async',
+  'readonly',
+  'defaultLibrary',
+  'local',
+] as const;
+
+/** Monaco delta-encoded semantic tokens: flat groups of 5 (deltaLine, deltaChar, len, type, mods). */
+export interface LsSemanticTokens {
+  data: number[];
+}
+
 // All positions are 1-based line / 1-based column (Monaco-native) so the renderer
 // passes Monaco positions straight through and maps results back without conversion.
 
@@ -253,6 +290,7 @@ export interface EditorLanguageApi {
     newName: string,
   ) => Promise<Result<LsRenameResult>>;
   formatDocument: (filePath: string) => Promise<Result<LsTextEdit[]>>;
+  getSemanticTokens: (filePath: string) => Promise<Result<LsSemanticTokens>>;
 }
 
 export interface RecentEntry {
@@ -263,6 +301,8 @@ export interface RecentEntry {
 
 export interface ForgeSettings {
   themeId?: string;
+  /** Editor syntax color scheme id ('auto' follows the interface theme). */
+  editorScheme?: string;
   sidebarVisible?: boolean;
   sidebarSide?: 'left' | 'right';
   keybindings?: Record<string, string>;

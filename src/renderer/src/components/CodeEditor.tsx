@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { FolderOpen } from 'lucide-react';
 import type { editor, IDisposable } from 'monaco-editor';
 import { getMonaco } from '../editor/monaco-setup';
+import { monacoThemeForScheme } from '../editor/editor-schemes';
 import { languageFor } from '../editor/language';
 import { hunkAtLine, hunkToDecoration, revertHunk } from '../editor/git-gutter';
 import { DiffPeek } from '../editor/diff-peek';
@@ -67,6 +68,7 @@ export function CodeEditor(): React.JSX.Element {
   const fontSize = useEditorStore((s) => s.fontSize);
   const projectDiagnostics = useDiagnosticsStore((s) => s.diagnostics);
   const themeId = useThemeStore((s) => s.currentId);
+  const editorScheme = useThemeStore((s) => s.editorScheme);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const syncTick = useWorkspaceStore((s) => s.syncTick);
 
@@ -97,6 +99,8 @@ export function CodeEditor(): React.JSX.Element {
     registerLanguageProviders(monaco);
     const instance = monaco.editor.create(containerRef.current, {
       theme: 'forge-dark',
+      // Color class/function/variable names from the TS worker's semantic tokens (Dark+ look).
+      'semanticHighlighting.enabled': true,
       automaticLayout: true,
       minimap: { enabled: true, renderCharacters: false, maxColumn: 80 },
       fontSize: useEditorStore.getState().fontSize,
@@ -344,10 +348,11 @@ export function CodeEditor(): React.JSX.Element {
     }
   }, [tabs]);
 
+  // Apply the editor syntax scheme: an explicit choice, or 'auto' to follow the interface theme.
   useEffect(() => {
-    const theme = builtInThemes[themeId];
-    getMonaco().editor.setTheme(theme?.type === 'light' ? 'forge-light' : 'forge-dark');
-  }, [themeId]);
+    const uiType = builtInThemes[themeId]?.type === 'light' ? 'light' : 'dark';
+    getMonaco().editor.setTheme(monacoThemeForScheme(editorScheme, uiType));
+  }, [themeId, editorScheme]);
 
   useEffect(() => {
     editorRef.current?.updateOptions({ fontSize });

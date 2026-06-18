@@ -7,6 +7,7 @@ import type {
   LsHover,
   LsLocation,
   LsRenameResult,
+  LsSemanticTokens,
   LsSignatureHelp,
   LsTextEdit,
 } from '@shared/ipc-contract';
@@ -254,6 +255,51 @@ class LanguageServiceManager {
       });
     }
     return { edits };
+  }
+
+  /**
+   * Whole-file semantic classification, delta-encoded for Monaco. TS classifier v2020 encodes
+   * each span as `((tokenType + 1) << 8) | modifierBits`; the type/modifier order matches our
+   * shared legend, so indices pass straight through. Drives the teal classes / gold functions /
+   * blue variables of the Dark+ look (Monaco's browser worker can't be relied on for this).
+   */
+  getSemanticTokens(file: string): LsSemanticTokens {
+    const project = this.projectFor(file);
+    const sf = project.getSourceFile(file);
+    if (!sf) return { data: [] };
+    let spans: number[];
+    try {
+      const text = sf.getFullText();
+      const result = project
+        .getService()
+        .getEncodedSemanticClassifications(
+          toTsPath(file),
+          { start: 0, length: text.length },
+          ts.SemanticClassificationFormat.TwentyTwenty,
+        );
+      spans = result.spans;
+    } catch {
+      return { data: [] };
+    }
+    const data: number[] = [];
+    let prevLine = 0;
+    let prevChar = 0;
+    // spans is a flat sequence of [start, length, classification] triples.
+    for (let i = 0; i + 2 < spans.length; i += 3) {
+      const start = spans[i];
+      const length = spans[i + 1];
+      const classification = spans[i + 2];
+      const tokenType = (classification >> 8) - 1;
+      if (tokenType < 0) continue;
+      const modifiers = classification & 255;
+      const lc = sf.getLineAndCharacterOfPosition(start);
+      const deltaLine = lc.line - prevLine;
+      const deltaChar = deltaLine === 0 ? lc.character - prevChar : lc.character;
+      data.push(deltaLine, deltaChar, length, tokenType, modifiers);
+      prevLine = lc.line;
+      prevChar = lc.character;
+    }
+    return { data };
   }
 
   formatDocument(file: string): LsTextEdit[] {

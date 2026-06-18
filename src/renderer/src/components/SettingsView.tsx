@@ -10,6 +10,7 @@ import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { commandRegistry } from '../commands/command-registry';
 import { defaultKeybindings, eventToKeystroke, mergeKeybindings } from '../keybindings/keybinding-service';
 import { builtInThemes } from '../theme/themes';
+import { EDITOR_SCHEMES } from '../editor/editor-schemes';
 import { FORMATTERS } from '../lib/detect-formatters';
 import { cn } from '../lib/cn';
 
@@ -131,6 +132,7 @@ export function SettingsView(): React.JSX.Element | null {
   const open = useLayoutStore((s) => s.settingsOpen);
   const close = (): void => useLayoutStore.getState().setSettingsOpen(false);
   const themeId = useThemeStore((s) => s.currentId);
+  const editorScheme = useThemeStore((s) => s.editorScheme);
   const autoSave = useEditorStore((s) => s.autoSave);
   const fontSize = useEditorStore((s) => s.fontSize);
   const autoCheckProblems = useDiagnosticsStore((s) => s.autoRun);
@@ -197,10 +199,21 @@ export function SettingsView(): React.JSX.Element | null {
 
   const general = (
     <Card>
-      <SettingRow label="Color theme" hint="Editor and interface color scheme">
+      <SettingRow label="Color theme" hint="Interface color scheme">
         <select value={themeId} onChange={(e) => useThemeStore.getState().setTheme(e.target.value)} className={selectCls}>
           {Object.values(builtInThemes).map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+      </SettingRow>
+      <SettingRow label="Editor color scheme" hint="Syntax highlighting theme for the code editor">
+        <select
+          value={editorScheme}
+          onChange={(e) => useThemeStore.getState().setEditorScheme(e.target.value)}
+          className={selectCls}
+        >
+          {EDITOR_SCHEMES.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
       </SettingRow>

@@ -12,6 +12,7 @@ import type { FormatterId } from '../lib/detect-formatters';
 export function useSettingsPersistence(): void {
   const hydrated = useRef(false);
   const themeId = useThemeStore((s) => s.currentId);
+  const editorScheme = useThemeStore((s) => s.editorScheme);
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
   const sidebarSide = useLayoutStore((s) => s.sidebarSide);
   const recents = useRecentsStore((s) => s.recents);
@@ -30,6 +31,7 @@ export function useSettingsPersistence(): void {
     void window.forge.loadSettings().then((res) => {
       if (res.ok) {
         if (res.data.themeId) useThemeStore.getState().setTheme(res.data.themeId);
+        if (res.data.editorScheme) useThemeStore.getState().setEditorScheme(res.data.editorScheme);
         if (typeof res.data.sidebarVisible === 'boolean') {
           useLayoutStore.getState().setPanelVisible('sidebar', res.data.sidebarVisible);
         }
@@ -71,6 +73,7 @@ export function useSettingsPersistence(): void {
     if (!hydrated.current) return;
     void window.forge.saveSettings({
       themeId,
+      editorScheme,
       sidebarVisible,
       sidebarSide,
       recents,
@@ -84,5 +87,5 @@ export function useSettingsPersistence(): void {
       keybindings,
       autoCheckProblems,
     });
-  }, [themeId, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems]);
+  }, [themeId, editorScheme, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems]);
 }

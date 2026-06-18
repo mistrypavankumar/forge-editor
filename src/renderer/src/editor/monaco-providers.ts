@@ -1,6 +1,7 @@
 import type * as monacoNs from 'monaco-editor';
 import type { editor, languages, Position } from 'monaco-editor';
 import type { LsLocation } from '@shared/ipc-contract';
+import { SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS } from '@shared/ipc-contract';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { openFilePath } from '../lib/workspace-actions';
@@ -229,6 +230,23 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
         })),
       };
     },
+  });
+
+  // Semantic highlighting straight from the project's Language Service: colors classes/types teal,
+  // functions gold, variables/params/properties blue (the Dark+ look). The legend type names line
+  // up with the theme token scopes in monaco-setup, so coloring is driven entirely by the theme.
+  const legend: languages.SemanticTokensLegend = {
+    tokenTypes: [...SEMANTIC_TOKEN_TYPES],
+    tokenModifiers: [...SEMANTIC_TOKEN_MODIFIERS],
+  };
+  monaco.languages.registerDocumentSemanticTokensProvider(SELECTOR, {
+    getLegend: () => legend,
+    async provideDocumentSemanticTokens(model) {
+      const res = await lang.getSemanticTokens(fileOf(model));
+      if (!res.ok) return null;
+      return { data: new Uint32Array(res.data.data), resultId: undefined };
+    },
+    releaseDocumentSemanticTokens() {},
   });
 
   // Route every go-to/peek "open" (Cmd/Ctrl+Click, F12, references) into the app's tab system.

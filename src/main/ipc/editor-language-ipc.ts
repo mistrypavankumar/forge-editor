@@ -45,4 +45,7 @@ export function registerLanguageIpc(ipcMain: IpcMain): void {
   ipcMain.handle(IpcChannels.langFormat, (_e, file: string) =>
     toResult(async () => languageManager.formatDocument(file)),
   );
+  ipcMain.handle(IpcChannels.langSemanticTokens, (_e, file: string) =>
+    toResult(async () => languageManager.getSemanticTokens(file)),
+  );
 }

@@ -84,6 +84,7 @@ export const api: ForgeApi = {
     renameSymbol: (file, line, col, newName) =>
       ipcRenderer.invoke(IpcChannels.langRename, file, line, col, newName),
     formatDocument: (file) => ipcRenderer.invoke(IpcChannels.langFormat, file),
+    getSemanticTokens: (file) => ipcRenderer.invoke(IpcChannels.langSemanticTokens, file),
   },
   onTerminalData: (cb) => {
     const listener = (_e: unknown, payload: TerminalDataEvent): void => cb(payload);
