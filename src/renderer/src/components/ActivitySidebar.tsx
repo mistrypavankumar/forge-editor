@@ -89,7 +89,7 @@ export function ActivitySidebar({
           type="button"
           title="Settings"
           aria-label="Settings"
-          onClick={() => void commandRegistry.run('workbench.commandPalette')}
+          onClick={() => void commandRegistry.run('workbench.openSettings')}
           className="flex h-11 w-full items-center justify-center text-faint transition-colors hover:text-fg"
         >
           <Settings size={20} strokeWidth={1.6} />
