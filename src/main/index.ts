@@ -44,6 +44,7 @@ import {
   getGitLog,
 } from './git/git-service';
 import { searchInFiles, replaceInFiles } from './search/search-service';
+import { registerLanguageIpc } from './ipc/editor-language-ipc';
 import { watchWorkspace } from './fs/watcher';
 import {
   createTerminal,
@@ -247,6 +248,7 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannels.openExternal, (_e, url: string) =>
     toResult(() => shell.openExternal(url)),
   );
+  registerLanguageIpc(ipcMain);
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

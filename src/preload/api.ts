@@ -68,6 +68,23 @@ export const api: ForgeApi = {
   resizeTerminal: (id, cols, rows) => ipcRenderer.send(IpcChannels.terminalResize, id, cols, rows),
   killCommand: (id) => ipcRenderer.invoke(IpcChannels.terminalKill, id),
   openExternal: (url) => ipcRenderer.invoke(IpcChannels.openExternal, url),
+  editorLanguage: {
+    initializeProject: (root) => ipcRenderer.invoke(IpcChannels.langInit, root),
+    openDocument: (file, content) => ipcRenderer.send(IpcChannels.langOpenDoc, file, content),
+    updateDocument: (file, content) => ipcRenderer.send(IpcChannels.langUpdateDoc, file, content),
+    closeDocument: (file) => ipcRenderer.send(IpcChannels.langCloseDoc, file),
+    getDiagnostics: (file) => ipcRenderer.invoke(IpcChannels.langDiagnostics, file),
+    getDefinition: (file, line, col) => ipcRenderer.invoke(IpcChannels.langDefinition, file, line, col),
+    getReferences: (file, line, col) => ipcRenderer.invoke(IpcChannels.langReferences, file, line, col),
+    getHover: (file, line, col) => ipcRenderer.invoke(IpcChannels.langHover, file, line, col),
+    getCompletions: (file, line, col) =>
+      ipcRenderer.invoke(IpcChannels.langCompletions, file, line, col),
+    getSignatureHelp: (file, line, col) =>
+      ipcRenderer.invoke(IpcChannels.langSignatureHelp, file, line, col),
+    renameSymbol: (file, line, col, newName) =>
+      ipcRenderer.invoke(IpcChannels.langRename, file, line, col, newName),
+    formatDocument: (file) => ipcRenderer.invoke(IpcChannels.langFormat, file),
+  },
   onTerminalData: (cb) => {
     const listener = (_e: unknown, payload: TerminalDataEvent): void => cb(payload);
     ipcRenderer.on(IpcChannels.terminalData, listener);

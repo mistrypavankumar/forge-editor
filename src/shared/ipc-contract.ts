@@ -50,6 +50,19 @@ export const IpcChannels = {
   terminalData: 'forge:terminal:data',
   terminalExit: 'forge:terminal:exit',
   openExternal: 'forge:shell:openExternal',
+  // TypeScript Language Service (real IDE intelligence).
+  langInit: 'forge:lang:init',
+  langOpenDoc: 'forge:lang:openDoc',
+  langUpdateDoc: 'forge:lang:updateDoc',
+  langCloseDoc: 'forge:lang:closeDoc',
+  langDiagnostics: 'forge:lang:diagnostics',
+  langDefinition: 'forge:lang:definition',
+  langReferences: 'forge:lang:references',
+  langHover: 'forge:lang:hover',
+  langCompletions: 'forge:lang:completions',
+  langSignatureHelp: 'forge:lang:signatureHelp',
+  langRename: 'forge:lang:rename',
+  langFormat: 'forge:lang:format',
 } as const;
 
 export interface DirEntry {
@@ -141,6 +154,105 @@ export interface ProjectDiagnostic {
   /** Diagnostic code, e.g. "TS2322". */
   code: string;
   message: string;
+}
+
+// ---- TypeScript Language Service types --------------------------------------
+// All positions are 1-based line / 1-based column (Monaco-native) so the renderer
+// passes Monaco positions straight through and maps results back without conversion.
+
+/** A source range in a file, used for definitions, references, and rename edits. */
+export interface LsLocation {
+  /** Absolute file path of the target. */
+  file: string;
+  line: number;
+  column: number;
+  endLine: number;
+  endColumn: number;
+}
+
+export interface LsDiagnostic {
+  line: number;
+  column: number;
+  endLine: number;
+  endColumn: number;
+  severity: 'error' | 'warning' | 'info';
+  code: number | string;
+  message: string;
+}
+
+export interface LsHover {
+  /** Markdown contents (signature fenced as TypeScript, plus any JSDoc). */
+  contents: string;
+  range?: { line: number; column: number; endLine: number; endColumn: number } | null;
+}
+
+export interface LsCompletionItem {
+  label: string;
+  /** Raw TS ScriptElementKind (e.g. "function", "property"); mapped to a Monaco kind in the provider. */
+  kind: string;
+  insertText?: string;
+  sortText?: string;
+  detail?: string;
+}
+
+export interface LsCompletions {
+  items: LsCompletionItem[];
+}
+
+export interface LsSignatureParameter {
+  label: string;
+  documentation?: string;
+}
+
+export interface LsSignature {
+  label: string;
+  documentation?: string;
+  parameters: LsSignatureParameter[];
+}
+
+export interface LsSignatureHelp {
+  signatures: LsSignature[];
+  activeSignature: number;
+  activeParameter: number;
+}
+
+export interface LsTextEdit {
+  /** Absolute file path the edit applies to. */
+  file: string;
+  line: number;
+  column: number;
+  endLine: number;
+  endColumn: number;
+  newText: string;
+}
+
+export interface LsRenameResult {
+  edits: LsTextEdit[];
+}
+
+/** Renderer-facing surface for the main-process TypeScript Language Service. */
+export interface EditorLanguageApi {
+  initializeProject: (workspaceRoot: string) => Promise<Result<void>>;
+  openDocument: (filePath: string, content: string) => void;
+  updateDocument: (filePath: string, content: string) => void;
+  closeDocument: (filePath: string) => void;
+  getDiagnostics: (filePath: string) => Promise<Result<LsDiagnostic[]>>;
+  getDefinition: (filePath: string, line: number, column: number) => Promise<Result<LsLocation[]>>;
+  getReferences: (filePath: string, line: number, column: number) => Promise<Result<LsLocation[]>>;
+  getHover: (filePath: string, line: number, column: number) => Promise<Result<LsHover | null>>;
+  getCompletions: (filePath: string, line: number, column: number) => Promise<Result<LsCompletions>>;
+  getSignatureHelp: (
+    filePath: string,
+    line: number,
+    column: number,
+  ) => Promise<Result<LsSignatureHelp | null>>;
+  renameSymbol: (
+    filePath: string,
+    line: number,
+    column: number,
+    newName: string,
+  ) => Promise<Result<LsRenameResult>>;
+  formatDocument: (filePath: string) => Promise<Result<LsTextEdit[]>>;
 }
 
 export interface RecentEntry {
@@ -262,6 +374,8 @@ export interface ForgeApi {
   openExternal: (url: string) => Promise<Result<void>>;
   onTerminalData: (cb: (e: TerminalDataEvent) => void) => () => void;
   onTerminalExit: (cb: (e: TerminalExitEvent) => void) => () => void;
+  /** Real TypeScript/JavaScript IDE intelligence backed by the main-process Language Service. */
+  editorLanguage: EditorLanguageApi;
 }
 
 export function pongOf(msg: string): string {

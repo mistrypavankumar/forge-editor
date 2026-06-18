@@ -8,8 +8,9 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: resolve(__dirname, 'src/main/index.ts'),
-        // Native module — keep external so it's require()d from node_modules at runtime.
-        external: ['node-pty'],
+        // node-pty is native; typescript is large and uses dynamic requires — keep both external
+        // so they're require()d from node_modules at runtime instead of bundled.
+        external: ['node-pty', 'typescript'],
       },
     },
     resolve: { alias: { '@shared': resolve(__dirname, 'src/shared') } },
