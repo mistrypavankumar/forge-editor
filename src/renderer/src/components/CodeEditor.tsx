@@ -10,6 +10,7 @@ import { commandRegistry } from '../commands/command-registry';
 import { commandForKeyEvent, defaultKeybindings, mergeKeybindings } from '../keybindings/keybinding-service';
 import { useKeybindingsStore } from '../stores/keybindings-store';
 import { registerFormatProvider } from '../editor/format-provider';
+import { registerAutoCloseTag } from '../editor/auto-close-tag';
 import { setActiveEditor } from '../editor/active-editor';
 import { saveAllFiles } from '../lib/save-actions';
 import { useFormatterStore } from '../stores/formatter-store';
@@ -168,6 +169,9 @@ export function CodeEditor(): React.JSX.Element {
         if (useEditorStore.getState().autoSave) void saveAllFiles();
       }),
     );
+
+    // Auto-close HTML/XML tags as you type.
+    disposables.push(registerAutoCloseTag(instance, monaco));
 
     // Click the change gutter (colored bar / deletion marker) to open the diff peek.
     disposables.push(
