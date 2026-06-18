@@ -8,9 +8,11 @@ import { ProjectRow } from './ProjectRow';
 import { cn } from '../lib/cn';
 import type { GitChange } from '@shared/ipc-contract';
 
-function dirOf(path: string): string {
-  const i = path.lastIndexOf('/');
-  return i > 0 ? path.slice(0, i).replace(/^\//, '') : '';
+/** Directory of `path`, relative to the workspace root when the file lives inside it. */
+function relDir(path: string, rootPath: string | null): string {
+  const rel = rootPath && path.startsWith(`${rootPath}/`) ? path.slice(rootPath.length + 1) : path;
+  const i = rel.lastIndexOf('/');
+  return (i > 0 ? rel.slice(0, i) : '').replace(/^\//, '');
 }
 
 const STATUS_STYLE: Record<GitChange['status'], { letter: string; cls: string }> = {
@@ -62,7 +64,7 @@ export function FocusView(): React.JSX.Element {
               <ProjectRow
                 icon={<ModernFileIcon name={active.name} />}
                 name={active.name}
-                meta={dirOf(active.path)}
+                meta={relDir(active.path, rootPath)}
                 badge={active.dirty ? { label: 'modified', tone: 'changed' } : undefined}
                 onClick={() => setActive(active.path)}
               />
@@ -77,7 +79,7 @@ export function FocusView(): React.JSX.Element {
                     key={t.path}
                     icon={<ModernFileIcon name={t.name} />}
                     name={t.name}
-                    meta={dirOf(t.path)}
+                    meta={relDir(t.path, rootPath)}
                     badge={t.dirty ? { label: 'modified', tone: 'changed' } : undefined}
                     onClick={() => setActive(t.path)}
                   />
@@ -110,7 +112,7 @@ export function FocusView(): React.JSX.Element {
                   key={c.path}
                   icon={<ModernFileIcon name={c.name} />}
                   name={c.name}
-                  meta={dirOf(c.path)}
+                  meta={relDir(c.path, rootPath)}
                   trailing={<span className={cn('font-mono text-[11px]', s.cls)}>{s.letter}</span>}
                   onClick={() => rootPath && void openFilePath(`${rootPath}/${c.path}`, c.name)}
                 />
