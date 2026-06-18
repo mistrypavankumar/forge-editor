@@ -17,6 +17,20 @@ let registered = false;
 export function registerFormatProvider(monaco: typeof monacoNs): void {
   if (registered) return;
   registered = true;
+
+  // Disable Monaco's built-in TS/JS formatter so our provider is the sole one for those
+  // languages — otherwise `editor.action.formatDocument` picks Monaco's formatter (which
+  // doesn't apply Prettier/ESLint rules) and "Format Document" appears to do nothing.
+  for (const defaults of [
+    monaco.languages.typescript.typescriptDefaults,
+    monaco.languages.typescript.javascriptDefaults,
+  ]) {
+    defaults.setModeConfiguration({
+      ...defaults.modeConfiguration,
+      documentRangeFormattingEdits: false,
+    });
+  }
+
   monaco.languages.registerDocumentFormattingEditProvider(FORMAT_LANGUAGES, {
     displayName: 'Forge',
     async provideDocumentFormattingEdits(model) {
