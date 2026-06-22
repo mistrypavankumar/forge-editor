@@ -9,6 +9,10 @@ export interface WorkspaceState {
   scopedPath: string | null;
   branch: string | null;
   renamingPath: string | null;
+  selectedDir: string | null;
+  creating: { dir: string; kind: 'file' | 'folder' } | null;
+  syncTick: number;
+  changeCount: number;
   setWorkspace: (rootPath: string, entries: DirEntry[]) => void;
   setRootEntries: (entries: DirEntry[]) => void;
   setChildren: (path: string, entries: DirEntry[]) => void;
@@ -16,6 +20,14 @@ export interface WorkspaceState {
   setScope: (path: string | null) => void;
   setBranch: (branch: string | null) => void;
   setRenaming: (path: string | null) => void;
+  setSelectedDir: (dir: string | null) => void;
+  expandPath: (path: string) => void;
+  startCreating: (dir: string, kind: 'file' | 'folder') => void;
+  cancelCreating: () => void;
+  collapseAll: () => void;
+  bumpSync: () => void;
+  setChangeCount: (n: number) => void;
+  closeWorkspace: () => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
@@ -26,6 +38,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   scopedPath: null,
   branch: null,
   renamingPath: null,
+  selectedDir: null,
+  creating: null,
+  syncTick: 0,
+  changeCount: 0,
   setWorkspace: (rootPath, entries) =>
     set({
       rootPath,
@@ -35,6 +51,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       scopedPath: null,
       branch: null,
       renamingPath: null,
+      selectedDir: null,
+      creating: null,
     }),
   setRootEntries: (entries) => set({ rootEntries: entries }),
   setChildren: (path, entries) =>
@@ -44,4 +62,23 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setScope: (path) => set({ scopedPath: path }),
   setBranch: (branch) => set({ branch }),
   setRenaming: (path) => set({ renamingPath: path }),
+  setSelectedDir: (dir) => set({ selectedDir: dir }),
+  expandPath: (path) =>
+    set((s) => ({ expandedPaths: { ...s.expandedPaths, [path]: true } })),
+  startCreating: (dir, kind) => set({ creating: { dir, kind } }),
+  cancelCreating: () => set({ creating: null }),
+  collapseAll: () => set({ expandedPaths: {} }),
+  bumpSync: () => set((s) => ({ syncTick: s.syncTick + 1 })),
+  setChangeCount: (n) => set({ changeCount: n }),
+  closeWorkspace: () =>
+    set({
+      rootPath: null,
+      rootEntries: [],
+      childrenByPath: {},
+      expandedPaths: {},
+      scopedPath: null,
+      branch: null,
+      selectedDir: null,
+      changeCount: 0,
+    }),
 }));

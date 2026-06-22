@@ -5,7 +5,19 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   main: {
-    build: { rollupOptions: { input: resolve(__dirname, 'src/main/index.ts') } },
+    build: {
+      rollupOptions: {
+        // Two entries: the main process and the language-service worker thread (emitted as
+        // out/main/language.worker.js, spawned by language-client at runtime).
+        input: {
+          index: resolve(__dirname, 'src/main/index.ts'),
+          'language.worker': resolve(__dirname, 'src/main/language/language.worker.ts'),
+        },
+        // node-pty is native; typescript is large and uses dynamic requires — keep both external
+        // so they're require()d from node_modules at runtime instead of bundled.
+        external: ['node-pty', 'typescript'],
+      },
+    },
     resolve: { alias: { '@shared': resolve(__dirname, 'src/shared') } },
   },
   preload: {

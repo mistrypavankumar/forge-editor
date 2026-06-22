@@ -7,20 +7,6 @@ import { useEditorStore } from '../stores/editor-store';
 import { useNavigatorStore } from '../stores/navigator-store';
 import { registerExec, unregisterExec } from '../lib/terminal-exec';
 
-const ACCENT = '\x1b[38;2;124;130;245m';
-const MUTED = '\x1b[38;2;124;124;135m';
-const GREEN = '\x1b[38;2;61;220;151m';
-const RED = '\x1b[38;2;248;113;113m';
-const GIT = '\x1b[38;2;199;146;234m';
-const RESET = '\x1b[0m';
-const BOLD = '\x1b[1m';
-
-function basename(p: string | null): string {
-  if (!p) return 'forge';
-  const parts = p.split('/').filter(Boolean);
-  return parts[parts.length - 1] ?? 'forge';
-}
-
 export function TerminalView({
   sessionId,
   visible,
@@ -35,56 +21,56 @@ export function TerminalView({
   const rootRef = useRef(rootPath);
   rootRef.current = rootPath;
 
-  // A terminal opened in a hidden (display:none) pane never paints; refit +
-  // repaint whenever this pane becomes visible (tab switch / split).
+  // Refit + repaint when this pane becomes visible (split/tab switch).
   useEffect(() => {
     if (!visible) return;
     const raf = requestAnimationFrame(() => {
       fitRef.current?.fit();
       const t = termRef.current;
-      if (t) t.refresh(0, Math.max(t.rows - 1, 0));
+      if (t) {
+        t.refresh(0, Math.max(t.rows - 1, 0));
+        window.forge.resizeTerminal(sessionId, t.cols, t.rows);
+        t.focus();
+      }
     });
     return () => cancelAnimationFrame(raf);
-  }, [visible]);
+  }, [visible, sessionId]);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
-    const runningRef = { current: false };
-    const lineRef = { current: '' };
-    const posRef = { current: 0 };
-    const branchRef = { current: null as string | null };
-
     const term = new Terminal({
-      fontFamily: "'Fira Code', 'SF Mono', Menlo, monospace",
-      fontSize: 12,
-      lineHeight: 1.35,
+      fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
+      fontSize: 12.5,
+      fontWeight: 400,
+      fontWeightBold: 600,
+      lineHeight: 1.25,
+      letterSpacing: 0,
       cursorBlink: true,
       cursorStyle: 'bar',
-      convertEol: true,
       theme: {
-        background: '#0d0d11',
-        foreground: '#e7e7ea',
-        cursor: '#7c82f5',
-        cursorAccent: '#0d0d11',
-        selectionBackground: '#7c82f540',
-        black: '#1c1c21',
-        red: '#f87171',
-        green: '#3ddc97',
-        yellow: '#f5c451',
-        blue: '#5b9df0',
-        magenta: '#c792ea',
-        cyan: '#22d3ee',
-        white: '#cdcdd4',
-        brightBlack: '#5c5c66',
-        brightRed: '#fca5a5',
-        brightGreen: '#86efac',
-        brightYellow: '#fde68a',
-        brightBlue: '#93c5fd',
-        brightMagenta: '#d8b4fe',
-        brightCyan: '#67e8f9',
-        brightWhite: '#ffffff',
+        background: '#080B12',
+        foreground: '#C7D2E3',
+        cursor: '#8B73FF',
+        cursorAccent: '#080B12',
+        selectionBackground: '#7C5CFF40',
+        black: '#111827',
+        red: '#FF5C7A',
+        green: '#3DDC97',
+        yellow: '#F7B955',
+        blue: '#4DBBFF',
+        magenta: '#8B73FF',
+        cyan: '#4DD0E1',
+        white: '#A8B3C7',
+        brightBlack: '#6B768A',
+        brightRed: '#ff7d95',
+        brightGreen: '#6ee7b0',
+        brightYellow: '#ffce7a',
+        brightBlue: '#7cccff',
+        brightMagenta: '#a48bff',
+        brightCyan: '#6fe0ee',
+        brightWhite: '#D7DEEC',
       },
     });
     const fit = new FitAddon();
@@ -94,12 +80,26 @@ export function TerminalView({
     termRef.current = term;
     fitRef.current = fit;
 
+    // xterm measures the glyph cell from whatever font is available at open time. If the
+    // JetBrains Mono webfont finishes loading later, that measurement is stale and columns
+    // misalign (garbled output). Re-assigning the font forces a re-measure; then refit/repaint.
+    let disposed = false;
+    void document.fonts?.ready.then(() => {
+      if (disposed) return;
+      term.options.fontFamily = "'JetBrains Mono', 'SF Mono', Menlo, monospace";
+      fit.fit();
+      term.refresh(0, Math.max(term.rows - 1, 0));
+      window.forge.resizeTerminal(sessionId, term.cols, term.rows);
+    });
+
+    // URLs: Cmd/Ctrl+click opens in the external browser.
     term.loadAddon(
       new WebLinksAddon((event, uri) => {
         if (event.metaKey || event.ctrlKey) void window.forge.openExternal(uri);
       }),
     );
 
+    // File paths: Cmd/Ctrl+click opens the file (or scopes the folder) in-editor.
     const openPathLink = (token: string): void => {
       const lc = /:(\d+)(?::(\d+))?$/.exec(token);
       const path = lc ? token.slice(0, lc.index) : token;
@@ -150,160 +150,64 @@ export function TerminalView({
       },
     });
 
-    const writePrompt = (): void => {
-      const folder = basename(rootRef.current);
-      const branch = branchRef.current;
-      const gitPart = branch ? ` ${MUTED}on${RESET} ${GIT}⎇ ${branch}${RESET}` : '';
-      term.write(`${ACCENT}╭─${RESET} ${BOLD}${folder}${RESET}${gitPart}\r\n${ACCENT}╰─❯${RESET} `);
-    };
-
-    // Resolve the git branch, then draw the first prompt.
-    void window.forge.gitBranch(rootRef.current ?? '').then((res) => {
-      branchRef.current = res.ok ? res.data : null;
-      writePrompt();
-    });
-
-    const exec = (command: string): void => {
-      runningRef.current = true;
-      void window.forge.runCommand({ id: sessionId, command, cwd: rootRef.current ?? undefined });
-    };
-    registerExec(sessionId, (command) => {
-      if (runningRef.current) return;
-      term.write(command + '\r\n');
-      exec(command);
+    // Spawn the real shell (PTY) for this session.
+    const created = window.forge.createTerminal({
+      id: sessionId,
+      cwd: rootRef.current ?? undefined,
+      cols: term.cols,
+      rows: term.rows,
     });
 
     const offData = window.forge.onTerminalData((e) => {
       if (e.id === sessionId) term.write(e.chunk);
     });
     const offExit = window.forge.onTerminalExit((e) => {
-      if (e.id !== sessionId) return;
-      runningRef.current = false;
-      const dot = e.code === 0 ? `${GREEN}●${RESET}` : `${RED}●${RESET}`;
-      term.write(`\r\n${dot} ${MUTED}exited ${e.code}${RESET}\r\n`);
-      writePrompt();
+      if (e.id === sessionId) {
+        term.write(`\r\n\x1b[38;2;107;118;138m[process exited ${e.code}]\x1b[0m\r\n`);
+      }
     });
 
-    const resetLine = (): void => {
-      lineRef.current = '';
-      posRef.current = 0;
-    };
-    const insertStr = (str: string): void => {
-      const line = lineRef.current;
-      const pos = posRef.current;
-      const newLine = line.slice(0, pos) + str + line.slice(pos);
-      lineRef.current = newLine;
-      const tail = newLine.slice(pos + str.length);
-      term.write(str + tail + '\x1b[D'.repeat(tail.length));
-      posRef.current = pos + str.length;
-    };
-    const backspaceAt = (): void => {
-      const line = lineRef.current;
-      const pos = posRef.current;
-      if (pos === 0) return;
-      const newLine = line.slice(0, pos - 1) + line.slice(pos);
-      lineRef.current = newLine;
-      const tail = newLine.slice(pos - 1);
-      term.write('\b' + tail + ' ' + '\x1b[D'.repeat(tail.length + 1));
-      posRef.current = pos - 1;
-    };
-    const deleteWord = (): void => {
-      const line = lineRef.current;
-      let i = posRef.current;
-      while (i > 0 && line[i - 1] === ' ') i--;
-      while (i > 0 && line[i - 1] !== ' ') i--;
-      const count = posRef.current - i;
-      for (let k = 0; k < count; k++) backspaceAt();
-    };
-    const deleteLine = (): void => {
-      const line = lineRef.current;
-      const fwd = line.length - posRef.current;
-      if (fwd > 0) term.write('\x1b[C'.repeat(fwd));
-      term.write('\b \b'.repeat(line.length));
-      resetLine();
-    };
-
+    // Map mac line-editing shortcuts to the control sequences the shell expects.
     term.attachCustomKeyEventHandler((e) => {
-      if (e.type !== 'keydown' || runningRef.current) return true;
-      if (e.key === 'Backspace' && (e.altKey || e.metaKey)) {
-        e.preventDefault();
-        if (e.metaKey) deleteLine();
-        else deleteWord();
+      if (e.type !== 'keydown') return true;
+      if (e.key === 'Backspace' && e.metaKey) {
+        window.forge.sendInput(sessionId, '\x15'); // Ctrl+U — kill line
+        return false;
+      }
+      if (e.key === 'Backspace' && e.altKey) {
+        window.forge.sendInput(sessionId, '\x1b\x7f'); // Alt+Backspace — kill word
         return false;
       }
       return true;
     });
 
-    const dataSub = term.onData((d) => {
-      if (runningRef.current) {
-        if (d === '\x03') window.forge.killCommand(sessionId);
-        return;
-      }
-      switch (d) {
-        case '\r': {
-          const cmd = lineRef.current.trim();
-          resetLine();
-          term.write('\r\n');
-          if (cmd === 'clear' || cmd === 'cls') {
-            term.clear();
-            writePrompt();
-          } else if (cmd) {
-            exec(cmd);
-          } else {
-            writePrompt();
-          }
-          return;
-        }
-        case '\x7f':
-          backspaceAt();
-          return;
-        case '\x0c':
-          term.clear();
-          resetLine();
-          writePrompt();
-          return;
-        case '\x1b[D': // left
-          if (posRef.current > 0) {
-            posRef.current -= 1;
-            term.write('\x1b[D');
-          }
-          return;
-        case '\x1b[C': // right
-          if (posRef.current < lineRef.current.length) {
-            posRef.current += 1;
-            term.write('\x1b[C');
-          }
-          return;
-        case '\x1b[H':
-        case '\x1b[1~': // home
-          if (posRef.current > 0) term.write('\x1b[D'.repeat(posRef.current));
-          posRef.current = 0;
-          return;
-        case '\x1b[F':
-        case '\x1b[4~': {
-          // end
-          const fwd = lineRef.current.length - posRef.current;
-          if (fwd > 0) term.write('\x1b[C'.repeat(fwd));
-          posRef.current = lineRef.current.length;
-          return;
-        }
-        case '\x1b[A':
-        case '\x1b[B': // up/down — no history yet
-          return;
-        default:
-          if (d >= ' ' && !d.startsWith('\x1b')) insertStr(d);
-      }
+    // Raw passthrough — the shell handles editing, history, programs like `claude`.
+    const dataSub = term.onData((d) => window.forge.sendInput(sessionId, d));
+
+    // Wait for the PTY to exist before writing — a task may run in a just-created terminal.
+    registerExec(sessionId, (command) => {
+      void created.then(() => window.forge.sendInput(sessionId, `${command}\r`));
     });
 
-    const resizeObs = new ResizeObserver(() => fit.fit());
+    const resizeObs = new ResizeObserver(() => {
+      fit.fit();
+      window.forge.resizeTerminal(sessionId, term.cols, term.rows);
+    });
     resizeObs.observe(el);
 
+    // Focus so keystrokes are captured immediately; also focus on click.
+    term.focus();
+    const focusOnClick = (): void => term.focus();
+    el.addEventListener('mousedown', focusOnClick);
+
     return () => {
+      disposed = true;
       unregisterExec(sessionId);
       offData();
       offExit();
       dataSub.dispose();
       resizeObs.disconnect();
+      el.removeEventListener('mousedown', focusOnClick);
       window.forge.killCommand(sessionId);
       term.dispose();
       termRef.current = null;

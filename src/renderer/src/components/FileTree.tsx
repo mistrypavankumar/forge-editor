@@ -1,12 +1,39 @@
+import { useEffect, useRef } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
-import { renameEntry } from '../lib/fs-actions';
+import { renameEntry, commitCreate } from '../lib/fs-actions';
 import { FileTypeIcon, FolderIcon } from './file-icon';
 import { cn } from '../lib/cn';
 import type { DirEntry } from '@shared/ipc-contract';
 
 type NodeContextHandler = (e: React.MouseEvent, entry: DirEntry) => void;
+
+function DraftRow({ depth, kind }: { depth: number; kind: 'file' | 'folder' }): React.JSX.Element {
+  const cancelCreating = useWorkspaceStore((s) => s.cancelCreating);
+  return (
+    <div className="flex h-[22px] items-center gap-1.5 pr-2" style={{ paddingLeft: depth * 12 + 6 }}>
+      <span className="w-3.5 shrink-0" />
+      <span className="flex shrink-0 items-center">
+        {kind === 'folder' ? <FolderIcon open={false} name="" /> : <FileTypeIcon name="" />}
+      </span>
+      <input
+        autoFocus
+        onFocus={(e) => e.currentTarget.select()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') void commitCreate(e.currentTarget.value);
+          else if (e.key === 'Escape') cancelCreating();
+        }}
+        onBlur={(e) => {
+          const v = e.currentTarget.value.trim();
+          if (v) void commitCreate(v);
+          else cancelCreating();
+        }}
+        className="w-full rounded border border-accent/60 bg-surface-2 px-1 text-[13px] text-fg outline-none"
+      />
+    </div>
+  );
+}
 
 function TreeNode({
   entry,
@@ -23,12 +50,14 @@ function TreeNode({
   const setChildren = useWorkspaceStore((s) => s.setChildren);
   const toggleExpanded = useWorkspaceStore((s) => s.toggleExpanded);
   const setRenaming = useWorkspaceStore((s) => s.setRenaming);
+  const setSelectedDir = useWorkspaceStore((s) => s.setSelectedDir);
   const openFile = useEditorStore((s) => s.openFile);
   const activePath = useEditorStore((s) => s.activePath);
   const dirty = useEditorStore((s) => s.tabs.some((t) => t.path === entry.path && t.dirty));
 
   const onClick = async (): Promise<void> => {
     if (entry.isDirectory) {
+      setSelectedDir(entry.path);
       toggleExpanded(entry.path);
       if (!expanded && children === undefined) {
         const res = await window.forge.readDirectory(entry.path);
@@ -36,11 +65,23 @@ function TreeNode({
       }
       return;
     }
+    setSelectedDir(entry.path.slice(0, entry.path.lastIndexOf('/')) || '/');
     const res = await window.forge.readFile(entry.path);
     if (res.ok) openFile({ path: entry.path, name: entry.name, content: res.data });
   };
 
   const isActive = !entry.isDirectory && entry.path === activePath;
+  const rowRef = useRef<HTMLButtonElement>(null);
+
+  // Once this row becomes the active file (e.g. after reveal expands its folders), bring it into
+  // view. `block: 'nearest'` is a no-op when it's already visible, so manual scrolling is left be.
+  useEffect(() => {
+    // Guarded: scrollIntoView exists in Chromium but not in the jsdom test environment.
+    if (isActive && typeof rowRef.current?.scrollIntoView === 'function') {
+      rowRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [isActive]);
+
   const indent = depth * 12 + 6;
   const icon = entry.isDirectory ? (
     <FolderIcon open={expanded} name={entry.name} />
@@ -68,6 +109,7 @@ function TreeNode({
         </div>
       ) : (
         <button
+          ref={rowRef}
           type="button"
           onClick={() => void onClick()}
           onKeyDown={(e) => {
@@ -85,7 +127,8 @@ function TreeNode({
           style={{ paddingLeft: indent }}
           className={cn(
             'group flex h-[22px] w-full items-center gap-1.5 pr-2 text-[13px] transition-colors',
-            isActive ? 'bg-accent/12 text-fg' : 'text-muted hover:bg-surface-2 hover:text-fg',
+            isActive ? 'bg-active text-fg' : 'text-muted hover:bg-surface-2 hover:text-fg',
+            !isActive && entry.ignored && 'opacity-45',
           )}
         >
           <span className="flex w-3.5 shrink-0 justify-center text-faint">
@@ -105,7 +148,12 @@ function TreeNode({
         </button>
       )}
       {entry.isDirectory && expanded ? (
-        <FileTree entries={children ?? []} depth={depth + 1} onContextMenu={onNodeContextMenu} />
+        <FileTree
+          entries={children ?? []}
+          depth={depth + 1}
+          dir={entry.path}
+          onContextMenu={onNodeContextMenu}
+        />
       ) : null}
     </>
   );
@@ -113,13 +161,16 @@ function TreeNode({
 
 interface FileTreeProps {
   entries: DirEntry[];
+  dir: string;
   depth?: number;
   onContextMenu: NodeContextHandler;
 }
 
-export function FileTree({ entries, depth = 0, onContextMenu }: FileTreeProps): React.JSX.Element {
+export function FileTree({ entries, dir, depth = 0, onContextMenu }: FileTreeProps): React.JSX.Element {
+  const creating = useWorkspaceStore((s) => s.creating);
   return (
     <>
+      {creating && creating.dir === dir ? <DraftRow depth={depth} kind={creating.kind} /> : null}
       {entries.map((entry) => (
         <TreeNode key={entry.path} entry={entry} depth={depth} onNodeContextMenu={onContextMenu} />
       ))}

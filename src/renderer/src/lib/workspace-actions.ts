@@ -1,7 +1,7 @@
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useRecentsStore } from '../stores/recents-store';
-import type { DirEntry } from '@shared/ipc-contract';
+import type { DirEntry, GitChange } from '@shared/ipc-contract';
 
 function base(p: string): string {
   const parts = p.split('/').filter(Boolean);
@@ -13,9 +13,10 @@ function applyFolder(rootPath: string, tree: DirEntry[]): void {
   useRecentsStore.getState().addRecent({ type: 'folder', path: rootPath, name: base(rootPath) });
 }
 
-function applyFile(path: string, name: string, content: string): void {
+function applyFile(path: string, name: string, content: string, record: boolean): void {
   useEditorStore.getState().openFile({ path, name, content });
-  useRecentsStore.getState().addRecent({ type: 'file', path, name });
+  // Only explicit "Open File"/recents reopens count as recents — not editor navigation.
+  if (record) useRecentsStore.getState().addRecent({ type: 'file', path, name });
 }
 
 export async function openFolderDialog(): Promise<void> {
@@ -30,10 +31,54 @@ export async function openFolderPath(path: string): Promise<void> {
 
 export async function openFileDialog(): Promise<void> {
   const res = await window.forge.openFileDialog();
-  if (res.ok && res.data) applyFile(res.data.path, res.data.name, res.data.content);
+  if (res.ok && res.data) applyFile(res.data.path, res.data.name, res.data.content, true);
 }
 
-export async function openFilePath(path: string, name?: string): Promise<void> {
+/** Open a file by path. `record` adds it to Recent (only for landing/recents flows). */
+export async function openFilePath(path: string, name?: string, record = false): Promise<void> {
   const res = await window.forge.readFile(path);
-  if (res.ok) applyFile(path, name ?? base(path), res.data);
+  if (res.ok) applyFile(path, name ?? base(path), res.data, record);
+}
+
+/** Open a read-only side-by-side diff of the staged (index) version against HEAD. */
+export async function openGitStagedDiff(rootPath: string, relPath: string): Promise<void> {
+  const filePath = `${rootPath}/${relPath}`;
+  const [origRes, stagedRes] = await Promise.all([
+    window.forge.gitOriginal(rootPath, filePath),
+    window.forge.gitStaged(rootPath, filePath),
+  ]);
+  const original = origRes.ok && origRes.data != null ? origRes.data : '';
+  const content = stagedRes.ok && stagedRes.data != null ? stagedRes.data : '';
+  useEditorStore.getState().openFile({
+    path: `git-index://${filePath}`,
+    name: base(relPath),
+    content,
+    original,
+    readOnly: true,
+    filePath,
+  });
+}
+
+/** Open a read-only diff of a file as changed by a single commit (commit vs its parent). */
+export async function openGitCommitDiff(
+  rootPath: string,
+  hash: string,
+  relPath: string,
+  status: GitChange['status'],
+): Promise<void> {
+  const filePath = `${rootPath}/${relPath}`;
+  const [parentRes, commitRes] = await Promise.all([
+    status === 'A' ? Promise.resolve(null) : window.forge.gitFileAt(rootPath, `${hash}^`, relPath),
+    status === 'D' ? Promise.resolve(null) : window.forge.gitFileAt(rootPath, hash, relPath),
+  ]);
+  const original = parentRes && parentRes.ok && parentRes.data != null ? parentRes.data : '';
+  const content = commitRes && commitRes.ok && commitRes.data != null ? commitRes.data : '';
+  useEditorStore.getState().openFile({
+    path: `git-commit://${hash}/${filePath}`,
+    name: `${base(relPath)} @ ${hash}`,
+    content,
+    original,
+    readOnly: true,
+    filePath,
+  });
 }

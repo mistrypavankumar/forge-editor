@@ -7,39 +7,47 @@
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
+  --color-elevated: var(--elevated);
+  --color-active: var(--active);
   --color-line: var(--line);
   --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
   --color-accent-fg: var(--accent-fg);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-info: var(--info);
 
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'Fira Code', 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, monospace;
 }
 
 /* Dark defaults — overridden at runtime by the theme store. */
 :root {
-  --bg: #0a0a0c;
-  --surface: #141417;
-  --surface-2: #1c1c21;
-  --surface-3: #272730;
-  --line: #2c2c34;
-  --line-soft: #1f1f25;
-  --fg: #ededf0;
-  --muted: #b2b2bb;
-  --faint: #7c7c87;
-  --accent: #7079f5;
+  --bg: #080b12;
+  --surface: #0d111b;
+  --surface-2: #111827;
+  --surface-3: #1b2638;
+  --elevated: #161f2e;
+  --active: #202c44;
+  --line: #1f2a3d;
+  --line-soft: #141c2a;
+  --line-strong: #2d3a52;
+  --fg: #e6edf7;
+  --muted: #a8b3c7;
+  --faint: #6b768a;
+  --accent: #7c5cff;
+  --accent-hover: #8b73ff;
   --accent-fg: #ffffff;
   --success: #3ddc97;
-  --warning: #f5c451;
-  --danger: #f87171;
-  --info: #60a5fa;
+  --warning: #f7b955;
+  --danger: #ff5c7a;
+  --info: #4dbbff;
 
   --separator-border: var(--line);
   --focus-border: var(--accent);
@@ -98,6 +106,235 @@ body {
   min-width: 0;
 }
 
+/* Rendered markdown preview */
+.md-body {
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.md-body h1,
+.md-body h2,
+.md-body h3,
+.md-body h4 {
+  color: var(--fg);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.4em 0 0.6em;
+}
+.md-body h1 {
+  font-size: 1.7em;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.3em;
+}
+.md-body h2 {
+  font-size: 1.35em;
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 0.25em;
+}
+.md-body h3 {
+  font-size: 1.15em;
+}
+.md-body p,
+.md-body ul,
+.md-body ol,
+.md-body blockquote,
+.md-body table,
+.md-body pre {
+  margin: 0.7em 0;
+}
+.md-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.md-body a:hover {
+  text-decoration: underline;
+}
+.md-body ul,
+.md-body ol {
+  padding-left: 1.5em;
+}
+.md-body li {
+  margin: 0.2em 0;
+}
+.md-body code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  padding: 0.1em 0.4em;
+}
+.md-body pre {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow: auto;
+}
+.md-body pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.md-body blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1em;
+  color: var(--muted);
+}
+.md-body table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92em;
+}
+.md-body th,
+.md-body td {
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  text-align: left;
+}
+.md-body th {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+.md-body hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+.md-body img {
+  max-width: 100%;
+}
+
+/* Git change gutter — colored bars (add/modify) and a deletion marker.
+   Bars sit in Monaco's lines-decorations strip; clicking one reverts the hunk. */
+.forge-git-gutter {
+  margin-left: 3px;
+  cursor: pointer;
+}
+.forge-git-add {
+  border-left: 3px solid var(--success);
+}
+.forge-git-mod {
+  border-left: 3px solid var(--info);
+}
+.forge-git-add:hover,
+.forge-git-mod:hover {
+  border-left-width: 5px;
+  margin-left: 1px;
+}
+.forge-git-del {
+  position: relative;
+}
+.forge-git-del::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  bottom: -3px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--danger);
+}
+
+/* Inline git diff peek (opened by clicking a change in the gutter) */
+.forge-peek {
+  width: 100%;
+  background: var(--surface);
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  overflow: hidden;
+}
+.forge-peek-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 8px 0 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.forge-peek-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  font-family: var(--font-sans);
+}
+.forge-peek-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+}
+.forge-peek-sub {
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.forge-peek-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.forge-peek-actions button {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.forge-peek-actions button:hover {
+  background: var(--surface-3);
+  color: var(--fg);
+}
+.forge-peek-actions button[data-act='revert']:hover {
+  color: var(--accent);
+}
+.forge-peek-body {
+  overflow: auto;
+}
+.forge-peek-row {
+  display: flex;
+  align-items: center;
+  white-space: pre;
+  font-size: 12.5px;
+}
+.forge-peek-ln {
+  flex-shrink: 0;
+  width: 52px;
+  padding-right: 12px;
+  text-align: right;
+  color: var(--faint);
+  user-select: none;
+}
+.forge-peek-code {
+  white-space: pre;
+}
+.forge-peek-del {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+}
+.forge-peek-del .forge-peek-ln {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+}
+.forge-peek-add {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+}
+.forge-peek-add .forge-peek-ln {
+  background: color-mix(in srgb, var(--success) 20%, transparent);
+}
+
 /* Inline AI suggestion widget rendered inside Monaco */
 .forge-inline-suggestion {
   display: inline-flex;
@@ -119,4 +356,11 @@ body {
   border-radius: 4px;
   padding: 0 4px;
   font-family: var(--font-mono);
+}
+
+/* Brief flash on a Go to Definition target symbol */
+.forge-goto-highlight {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 3px;
+  transition: background 0.6s ease-out;
 }

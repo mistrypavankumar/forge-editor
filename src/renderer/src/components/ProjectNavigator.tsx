@@ -1,6 +1,6 @@
 import { useNavigatorStore, filterChips } from '../stores/navigator-store';
 import { NavigatorTabs } from './NavigatorTabs';
-import { FocusView } from './FocusView';
+import { ChangesView } from './ChangesView';
 import { ProjectMapView } from './ProjectMapView';
 import { RecentFilesView } from './RecentFilesView';
 import { StructureTreeView } from './StructureTreeView';
@@ -39,7 +39,7 @@ export function ProjectNavigator(): React.JSX.Element {
       </div>
 
       <div className="min-h-0 flex-1">
-        {tab === 'focus' ? <FocusView /> : null}
+        {tab === 'changes' ? <ChangesView /> : null}
         {tab === 'map' ? <ProjectMapView /> : null}
         {tab === 'recent' ? <RecentFilesView /> : null}
         {tab === 'structure' ? <StructureTreeView /> : null}

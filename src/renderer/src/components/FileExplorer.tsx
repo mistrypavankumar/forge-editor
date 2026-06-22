@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { FolderOpen, ChevronLeft } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ChevronLeft, FilePlus, FolderPlus, RefreshCw, ChevronsDownUp } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { useEditorStore } from '../stores/editor-store';
 import { useFileClipboard } from '../stores/file-clipboard';
 import { openFolderDialog } from '../lib/workspace-actions';
-import { deleteEntry, pasteInto } from '../lib/fs-actions';
+import { revealInTree } from '../lib/reveal-in-tree';
+import { deleteEntry, pasteInto, newFile, newFolder, refreshDir } from '../lib/fs-actions';
 import { FileTree } from './FileTree';
 import { IconButton } from './ui/IconButton';
 import { ContextMenu, type MenuItem } from './ui/ContextMenu';
@@ -27,14 +29,23 @@ export function FileExplorer(): React.JSX.Element {
   const rootEntries = useWorkspaceStore((s) => s.rootEntries);
   const childrenByPath = useWorkspaceStore((s) => s.childrenByPath);
   const scopedPath = useWorkspaceStore((s) => s.scopedPath);
+  const selectedDir = useWorkspaceStore((s) => s.selectedDir);
   const setScope = useWorkspaceStore((s) => s.setScope);
   const setRenaming = useWorkspaceStore((s) => s.setRenaming);
+  const collapseAll = useWorkspaceStore((s) => s.collapseAll);
   const setClipboard = useFileClipboard((s) => s.set);
   const clipboardItem = useFileClipboard((s) => s.item);
+  const activePath = useEditorStore((s) => s.activePath);
 
   const [menu, setMenu] = useState<{ x: number; y: number; entry: DirEntry } | null>(null);
 
   const onOpenFolder = (): void => void openFolderDialog();
+
+  // Reveal the active file: expand its ancestor folders so its row shows in the tree. Runs when
+  // the active tab changes and when this view first mounts (e.g. switching to the Structure tab).
+  useEffect(() => {
+    if (activePath) void revealInTree(activePath);
+  }, [activePath]);
 
   if (!rootPath) {
     return (
@@ -53,18 +64,26 @@ export function FileExplorer(): React.JSX.Element {
 
   const scoped = scopedPath !== null;
   const entries = scoped ? (childrenByPath[scopedPath] ?? []) : rootEntries;
+  const targetDir = selectedDir ?? scopedPath ?? rootPath;
 
   const copy = (text: string): void => void navigator.clipboard?.writeText(text);
 
   const menuItems = (entry: DirEntry): MenuItem[] => {
-    const items: MenuItem[] = [
+    const items: MenuItem[] = [];
+    if (entry.isDirectory) {
+      items.push(
+        { label: 'New File', onSelect: () => void newFile(entry.path) },
+        { label: 'New Folder', dividerAfter: true, onSelect: () => void newFolder(entry.path) },
+      );
+    }
+    items.push(
       { label: 'Cut', onSelect: () => setClipboard({ path: entry.path, name: entry.name }, 'cut') },
       {
         label: 'Copy',
         dividerAfter: !entry.isDirectory || !clipboardItem,
         onSelect: () => setClipboard({ path: entry.path, name: entry.name }, 'copy'),
       },
-    ];
+    );
     if (entry.isDirectory && clipboardItem) {
       items.push({ label: 'Paste', dividerAfter: true, onSelect: () => void pasteInto(entry.path) });
     }
@@ -91,28 +110,68 @@ export function FileExplorer(): React.JSX.Element {
   return (
     <div className="flex h-full flex-col">
       {scoped ? (
-        <button
-          type="button"
-          onClick={() => setScope(null)}
-          className="flex h-8 shrink-0 items-center gap-1 px-2 text-[11px] text-faint hover:text-fg"
-        >
-          <ChevronLeft size={13} />
-          <span className="font-semibold uppercase tracking-wider text-muted">
-            {basename(scopedPath)}
-          </span>
-          <span className="ml-auto pr-1 text-faint">Show all</span>
-        </button>
+        <div className="flex h-8 shrink-0 items-center pl-2 pr-1.5">
+          <button
+            type="button"
+            onClick={() => setScope(null)}
+            title="Back to full tree"
+            className="flex min-w-0 items-center gap-1 text-[11px] text-faint hover:text-fg"
+          >
+            <ChevronLeft size={13} />
+            <span className="truncate font-semibold uppercase tracking-wider text-muted">
+              {basename(scopedPath)}
+            </span>
+          </button>
+          <div className="ml-auto flex shrink-0 items-center gap-0.5">
+            <IconButton label="New File" className="h-6 w-6" onClick={() => void newFile(targetDir)}>
+              <FilePlus size={14} />
+            </IconButton>
+            <IconButton
+              label="New Folder"
+              className="h-6 w-6"
+              onClick={() => void newFolder(targetDir)}
+            >
+              <FolderPlus size={14} />
+            </IconButton>
+            <IconButton
+              label="Refresh"
+              className="h-6 w-6"
+              onClick={() => void refreshDir(scopedPath)}
+            >
+              <RefreshCw size={13} />
+            </IconButton>
+            <IconButton label="Collapse All" className="h-6 w-6" onClick={collapseAll}>
+              <ChevronsDownUp size={14} />
+            </IconButton>
+          </div>
+        </div>
       ) : (
-        <div className="flex h-8 shrink-0 items-center justify-between px-3 text-[11px] font-semibold uppercase tracking-wider text-faint">
+        <div className="flex h-8 shrink-0 items-center justify-between pl-3 pr-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint">
           <span className="truncate">{basename(rootPath)}</span>
-          <IconButton label="Change folder" className="h-6 w-6" onClick={() => void onOpenFolder()}>
-            <FolderOpen size={13} />
-          </IconButton>
+          <div className="flex items-center gap-0.5">
+            <IconButton label="New File" className="h-6 w-6" onClick={() => void newFile(targetDir)}>
+              <FilePlus size={14} />
+            </IconButton>
+            <IconButton
+              label="New Folder"
+              className="h-6 w-6"
+              onClick={() => void newFolder(targetDir)}
+            >
+              <FolderPlus size={14} />
+            </IconButton>
+            <IconButton label="Refresh" className="h-6 w-6" onClick={() => void refreshDir(rootPath)}>
+              <RefreshCw size={13} />
+            </IconButton>
+            <IconButton label="Collapse All" className="h-6 w-6" onClick={collapseAll}>
+              <ChevronsDownUp size={14} />
+            </IconButton>
+          </div>
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-auto pb-2">
         <FileTree
           entries={entries}
+          dir={scopedPath ?? rootPath}
           onContextMenu={(e, entry) => setMenu({ x: e.clientX, y: e.clientY, entry })}
         />
       </div>

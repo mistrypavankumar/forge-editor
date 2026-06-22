@@ -3,6 +3,8 @@ import { create } from 'zustand';
 export interface TerminalSession {
   id: string;
   title: string;
+  /** The task this terminal was launched for (if any) — drives the "running" indicator. */
+  taskKey?: string;
 }
 
 export interface TerminalGroup {
@@ -12,9 +14,9 @@ export interface TerminalGroup {
 
 let sSeq = 0;
 let gSeq = 0;
-function makeSession(): TerminalSession {
+function makeSession(title?: string, taskKey?: string): TerminalSession {
   sSeq += 1;
-  return { id: `term-${sSeq}`, title: `zsh ${sSeq}` };
+  return { id: `term-${sSeq}`, title: title ?? `zsh ${sSeq}`, taskKey };
 }
 function makeGroupId(): string {
   gSeq += 1;
@@ -29,7 +31,10 @@ export interface TerminalState {
   groups: TerminalGroup[];
   activeGroupId: string;
   activeSessionId: string;
-  newTerminal: () => void;
+  /** Open a fresh terminal (optionally titled / tied to a task) as the active session; returns its id. */
+  newTerminal: (title?: string, taskKey?: string) => string;
+  /** Clear a session's task tag (its command finished) — drops the running indicator. */
+  clearTask: (id: string) => void;
   splitActive: () => void;
   closeSession: (id: string) => void;
   focusGroup: (groupId: string) => void;
@@ -42,8 +47,8 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
   activeGroupId: g0.id,
   activeSessionId: s0.id,
 
-  newTerminal: () => {
-    const s = makeSession();
+  newTerminal: (title, taskKey) => {
+    const s = makeSession(title, taskKey);
     const g: TerminalGroup = { id: makeGroupId(), sessions: [s.id] };
     set((st) => ({
       sessions: { ...st.sessions, [s.id]: s },
@@ -51,7 +56,15 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       activeGroupId: g.id,
       activeSessionId: s.id,
     }));
+    return s.id;
   },
+
+  clearTask: (id) =>
+    set((st) => {
+      const s = st.sessions[id];
+      if (!s || s.taskKey === undefined) return st;
+      return { sessions: { ...st.sessions, [id]: { ...s, taskKey: undefined } } };
+    }),
 
   splitActive: () => {
     const st = get();

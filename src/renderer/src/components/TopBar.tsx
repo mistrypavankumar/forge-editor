@@ -6,16 +6,28 @@ import {
   PanelBottom,
   Search,
   Sparkles,
+  Sparkle,
 } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
 import { usePaletteStore } from '../stores/palette-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { useGitUserStore } from '../stores/git-user-store';
 import { commandRegistry } from '../commands/command-registry';
 import { IconButton } from './ui/IconButton';
+import { FileMenu } from './FileMenu';
 
 function basename(p: string): string {
   const parts = p.split('/').filter(Boolean);
   return parts[parts.length - 1] ?? p;
+}
+
+/** Up to two initials from a name/login (e.g. "dax-pavankumar-mistry" → "DM", "Pavan" → "P"). */
+function initials(name: string): string {
+  const parts = name.split(/[\s\-_.]+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0][0];
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (first + last).toUpperCase();
 }
 
 export function TopBar(): React.JSX.Element {
@@ -26,14 +38,18 @@ export function TopBar(): React.JSX.Element {
   const openPalette = usePaletteStore((s) => s.openPalette);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const workspaceName = rootPath ? basename(rootPath) : 'No workspace';
+  const gitUser = useGitUserStore((s) => s.active);
+  const openGitUserPicker = useGitUserStore((s) => s.openPicker);
+  const avatarLabel = gitUser?.username || gitUser?.name;
 
   return (
     <header className="drag flex h-11 shrink-0 items-center gap-3 border-b border-line bg-surface pl-20 pr-3">
       {/* Brand + workspace */}
-      <div className="no-drag flex items-center gap-2">
+      <div className="no-drag flex items-center gap-1">
         <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent text-[13px] font-bold text-accent-fg">
           F
         </div>
+        {window.forge.isMac ? null : <FileMenu />}
         <button
           type="button"
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-fg hover:bg-surface-3"
@@ -61,6 +77,15 @@ export function TopBar(): React.JSX.Element {
 
       {/* Actions */}
       <div className="no-drag flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => useLayoutStore.getState().setFeaturesOpen(true)}
+          className="flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-xs font-medium text-muted transition-colors hover:border-line-strong hover:text-fg"
+        >
+          <Sparkle size={12} className="text-accent" />
+          Features
+        </button>
+
         <button
           type="button"
           onClick={() => void commandRegistry.run('file.save')}
@@ -101,10 +126,12 @@ export function TopBar(): React.JSX.Element {
 
         <button
           type="button"
-          aria-label="Account"
+          aria-label="Switch git user"
+          title={avatarLabel ? `Git user: ${avatarLabel} — click to switch` : 'Switch git user'}
+          onClick={openGitUserPicker}
           className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-accent to-info text-[11px] font-semibold text-white"
         >
-          PM
+          {avatarLabel ? initials(avatarLabel) : 'PM'}
         </button>
       </div>
     </header>

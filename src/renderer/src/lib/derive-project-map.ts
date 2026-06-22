@@ -68,33 +68,61 @@ const BUCKETS: Record<string, Bucket> = {
 
 const ORDER = ['apps', 'packages', 'services', 'folders', 'files', 'config', 'docs', 'scripts', 'hidden'];
 
+/** Container directories whose contents are flattened into their group instead of the dir itself. */
+const EXPANDABLE = new Set(['apps', 'packages']);
+
 const isTestName = (n: string): boolean => /\.(test|spec)\./.test(n.toLowerCase());
+
+/** True for a root `apps`/`packages` directory whose children should be listed directly. */
+export function isExpandableContainer(entry: DirEntry): boolean {
+  return entry.isDirectory && EXPANDABLE.has(classify(entry));
+}
+
+function makeDerived(
+  entry: DirEntry,
+  openTabs: OpenFile[],
+  markers: MarkerInfo[],
+): DerivedEntry {
+  const seg = `/${entry.name}`;
+  return {
+    id: entry.path,
+    name: entry.name,
+    path: entry.path,
+    isFolder: entry.isDirectory,
+    changed: openTabs.some((t) => t.dirty && t.path.includes(seg)),
+    recent: openTabs.some((t) => t.path.includes(seg)),
+    errors: markers.some((m) => m.path.includes(seg)),
+    config: classify(entry) === 'config',
+    test: isTestName(entry.name),
+  };
+}
 
 export function deriveProjectMap(
   rootEntries: DirEntry[],
   openTabs: OpenFile[],
   markers: MarkerInfo[],
+  childrenByPath: Record<string, DirEntry[]> = {},
 ): DerivedGroup[] {
   const byKey: Record<string, DerivedEntry[]> = {};
+  const push = (key: string, entry: DirEntry): void => {
+    (byKey[key] ??= []).push(makeDerived(entry, openTabs, markers));
+  };
 
   for (const entry of rootEntries) {
     const key = classify(entry);
-    const seg = `/${entry.name}`;
-    const changed = openTabs.some((t) => t.dirty && t.path.includes(seg));
-    const recent = openTabs.some((t) => t.path.includes(seg));
-    const errors = markers.some((m) => m.path.includes(seg));
-    const derived: DerivedEntry = {
-      id: entry.path,
-      name: entry.name,
-      path: entry.path,
-      isFolder: entry.isDirectory,
-      changed,
-      recent,
-      errors,
-      config: key === 'config',
-      test: isTestName(entry.name),
-    };
-    (byKey[key] ??= []).push(derived);
+    // Flatten apps/packages containers into their child folders and files.
+    if (EXPANDABLE.has(key) && entry.isDirectory) {
+      const children = childrenByPath[entry.path];
+      if (children && children.length > 0) {
+        for (const child of children) {
+          // Skip node_modules/dist/dotfiles so the group stays signal, not noise.
+          if (classify(child) === 'hidden') continue;
+          push(key, child);
+        }
+        continue;
+      }
+    }
+    push(key, entry);
   }
 
   return ORDER.filter((k) => byKey[k]?.length).map((k) => ({

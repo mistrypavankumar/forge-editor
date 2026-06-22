@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Allotment } from 'allotment';
 import { useLayoutStore } from '../stores/layout-store';
 import { useThemeStore } from '../stores/theme-store';
@@ -6,45 +6,122 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 import { applyCssVariables } from '../theme/theme-service';
 import { builtInThemes } from '../theme/themes';
 import { loadFiles } from '../lib/quickopen-cache';
+import { refreshTree } from '../lib/fs-actions';
+import { detectPackageManager } from '../lib/detect-pm';
+import { detectFormatters } from '../lib/detect-formatters';
+import { useFormatterStore } from '../stores/formatter-store';
+import { useTasksStore } from '../stores/tasks-store';
+import { useTerminalStore } from '../stores/terminal-store';
+import { useNavigatorStore } from '../stores/navigator-store';
 import { useKeybindings } from '../keybindings/use-keybindings';
+import { useKeybindingsStore } from '../stores/keybindings-store';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
+import { useAutoSave } from '../settings/use-auto-save';
+import { useAutoFormat } from '../settings/use-auto-format';
+import { useAutoDiagnostics } from '../settings/use-auto-diagnostics';
+import { commandRegistry } from '../commands/command-registry';
 import { TopBar } from './TopBar';
 import { ActivitySidebar } from './ActivitySidebar';
 import { ProjectNavigator } from './ProjectNavigator';
-import { EditorTabs } from './EditorTabs';
-import { Breadcrumbs } from './Breadcrumbs';
-import { CodeEditor } from './CodeEditor';
+import { SearchPanel } from './SearchPanel';
+import { SourceControlPanel } from './SourceControlPanel';
+import { RunPanel } from './RunPanel';
+import { PlaceholderPanel } from './PlaceholderPanel';
+import { Database, Blocks } from 'lucide-react';
+import { EditorGroupView } from './EditorGroupView';
 import { Landing } from './Landing';
 import { useEditorStore } from '../stores/editor-store';
 import { RightPanel } from './RightPanel';
 import { BottomPanel } from './BottomPanel';
 import { StatusBar } from './StatusBar';
 import { Palette } from './Palette';
+import { AwsConnectionPicker } from './AwsConnectionPicker';
+import { AwsCredentialsEditor } from './AwsCredentialsEditor';
+import { useAwsStore } from '../stores/aws-store';
+import { GitUserPicker } from './GitUserPicker';
+import { useGitUserStore } from '../stores/git-user-store';
+import { SettingsView } from './SettingsView';
+import { FeaturesView } from './FeaturesView';
 import { ContextMenu } from './ui/ContextMenu';
 
 export function AppShell(): React.JSX.Element {
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
   const rightVisible = useLayoutStore((s) => s.rightVisible);
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
+  const activity = useLayoutStore((s) => s.activity);
   const sidebarSide = useLayoutStore((s) => s.sidebarSide);
   const setSidebarSide = useLayoutStore((s) => s.setSidebarSide);
   const themeId = useThemeStore((s) => s.currentId);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const rootEntries = useWorkspaceStore((s) => s.rootEntries);
   const tabCount = useEditorStore((s) => s.tabs.length);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // Restore the active AWS connection (and profile list) for the status-bar indicator.
+  useEffect(() => {
+    void useAwsStore.getState().load();
+  }, []);
+
+  // Reflect the open repo's git identity in the status bar (re-reads when the folder changes).
+  useEffect(() => {
+    if (rootPath) void useGitUserStore.getState().loadActive(rootPath);
+  }, [rootPath]);
 
   const onSidebarContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault();
     setMenu({ x: e.clientX, y: e.clientY });
   };
 
-  useKeybindings();
+  const keybindingOverrides = useKeybindingsStore((s) => s.overrides);
+  useKeybindings(keybindingOverrides);
   useSettingsPersistence();
+  useAutoSave();
+  useAutoFormat();
+  useAutoDiagnostics();
+
+  const autoSave = useEditorStore((s) => s.autoSave);
+  const editorGroups = useEditorStore((s) => s.groups);
+
+  // When a task terminal's command returns to the shell (done/failed/interrupted), drop its
+  // running indicator. The first event a task session gets is "busy"; the next "idle" clears it.
+  useEffect(() => {
+    return window.forge.onTerminalBusy(({ id, busy }) => {
+      if (!busy) useTerminalStore.getState().clearTask(id);
+    });
+  }, []);
+
+  // Navigator follows the editor: jump to Changes when the first file opens, back to Structure when
+  // the last one closes. Only on that transition, so manual tab choices in between are respected.
+  const hadFiles = useRef(tabCount > 0);
+  useEffect(() => {
+    const hasFiles = tabCount > 0;
+    if (hasFiles && !hadFiles.current) useNavigatorStore.getState().setTab('changes');
+    else if (!hasFiles && hadFiles.current) useNavigatorStore.getState().setTab('structure');
+    hadFiles.current = hasFiles;
+  }, [tabCount]);
+
+  // Native (mac) File-menu actions → run the matching command.
+  useEffect(() => {
+    return window.forge.onMenuAction((id) => {
+      if (id === 'toggleAutoSave') {
+        useEditorStore.getState().setAutoSave(!useEditorStore.getState().autoSave);
+      } else {
+        void commandRegistry.run(id);
+      }
+    });
+  }, []);
+
+  // Keep the native Auto Save checkbox in sync.
+  useEffect(() => {
+    window.forge.syncMenuState(autoSave);
+  }, [autoSave]);
 
   useEffect(() => {
     const theme = builtInThemes[themeId];
     if (theme) applyCssVariables(theme);
   }, [themeId]);
+
+  const syncTick = useWorkspaceStore((s) => s.syncTick);
 
   // Warm the quick-open file list + resolve the git branch when a folder opens.
   useEffect(() => {
@@ -53,6 +130,43 @@ export function AppShell(): React.JSX.Element {
     void window.forge.gitBranch(rootPath).then((res) => {
       useWorkspaceStore.getState().setBranch(res.ok ? res.data : null);
     });
+  }, [rootPath]);
+
+  // Keep the source-control change count (activity-bar badge) in sync.
+  useEffect(() => {
+    if (!rootPath) {
+      useWorkspaceStore.getState().setChangeCount(0);
+      return;
+    }
+    void window.forge.gitChangedFiles(rootPath).then((res) => {
+      useWorkspaceStore.getState().setChangeCount(res.ok ? res.data.length : 0);
+    });
+  }, [rootPath, syncTick]);
+
+  // Auto-detect the package manager from the project's lockfile.
+  useEffect(() => {
+    if (rootEntries.length > 0) {
+      useTasksStore.getState().setPm(detectPackageManager(rootEntries.map((e) => e.name)));
+    }
+  }, [rootEntries]);
+
+  // Detect available document formatters (ESLint plus any configured at the repo root).
+  useEffect(() => {
+    useFormatterStore.getState().setAvailable(detectFormatters(rootEntries.map((e) => e.name)));
+  }, [rootEntries]);
+
+  // Watch the workspace and auto-sync the tree, git status, and branch on external changes.
+  useEffect(() => {
+    if (!rootPath) return;
+    window.forge.watchWorkspace(rootPath);
+    const off = window.forge.onFsChanged(() => {
+      void refreshTree();
+      void window.forge.gitBranch(rootPath).then((r) => {
+        useWorkspaceStore.getState().setBranch(r.ok ? r.data : null);
+      });
+      useWorkspaceStore.getState().bumpSync();
+    });
+    return off;
   }, [rootPath]);
 
   const showLanding = !rootPath && tabCount === 0;
@@ -64,14 +178,38 @@ export function AppShell(): React.JSX.Element {
         <Landing />
         <StatusBar />
         <Palette />
+        <AwsConnectionPicker />
+        <AwsCredentialsEditor />
+        <GitUserPicker />
+        <SettingsView />
+        <FeaturesView />
       </div>
     );
   }
 
+  const sidePanel =
+    activity === 'search' ? (
+      <SearchPanel />
+    ) : activity === 'git' ? (
+      <SourceControlPanel />
+    ) : activity === 'run' ? (
+      <RunPanel />
+    ) : activity === 'database' ? (
+      <PlaceholderPanel
+        title="Database / API"
+        icon={Database}
+        hint="Connect a database or API to browse it here."
+      />
+    ) : activity === 'extensions' ? (
+      <PlaceholderPanel title="Extensions" icon={Blocks} hint="A plugin system is on the roadmap." />
+    ) : (
+      <ProjectNavigator />
+    );
+
   const navigatorPane = sidebarVisible ? (
     <Allotment.Pane key="nav" preferredSize={300} minSize={248} maxSize={460} snap>
       <div data-testid="sidebar-region" className="h-full border-x border-line bg-surface">
-        <ProjectNavigator />
+        {sidePanel}
       </div>
     </Allotment.Pane>
   ) : null;
@@ -80,19 +218,24 @@ export function AppShell(): React.JSX.Element {
     <Allotment.Pane key="center" minSize={420}>
       <Allotment vertical proportionalLayout={false}>
         <Allotment.Pane minSize={160}>
-          <div data-testid="editor-region" className="flex h-full flex-col bg-bg">
-            <EditorTabs />
-            <Breadcrumbs />
-            <div className="min-h-0 flex-1">
-              <CodeEditor />
-            </div>
-          </div>
+          {editorGroups.length > 1 ? (
+            <Allotment proportionalLayout>
+              {editorGroups.map((g) => (
+                <Allotment.Pane key={g.id} minSize={320}>
+                  <EditorGroupView groupId={g.id} />
+                </Allotment.Pane>
+              ))}
+            </Allotment>
+          ) : (
+            <EditorGroupView groupId={editorGroups[0]?.id ?? 'main'} />
+          )}
         </Allotment.Pane>
-        {bottomVisible ? (
-          <Allotment.Pane preferredSize={240} minSize={120} snap>
-            <BottomPanel />
-          </Allotment.Pane>
-        ) : null}
+        {/* Always mounted; we toggle visibility (not mount) so live terminal PTY
+            sessions survive hiding/restoring the bottom panel. Unmounting it would
+            tear down every TerminalView and kill its shell. */}
+        <Allotment.Pane preferredSize={240} minSize={120} snap visible={bottomVisible}>
+          <BottomPanel />
+        </Allotment.Pane>
       </Allotment>
     </Allotment.Pane>
   );
@@ -123,6 +266,11 @@ export function AppShell(): React.JSX.Element {
       </div>
       <StatusBar />
       <Palette />
+      <AwsConnectionPicker />
+      <AwsCredentialsEditor />
+      <GitUserPicker />
+      <SettingsView />
+      <FeaturesView />
       {menu ? (
         <ContextMenu
           x={menu.x}

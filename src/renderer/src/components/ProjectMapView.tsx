@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown, FolderOpen } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useWorkbenchStatusStore } from '../stores/workbench-status-store';
 import { useNavigatorStore } from '../stores/navigator-store';
-import { deriveProjectMap, entryMatchesFilter } from '../lib/derive-project-map';
+import { deriveProjectMap, entryMatchesFilter, isExpandableContainer } from '../lib/derive-project-map';
 import { openFolderDialog } from '../lib/workspace-actions';
 import { ModernFolderIcon } from './ModernFolderIcon';
 import { ModernFileIcon } from './ModernFileIcon';
@@ -14,12 +14,24 @@ import { cn } from '../lib/cn';
 export function ProjectMapView(): React.JSX.Element {
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const rootEntries = useWorkspaceStore((s) => s.rootEntries);
+  const childrenByPath = useWorkspaceStore((s) => s.childrenByPath);
   const openFile = useEditorStore((s) => s.openFile);
   const tabs = useEditorStore((s) => s.tabs);
   const markers = useWorkbenchStatusStore((s) => s.markers);
   const filter = useNavigatorStore((s) => s.filter);
   const setTab = useNavigatorStore((s) => s.setTab);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ hidden: true });
+
+  // Load the contents of apps/packages containers so the groups list their children directly.
+  useEffect(() => {
+    for (const entry of rootEntries) {
+      if (!isExpandableContainer(entry)) continue;
+      if (useWorkspaceStore.getState().childrenByPath[entry.path] !== undefined) continue;
+      void window.forge.readDirectory(entry.path).then((res) => {
+        if (res.ok) useWorkspaceStore.getState().setChildren(entry.path, res.data);
+      });
+    }
+  }, [rootEntries]);
 
   const onOpenFolder = (): void => void openFolderDialog();
 
@@ -38,7 +50,7 @@ export function ProjectMapView(): React.JSX.Element {
     );
   }
 
-  const groups = deriveProjectMap(rootEntries, tabs, markers);
+  const groups = deriveProjectMap(rootEntries, tabs, markers, childrenByPath);
 
   const onEntry = async (name: string, path: string, isFolder: boolean): Promise<void> => {
     if (isFolder) {
