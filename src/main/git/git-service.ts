@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { basename, relative, sep } from 'node:path';
-import type { BlameLine, GitBranches, GitChange, GitCommit, GitRef } from '@shared/ipc-contract';
+import type { BlameLine, GitBranches, GitChange, GitCommit, GitRef, GitUser } from '@shared/ipc-contract';
 
 const run = promisify(execFile);
 
@@ -88,6 +88,30 @@ export async function gitCommit(rootPath: string, message: string): Promise<void
   }
   if (nothingStaged) await run('git', ['-C', rootPath, 'add', '-A']);
   await run('git', ['-C', rootPath, 'commit', '-m', message]);
+}
+
+/** A single git config value, or '' when the key is unset (git exits 1, which we swallow). */
+async function gitConfig(rootPath: string, key: string): Promise<string> {
+  try {
+    return (await runGit(rootPath, ['config', key])).trim();
+  } catch {
+    return '';
+  }
+}
+
+/** The repo's configured author identity; empty strings when `user.name`/`user.email` are unset. */
+export async function getGitUser(rootPath: string): Promise<GitUser> {
+  const [name, email] = await Promise.all([
+    gitConfig(rootPath, 'user.name'),
+    gitConfig(rootPath, 'user.email'),
+  ]);
+  return { name, email };
+}
+
+/** Set the repo-local author identity used for subsequent commits. */
+export async function setGitUser(rootPath: string, name: string, email: string): Promise<void> {
+  await runGit(rootPath, ['config', 'user.name', name]);
+  await runGit(rootPath, ['config', 'user.email', email]);
 }
 
 /** Run a git subcommand, surfacing stderr as the error message on failure. */

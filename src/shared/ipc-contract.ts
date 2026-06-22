@@ -28,6 +28,8 @@ export const IpcChannels = {
   gitLog: 'forge:git:log',
   gitCommitFiles: 'forge:git:commitFiles',
   gitFileAt: 'forge:git:fileAt',
+  gitGetUser: 'forge:git:getUser',
+  gitSetUser: 'forge:git:setUser',
   search: 'forge:search',
   replaceInFiles: 'forge:search:replace',
   watchWorkspace: 'forge:fs:watch',
@@ -128,6 +130,12 @@ export interface GitCommit {
   refs: GitRef[];
   /** Abbreviated parent hashes (matching `hash`); 2+ for merges, 0 for the root commit. */
   parents: string[];
+}
+
+/** A git author identity (`user.name` / `user.email`), as configured in a repo. */
+export interface GitUser {
+  name: string;
+  email: string;
 }
 
 export interface BlameLine {
@@ -378,6 +386,8 @@ export interface ForgeSettings {
   awsProfile?: string;
   /** Region paired with the active AWS profile. */
   awsRegion?: string;
+  /** Saved git identities, offered in the status-bar "switch git user" picker. */
+  gitUsers?: GitUser[];
 }
 
 /** Outcome of running a formatter CLI against a file. */
@@ -447,6 +457,10 @@ export interface ForgeApi {
   gitCommitFiles: (rootPath: string, hash: string) => Promise<Result<GitChange[]>>;
   /** A file's content at a given ref (e.g. a commit hash), or null if absent at that ref. */
   gitFileAt: (rootPath: string, ref: string, relPath: string) => Promise<Result<string | null>>;
+  /** The repo's configured author identity (empty strings when unset). */
+  gitGetUser: (rootPath: string) => Promise<Result<GitUser>>;
+  /** Set the repo's author identity (writes repo-local `user.name`/`user.email`). */
+  gitSetUser: (rootPath: string, name: string, email: string) => Promise<Result<void>>;
   search: (rootPath: string, options: SearchOptions) => Promise<Result<SearchMatch[]>>;
   replaceInFiles: (
     rootPath: string,

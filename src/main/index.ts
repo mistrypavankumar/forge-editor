@@ -44,6 +44,8 @@ import {
   getGitLog,
   getCommitFiles,
   getFileAtRef,
+  getGitUser,
+  setGitUser,
 } from './git/git-service';
 import { searchInFiles, replaceInFiles } from './search/search-service';
 import { registerLanguageIpc } from './ipc/editor-language-ipc';
@@ -201,6 +203,12 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannels.gitFileAt, (_e, rootPath: string, ref: string, relPath: string) =>
     toResult(() => getFileAtRef(rootPath, ref, relPath)),
   );
+  ipcMain.handle(IpcChannels.gitGetUser, (_e, rootPath: string) =>
+    toResult(() => getGitUser(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.gitSetUser, (_e, rootPath: string, name: string, email: string) =>
+    toResult(() => setGitUser(rootPath, name, email)),
+  );
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, options: SearchOptions) =>
     toResult(() => searchInFiles(rootPath, options)),
   );
@@ -229,7 +237,12 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannels.mkdir, (_e, path: string) => toResult(() => makeDir(path)));
   ipcMain.handle(IpcChannels.loadSettings, () => toResult(() => readSettings(SETTINGS_PATH)));
   ipcMain.handle(IpcChannels.saveSettings, (_e, settings: ForgeSettings) =>
-    toResult(() => writeSettings(SETTINGS_PATH, settings)),
+    toResult(async () => {
+      // Merge so a partial save (e.g. the renderer hook, which omits awsProfile) doesn't
+      // clobber fields owned by other writers like the AWS switcher.
+      const existing = await readSettings(SETTINGS_PATH);
+      await writeSettings(SETTINGS_PATH, { ...existing, ...settings });
+    }),
   );
   ipcMain.handle(IpcChannels.runFormatter, (_e, rootPath: string, tool: string, args: string[]) =>
     toResult(() => runFormatter(rootPath, tool, args)),
