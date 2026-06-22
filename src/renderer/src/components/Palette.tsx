@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search, CornerDownLeft, Command as CommandIcon } from 'lucide-react';
 import { commandRegistry } from '../commands/command-registry';
-import { fuzzyMatch } from '../util/fuzzy';
+import { fuzzyMatchTerms } from '../util/fuzzy';
 import { usePaletteStore } from '../stores/palette-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
@@ -21,16 +21,31 @@ interface Row {
 }
 
 function highlight(text: string, query: string): React.ReactNode {
-  if (!query) return text;
-  const idx = text.toLowerCase().indexOf(query.toLowerCase());
-  if (idx === -1) return text;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <span className="font-semibold text-accent">{text.slice(idx, idx + query.length)}</span>
-      {text.slice(idx + query.length)}
-    </>
-  );
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return text;
+  const lower = text.toLowerCase();
+  // First occurrence of each term, merged into non-overlapping ranges.
+  const ranges = terms
+    .map((t) => [lower.indexOf(t), t.length] as const)
+    .filter(([i]) => i !== -1)
+    .map(([i, len]) => [i, i + len] as [number, number]);
+  if (ranges.length === 0) return text;
+  ranges.sort((a, b) => a[0] - b[0]);
+  const merged: Array<[number, number]> = [];
+  for (const [s, e] of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && s <= last[1]) last[1] = Math.max(last[1], e);
+    else merged.push([s, e]);
+  }
+  const out: React.ReactNode[] = [];
+  let pos = 0;
+  merged.forEach(([s, e], i) => {
+    if (s > pos) out.push(text.slice(pos, s));
+    out.push(<span key={i} className="font-semibold text-accent">{text.slice(s, e)}</span>);
+    pos = e;
+  });
+  if (pos < text.length) out.push(text.slice(pos));
+  return <>{out}</>;
 }
 
 export function Palette(): React.JSX.Element | null {
@@ -82,7 +97,7 @@ export function Palette(): React.JSX.Element | null {
   const filtered = useMemo(() => {
     if (!query) return rows;
     return rows
-      .map((r) => ({ row: r, score: fuzzyMatch(query, `${r.primary} ${r.secondary ?? ''}`) }))
+      .map((r) => ({ row: r, score: fuzzyMatchTerms(query, `${r.primary} ${r.secondary ?? ''}`) }))
       .filter((x) => x.score.matched)
       .sort((a, b) => b.score.score - a.score.score)
       .map((x) => x.row);
@@ -171,7 +186,7 @@ export function Palette(): React.JSX.Element | null {
                 </span>
                 {row.secondary ? (
                   <span className="ml-auto truncate pl-3 text-[11px] text-faint">
-                    {row.secondary}
+                    {highlight(row.secondary, query)}
                   </span>
                 ) : null}
               </button>

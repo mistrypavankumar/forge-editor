@@ -450,6 +450,15 @@ export interface ForgeSettings {
   awsRegion?: string;
   /** Saved git identities, offered in the status-bar "switch git user" picker. */
   gitUsers?: GitUser[];
+  /**
+   * Folder names skipped during global file search (quick open), on top of .gitignore.
+   * Any file with a matching path segment (e.g. ".next", "coverage") is excluded.
+   */
+  searchExclude?: string[];
+  /** Set once the built-in default excludes have been merged in, so we never re-add removed ones. */
+  searchExcludeSeeded?: boolean;
+  /** Height (px) of the resizable commit-graph pane in the Source Control panel. */
+  scmGraphHeight?: number;
 }
 
 /** Outcome of running a formatter CLI against a file. */

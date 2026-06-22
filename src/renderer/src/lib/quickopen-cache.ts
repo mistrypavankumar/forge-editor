@@ -7,6 +7,11 @@ export function getCachedFiles(rootPath: string): FileItem[] | null {
   return cache && cache.key === rootPath ? cache.files : null;
 }
 
+/** Drop the cached list so the next quick-open re-lists (e.g. after exclude settings change). */
+export function clearFileCache(): void {
+  cache = null;
+}
+
 export async function loadFiles(rootPath: string): Promise<FileItem[]> {
   const hit = getCachedFiles(rootPath);
   if (hit) return hit;

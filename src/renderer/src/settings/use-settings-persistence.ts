@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useThemeStore } from '../stores/theme-store';
-import { useLayoutStore } from '../stores/layout-store';
+import { useLayoutStore, DEFAULT_SEARCH_EXCLUDE } from '../stores/layout-store';
 import { useRecentsStore } from '../stores/recents-store';
 import { useTasksStore, type TaskId } from '../stores/tasks-store';
 import { useEditorStore } from '../stores/editor-store';
@@ -8,6 +8,7 @@ import { useFormatterStore } from '../stores/formatter-store';
 import { useKeybindingsStore } from '../stores/keybindings-store';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { useGitUserStore } from '../stores/git-user-store';
+import { clearFileCache } from '../lib/quickopen-cache';
 import type { FormatterId } from '../lib/detect-formatters';
 
 export function useSettingsPersistence(): void {
@@ -27,6 +28,9 @@ export function useSettingsPersistence(): void {
   const keybindings = useKeybindingsStore((s) => s.overrides);
   const autoCheckProblems = useDiagnosticsStore((s) => s.autoRun);
   const gitUsers = useGitUserStore((s) => s.users);
+  const searchExclude = useLayoutStore((s) => s.searchExclude);
+  const searchExcludeSeeded = useLayoutStore((s) => s.searchExcludeSeeded);
+  const scmGraphHeight = useLayoutStore((s) => s.scmGraphHeight);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -66,6 +70,19 @@ export function useSettingsPersistence(): void {
           useDiagnosticsStore.getState().setAutoRun(res.data.autoCheckProblems);
         }
         if (res.data.gitUsers) useGitUserStore.getState().setUsers(res.data.gitUsers);
+        if (typeof res.data.scmGraphHeight === 'number') {
+          useLayoutStore.getState().setScmGraphHeight(res.data.scmGraphHeight);
+        }
+        // Seed built-in default excludes once: union them with any stored list, then never re-add.
+        if (res.data.searchExcludeSeeded) {
+          useLayoutStore.getState().setSearchExclude(res.data.searchExclude ?? []);
+          useLayoutStore.getState().setSearchExcludeSeeded(true);
+        } else {
+          const stored = res.data.searchExclude ?? [];
+          const merged = [...stored, ...DEFAULT_SEARCH_EXCLUDE.filter((f) => !stored.includes(f))];
+          useLayoutStore.getState().setSearchExclude(merged);
+          useLayoutStore.getState().setSearchExcludeSeeded(true);
+        }
       }
       hydrated.current = true;
     });
@@ -90,6 +107,15 @@ export function useSettingsPersistence(): void {
       keybindings,
       autoCheckProblems,
       gitUsers,
+      searchExclude,
+      searchExcludeSeeded,
+      scmGraphHeight,
     });
-  }, [themeId, editorScheme, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, gitUsers]);
+  }, [themeId, editorScheme, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight]);
+
+  // Drop the quick-open cache when excludes change so the next search re-lists with them.
+  useEffect(() => {
+    if (!hydrated.current) return;
+    clearFileCache();
+  }, [searchExclude]);
 }

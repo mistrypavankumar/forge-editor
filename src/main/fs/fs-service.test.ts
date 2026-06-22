@@ -47,4 +47,14 @@ describe('fs-service', () => {
     const files = await listFilesRecursive(dir);
     expect(files.map((f) => f.relPath).sort()).toEqual(['readme.md', 'src/a.ts']);
   });
+
+  it('listFilesRecursive skips folders named in extraIgnore', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'forge-'));
+    mkdirSync(join(dir, 'src'));
+    mkdirSync(join(dir, 'coverage'));
+    writeFileSync(join(dir, 'src', 'a.ts'), 'x');
+    writeFileSync(join(dir, 'coverage', 'report.html'), 'y');
+    const files = await listFilesRecursive(dir, ['coverage']);
+    expect(files.map((f) => f.relPath).sort()).toEqual(['src/a.ts']);
+  });
 });

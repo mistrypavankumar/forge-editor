@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
 import type { DirEntry, FileItem } from '@shared/ipc-contract';
-import { getIgnoredNames } from '../git/git-service';
+import { getIgnoredNames, listProjectFiles } from '../git/git-service';
 
 export function sortDirEntries(entries: DirEntry[]): DirEntry[] {
   return [...entries].sort((a, b) => {
@@ -39,14 +39,41 @@ export async function writeFileText(filePath: string, content: string): Promise<
 
 const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'out']);
 
-export async function listFilesRecursive(rootPath: string): Promise<FileItem[]> {
+/** True when any path segment of the (forward-slash) `relPath` is an ignored folder name. */
+function hasIgnoredSegment(relPath: string, ignored: Set<string>): boolean {
+  return relPath.split('/').some((seg) => ignored.has(seg));
+}
+
+/**
+ * Every searchable file under `rootPath` for quick-open. In a git repo this honors
+ * .gitignore (via `git ls-files`); otherwise it walks the tree skipping common build
+ * dirs. Folder names in `extraIgnore` are always excluded on top of that, letting the
+ * user drop noisy folders out of global file search via settings.
+ */
+export async function listFilesRecursive(
+  rootPath: string,
+  extraIgnore: string[] = [],
+): Promise<FileItem[]> {
+  const ignored = new Set([...IGNORED_DIRS, ...extraIgnore]);
+
+  const tracked = await listProjectFiles(rootPath);
+  if (tracked) {
+    const results: FileItem[] = [];
+    for (const relPath of tracked) {
+      if (hasIgnoredSegment(relPath, ignored)) continue;
+      results.push({ name: basename(relPath), path: join(rootPath, relPath), relPath });
+    }
+    return results;
+  }
+
+  // Not a git repo — walk the filesystem, skipping ignored folders by name.
   const results: FileItem[] = [];
   async function walk(dir: string): Promise<void> {
     const dirents = await fs.readdir(dir, { withFileTypes: true });
     for (const d of dirents) {
       const full = join(dir, d.name);
       if (d.isDirectory()) {
-        if (IGNORED_DIRS.has(d.name)) continue;
+        if (ignored.has(d.name)) continue;
         await walk(full);
       } else {
         results.push({ name: d.name, path: full, relPath: relative(rootPath, full) });

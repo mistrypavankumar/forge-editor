@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, RotateCcw, SlidersHorizontal, Wand2, Keyboard, Search } from 'lucide-react';
+import { X, RotateCcw, SlidersHorizontal, Wand2, Keyboard, Search, FolderSearch } from 'lucide-react';
 import { useThemeStore } from '../stores/theme-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useFormatterStore } from '../stores/formatter-store';
@@ -17,6 +17,7 @@ import { cn } from '../lib/cn';
 const SECTIONS = [
   { id: 'general', label: 'General', icon: SlidersHorizontal },
   { id: 'formatting', label: 'Formatting', icon: Wand2 },
+  { id: 'search', label: 'Search', icon: FolderSearch },
   { id: 'keyboard', label: 'Keyboard Shortcuts', icon: Keyboard },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]['id'];
@@ -141,9 +142,11 @@ export function SettingsView(): React.JSX.Element | null {
   const formatOnSave = useFormatterStore((s) => s.formatOnSave);
   const autoFormat = useFormatterStore((s) => s.autoFormat);
   const overrides = useKeybindingsStore((s) => s.overrides);
+  const searchExclude = useLayoutStore((s) => s.searchExclude);
   const [recording, setRecording] = useState<string | null>(null);
   const [active, setActive] = useState<SectionId>('general');
   const [kbFilter, setKbFilter] = useState('');
+  const [newExclude, setNewExclude] = useState('');
   const isMac = window.forge.isMac;
 
   useEffect(() => {
@@ -250,6 +253,73 @@ export function SettingsView(): React.JSX.Element | null {
       <SettingRow label="Auto format" hint="Format automatically 5 seconds after edits stop" last>
         <Toggle on={autoFormat} onChange={(v) => useFormatterStore.getState().setAutoFormat(v)} />
       </SettingRow>
+    </Card>
+  );
+
+  const addExclude = (): void => {
+    const value = newExclude.trim().replace(/^[/\\]+|[/\\]+$/g, '');
+    setNewExclude('');
+    if (!value || searchExclude.includes(value)) return;
+    useLayoutStore.getState().setSearchExclude([...searchExclude, value]);
+  };
+  const removeExclude = (folder: string): void => {
+    useLayoutStore.getState().setSearchExclude(searchExclude.filter((f) => f !== folder));
+  };
+
+  const search = (
+    <Card>
+      <div className="px-4 py-4">
+        <div className="text-[13px] font-medium text-fg">Excluded folders</div>
+        <div className="mt-0.5 text-[11.5px] leading-snug text-faint">
+          Folder names skipped during global file search (quick open), on top of your{' '}
+          <span className="font-mono">.gitignore</span>. Saved to{' '}
+          <span className="font-mono">~/.forge/settings.json</span>.
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {searchExclude.length === 0 ? (
+            <span className="text-[12px] text-faint">No extra folders excluded yet.</span>
+          ) : (
+            searchExclude.map((f) => (
+              <span
+                key={f}
+                className="flex items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-1 font-mono text-[12px] text-fg"
+              >
+                {f}
+                <button
+                  type="button"
+                  onClick={() => removeExclude(f)}
+                  aria-label={`Remove ${f}`}
+                  className="text-faint transition-colors hover:text-fg"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            value={newExclude}
+            onChange={(e) => setNewExclude(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addExclude();
+              }
+            }}
+            placeholder="e.g. .next, coverage, build"
+            className="flex-1 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[12px] text-fg outline-none transition-colors placeholder:text-faint focus:border-accent/70"
+          />
+          <button
+            type="button"
+            onClick={addExclude}
+            disabled={!newExclude.trim()}
+            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-[12px] text-fg transition-colors hover:border-line-strong disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
+      </div>
     </Card>
   );
 
@@ -360,6 +430,7 @@ export function SettingsView(): React.JSX.Element | null {
           <div className="min-h-0 flex-1 overflow-auto px-6 py-5">
             {active === 'general' ? general : null}
             {active === 'formatting' ? formatting : null}
+            {active === 'search' ? search : null}
             {active === 'keyboard' ? keyboard : null}
           </div>
         </div>
