@@ -11,6 +11,7 @@ import {
 import { useLayoutStore } from '../stores/layout-store';
 import { usePaletteStore } from '../stores/palette-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { useGitUserStore } from '../stores/git-user-store';
 import { commandRegistry } from '../commands/command-registry';
 import { IconButton } from './ui/IconButton';
 import { FileMenu } from './FileMenu';
@@ -18,6 +19,15 @@ import { FileMenu } from './FileMenu';
 function basename(p: string): string {
   const parts = p.split('/').filter(Boolean);
   return parts[parts.length - 1] ?? p;
+}
+
+/** Up to two initials from a name/login (e.g. "dax-pavankumar-mistry" → "DM", "Pavan" → "P"). */
+function initials(name: string): string {
+  const parts = name.split(/[\s\-_.]+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0][0];
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (first + last).toUpperCase();
 }
 
 export function TopBar(): React.JSX.Element {
@@ -28,6 +38,9 @@ export function TopBar(): React.JSX.Element {
   const openPalette = usePaletteStore((s) => s.openPalette);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const workspaceName = rootPath ? basename(rootPath) : 'No workspace';
+  const gitUser = useGitUserStore((s) => s.active);
+  const openGitUserPicker = useGitUserStore((s) => s.openPicker);
+  const avatarLabel = gitUser?.username || gitUser?.name;
 
   return (
     <header className="drag flex h-11 shrink-0 items-center gap-3 border-b border-line bg-surface pl-20 pr-3">
@@ -113,10 +126,12 @@ export function TopBar(): React.JSX.Element {
 
         <button
           type="button"
-          aria-label="Account"
+          aria-label="Switch git user"
+          title={avatarLabel ? `Git user: ${avatarLabel} — click to switch` : 'Switch git user'}
+          onClick={openGitUserPicker}
           className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-accent to-info text-[11px] font-semibold text-white"
         >
-          PM
+          {avatarLabel ? initials(avatarLabel) : 'PM'}
         </button>
       </div>
     </header>
