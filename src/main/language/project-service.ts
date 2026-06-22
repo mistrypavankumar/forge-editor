@@ -12,6 +12,33 @@ interface OpenDoc {
 }
 
 /**
+ * Directory holding TypeScript's standard library (lib.*.d.ts). In dev it's typescript's own
+ * lib folder; in a packaged build electron-builder strips *.d.ts from node_modules, so the
+ * default path inside the asar is empty and we fall back to the copy shipped as extraResources
+ * (Contents/Resources/ts-libs — see electron-builder.yml). Without these files every global
+ * type (Array, TemplateStringsArray, …) is undefined and IntelliSense emits nonsense
+ * diagnostics — gql`` tagged templates fail with TS2345, and so on.
+ */
+const STD_LIB_DIR = ((): string => {
+  const sentinel = 'lib.es5.d.ts'; // every other lib.*.d.ts references this one
+  const fromTs = dirname(ts.getDefaultLibFilePath({}));
+  const candidates = [
+    fromTs,
+    ...(process.resourcesPath ? [join(process.resourcesPath, 'ts-libs')] : []),
+    // __dirname is <Resources>/app.asar/out/main; Resources/ts-libs sits three levels up.
+    join(__dirname, '..', '..', '..', 'ts-libs'),
+  ];
+  const found = candidates.find((dir) => ts.sys.fileExists(join(dir, sentinel)));
+  if (!found) {
+    console.error(
+      `[language] TypeScript standard library (lib.*.d.ts) not found. Tried: ${candidates.join(', ')}. ` +
+        `IntelliSense diagnostics will be wrong (missing global types).`,
+    );
+  }
+  return found ?? fromTs;
+})();
+
+/**
  * One TypeScript Language Service rooted at a workspace folder.
  *
  * It loads the project's tsconfig.json (or a permissive fallback), enumerates the project's
@@ -102,7 +129,9 @@ export class Project {
       },
       getCurrentDirectory: () => this.rootPath,
       getCompilationSettings: () => this.options,
-      getDefaultLibFileName: (opts) => ts.getDefaultLibFilePath(opts),
+      // Resolve lib.*.d.ts from STD_LIB_DIR (TS uses this path's directory to find every lib
+      // file), so packaged builds read them from the shipped copy rather than the stripped asar.
+      getDefaultLibFileName: (opts) => join(STD_LIB_DIR, ts.getDefaultLibFileName(opts)),
       fileExists: ts.sys.fileExists,
       readFile: ts.sys.readFile,
       readDirectory: ts.sys.readDirectory,

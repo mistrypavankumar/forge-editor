@@ -12,6 +12,19 @@ files:
   - out/**
   - package.json
 
+# The in-process TS language service (src/main/language) loads typescript's own
+# lib.*.d.ts at runtime as the standard library. electron-builder strips *.d.ts from
+# node_modules when collecting deps, so those files never make it into the asar — and
+# without them every global type (Array, TemplateStringsArray, …) is undefined and
+# IntelliSense reports bogus errors (e.g. gql`` tagged templates fail with TS2345).
+# extraResources is copied verbatim (no .d.ts filtering), so ship the lib files here;
+# project-service.ts resolves them from Contents/Resources/ts-libs at runtime.
+extraResources:
+  - from: node_modules/typescript/lib
+    to: ts-libs
+    filter:
+      - 'lib*.d.ts'
+
 # node-pty ships a native .node binary that cannot run from inside the asar.
 asarUnpack:
   - '**/node_modules/node-pty/**'

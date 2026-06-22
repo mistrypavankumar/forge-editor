@@ -195,10 +195,57 @@ const MONOKAI_COLORS: Record<string, string> = {
   'editorWidget.border': '#75715e',
 };
 
+/**
+ * Monaco ships no dotenv grammar, so `.env*` files render as undifferentiated plaintext. Register
+ * a small Monarch tokenizer that colors comments, keys, and values using the same token names the
+ * theme palettes already style (`comment`, `variable`, `operator`, `string`). Handles `export KEY=`,
+ * quoted/unquoted values with escapes, and `#` inline comments (only after whitespace, so URLs with
+ * a fragment like `http://x#y` stay intact).
+ */
+function registerDotenv(): void {
+  monaco.languages.register({ id: 'dotenv', extensions: ['.env'], aliases: ['dotenv', 'Env'] });
+  monaco.languages.setLanguageConfiguration('dotenv', {
+    comments: { lineComment: '#' },
+    autoClosingPairs: [
+      { open: '"', close: '"' },
+      { open: "'", close: "'" },
+    ],
+  });
+  monaco.languages.setMonarchTokensProvider('dotenv', {
+    defaultToken: '',
+    tokenizer: {
+      root: [
+        [/^\s*#.*/, 'comment'],
+        // KEY= or `export KEY=`; hand off the value to its own state.
+        [/^(\s*)(export\s+)?([A-Za-z_][\w.]*)(\s*)(=)/, ['', 'keyword', 'variable', '', 'operator'], '@value'],
+      ],
+      value: [
+        [/"/, 'string', '@dquote'],
+        [/'/, 'string', '@squote'],
+        [/\s+#.*/, 'comment', '@pop'],
+        [/[^\s#"']+/, 'string'],
+        [/[ \t]+/, ''],
+        [/$/, '', '@pop'],
+      ],
+      dquote: [
+        [/[^"\\]+/, 'string'],
+        [/\\./, 'string.escape'],
+        [/"/, 'string', '@pop'],
+      ],
+      squote: [
+        [/[^'\\]+/, 'string'],
+        [/\\./, 'string.escape'],
+        [/'/, 'string', '@pop'],
+      ],
+    },
+  });
+}
+
 let configured = false;
 
 export function getMonaco(): typeof monaco {
   if (!configured) {
+    registerDotenv();
     // Diagnostics now come from the main-process TypeScript Language Service (project-aware,
     // resolves tsconfig aliases + node_modules). Silence the browser worker entirely so we don't
     // get duplicate or misleading single-file squiggles.
