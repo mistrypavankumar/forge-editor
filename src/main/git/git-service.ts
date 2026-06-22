@@ -4,6 +4,8 @@ import { promisify } from 'node:util';
 import { basename, join, relative, sep } from 'node:path';
 import type {
   BlameLine,
+  GhAccount,
+  GhAccounts,
   GhAuth,
   GitBranches,
   GitChange,
@@ -287,6 +289,64 @@ export async function ghAuth(rootPath: string): Promise<GhAuth> {
     /* token is usable even if the profile fetch fails */
   }
   return { installed: true, login, name, email, token };
+}
+
+/**
+ * Every `gh` account signed in for the repo's host — each with the token and profile needed
+ * to import it without pasting credentials. Unlike {@link ghAuth} (which only sees gh's active
+ * account), this surfaces all logged-in accounts so the picker can offer each as a one-click
+ * import. Returns installed:false when gh isn't on PATH; an empty list when not signed in.
+ */
+export async function ghAccounts(rootPath: string): Promise<GhAccounts> {
+  try {
+    await run('gh', ['--version']);
+  } catch {
+    return { installed: false, accounts: [] };
+  }
+  const host = await originHost(rootPath);
+
+  let logins: { login: string; active: boolean }[];
+  try {
+    const out = (await run('gh', ['auth', 'status', '--json', 'hosts'])).stdout;
+    const parsed = JSON.parse(out) as {
+      hosts?: Record<string, { login?: string; active?: boolean }[]>;
+    };
+    logins = (parsed.hosts?.[host] ?? [])
+      .filter((a) => typeof a.login === 'string')
+      .map((a) => ({ login: a.login as string, active: a.active === true }));
+  } catch {
+    return { installed: true, accounts: [] }; // installed but not signed in (or pre-2.x gh without --json)
+  }
+
+  const accounts: GhAccount[] = [];
+  for (const { login, active } of logins) {
+    let token = '';
+    try {
+      token = (
+        await run('gh', ['auth', 'token', '--hostname', host, '--user', login])
+      ).stdout.trim();
+    } catch {
+      continue; // no usable token for this account — skip it
+    }
+    if (!token) continue;
+
+    let name: string | undefined;
+    let email: string | undefined;
+    try {
+      // `gh api` queries the *active* account by default; inject this account's token so the
+      // profile we read matches `login`. GH_ENTERPRISE_TOKEN covers GHE hosts.
+      const env = { ...process.env, GH_TOKEN: token, GH_ENTERPRISE_TOKEN: token };
+      const out = (await run('gh', ['api', 'user', '--hostname', host], { env })).stdout;
+      const u = JSON.parse(out) as { login?: string; name?: string; email?: string; id?: number };
+      name = u.name ?? undefined;
+      // Mirror ghAuth: fall back to the no-reply alias when the public email is hidden.
+      email = u.email ?? (u.login && u.id ? `${u.id}+${u.login}@users.noreply.github.com` : undefined);
+    } catch {
+      /* token is still usable for import even if the profile fetch fails */
+    }
+    accounts.push({ login, name, email, token, active });
+  }
+  return { installed: true, accounts };
 }
 
 /** A bounded fetch (8s) so a hung network call can't wedge the picker's "Test connection". */

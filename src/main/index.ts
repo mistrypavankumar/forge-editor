@@ -49,8 +49,10 @@ import {
   setGitUser,
   testGitCredential,
   ghAuth,
+  ghAccounts,
 } from './git/git-service';
 import { searchInFiles, replaceInFiles } from './search/search-service';
+import { hydratePathFromLoginShell } from './env/resolve-path';
 import { registerLanguageIpc } from './ipc/editor-language-ipc';
 import { registerAwsIpc } from './ipc/aws-ipc';
 import { setActiveProfile } from './aws/aws-service';
@@ -128,7 +130,11 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // GUI-launched (packaged) builds inherit only the bare system PATH, so Homebrew tools
+  // like `gh` aren't found when we shell out from the main process. Hydrate PATH from a
+  // login shell before registering IPC so the git-user switcher can see the gh account.
+  if (app.isPackaged) await hydratePathFromLoginShell();
   // Packaged builds get their icon from the app bundle (build/icon.icns). During
   // `electron-vite dev` there is no bundle, so set the dock icon from source.
   if (isMac && !app.isPackaged) {
@@ -225,6 +231,9 @@ app.whenReady().then(() => {
       toResult(() => testGitCredential(rootPath, username, token)),
   );
   ipcMain.handle(IpcChannels.gitGhAuth, (_e, rootPath: string) => toResult(() => ghAuth(rootPath)));
+  ipcMain.handle(IpcChannels.gitGhAccounts, (_e, rootPath: string) =>
+    toResult(() => ghAccounts(rootPath)),
+  );
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, options: SearchOptions) =>
     toResult(() => searchInFiles(rootPath, options)),
   );

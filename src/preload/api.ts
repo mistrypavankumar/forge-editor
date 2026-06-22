@@ -42,6 +42,7 @@ export const api: ForgeApi = {
   gitTestCredential: (rootPath, username, token) =>
     ipcRenderer.invoke(IpcChannels.gitTestCredential, rootPath, username, token),
   gitGhAuth: (rootPath) => ipcRenderer.invoke(IpcChannels.gitGhAuth, rootPath),
+  gitGhAccounts: (rootPath) => ipcRenderer.invoke(IpcChannels.gitGhAccounts, rootPath),
   search: (rootPath, options) => ipcRenderer.invoke(IpcChannels.search, rootPath, options),
   replaceInFiles: (rootPath, options, replacement, files) =>
     ipcRenderer.invoke(IpcChannels.replaceInFiles, rootPath, options, replacement, files),

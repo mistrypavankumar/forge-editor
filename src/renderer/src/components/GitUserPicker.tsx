@@ -17,7 +17,7 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { useTerminalStore } from '../stores/terminal-store';
 import { runInTerminal } from '../lib/terminal-exec';
-import type { GhAuth, GitCredentialTest, GitUser } from '@shared/ipc-contract';
+import type { GhAccount, GitCredentialTest, GitUser } from '@shared/ipc-contract';
 import { cn } from '../lib/cn';
 
 export function GitUserPicker(): React.JSX.Element | null {
@@ -41,8 +41,8 @@ export function GitUserPicker(): React.JSX.Element | null {
   const [testing, setTesting] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [testResult, setTestResult] = useState<GitCredentialTest | null>(null);
-  // The active `gh` account for this repo's host, surfaced as a one-click import row.
-  const [ghAccount, setGhAccount] = useState<GhAuth | null>(null);
+  // Every `gh` account signed in for this repo's host, each surfaced as a one-click import row.
+  const [ghAccounts, setGhAccounts] = useState<GhAccount[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -52,10 +52,10 @@ export function GitUserPicker(): React.JSX.Element | null {
     setUsername('');
     setToken('');
     setTestResult(null);
-    setGhAccount(null);
+    setGhAccounts([]);
     if (rootPath) {
-      void window.forge.gitGhAuth(rootPath).then((res) => {
-        if (res.ok && res.data.installed && res.data.token && res.data.login) setGhAccount(res.data);
+      void window.forge.gitGhAccounts(rootPath).then((res) => {
+        if (res.ok && res.data.installed) setGhAccounts(res.data.accounts);
       });
     }
   }, [open, rootPath]);
@@ -91,16 +91,14 @@ export function GitUserPicker(): React.JSX.Element | null {
 
   const pick = (u: GitUser): void => apply(u);
 
-  // The gh account is worth offering only when it isn't already a saved user.
-  const ghImportable =
-    ghAccount?.login &&
-    !users.some((u) => u.username?.trim().toLowerCase() === ghAccount.login!.trim().toLowerCase())
-      ? ghAccount
-      : null;
+  // Offer each gh account that isn't already a saved user (matched by username), active first.
+  const importable = ghAccounts
+    .filter((a) => !users.some((u) => u.username?.trim().toLowerCase() === a.login.trim().toLowerCase()))
+    .sort((a, b) => Number(b.active) - Number(a.active));
 
-  const importGh = (gh: GhAuth): void => {
+  const importGh = (gh: GhAccount): void => {
     apply({
-      name: gh.name || gh.login || '',
+      name: gh.name || gh.login,
       email: gh.email || '',
       username: gh.login,
       token: gh.token,
@@ -267,19 +265,22 @@ export function GitUserPicker(): React.JSX.Element | null {
               </div>
             ))}
 
-            {ghImportable && !editing ? (
-              <button
-                type="button"
-                onClick={() => importGh(ghImportable)}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left hover:bg-surface-3"
-              >
-                <span className="flex w-4 shrink-0 items-center justify-center text-accent">
-                  <Github size={13} />
-                </span>
-                <span className="truncate text-[13px] text-fg">Import {ghImportable.login}</span>
-                <span className="ml-1 truncate text-[11px] text-faint">from GitHub CLI</span>
-              </button>
-            ) : null}
+            {!editing
+              ? importable.map((a) => (
+                  <button
+                    key={a.login}
+                    type="button"
+                    onClick={() => importGh(a)}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left hover:bg-surface-3"
+                  >
+                    <span className="flex w-4 shrink-0 items-center justify-center text-accent">
+                      <Github size={13} />
+                    </span>
+                    <span className="truncate text-[13px] text-fg">Import {a.login}</span>
+                    <span className="ml-1 truncate text-[11px] text-faint">from GitHub CLI</span>
+                  </button>
+                ))
+              : null}
 
             {editing ? (
               <div className="flex flex-col gap-2 rounded-lg bg-surface-2 p-2.5">

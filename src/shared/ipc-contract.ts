@@ -32,6 +32,7 @@ export const IpcChannels = {
   gitSetUser: 'forge:git:setUser',
   gitTestCredential: 'forge:git:testCredential',
   gitGhAuth: 'forge:git:ghAuth',
+  gitGhAccounts: 'forge:git:ghAccounts',
   search: 'forge:search',
   replaceInFiles: 'forge:search:replace',
   watchWorkspace: 'forge:fs:watch',
@@ -175,6 +176,28 @@ export interface GhAuth {
   email?: string;
   /** OAuth token gh holds for the host, when signed in. */
   token?: string;
+}
+
+/** One `gh` account signed in for the repo's host, offered as a one-click import. */
+export interface GhAccount {
+  /** Authenticated login. */
+  login: string;
+  /** Profile name, for prefilling the commit author. */
+  name?: string;
+  /** Public/no-reply email, for prefilling the commit author. */
+  email?: string;
+  /** OAuth token gh holds for this account. */
+  token: string;
+  /** True for gh's currently-active account on the host. */
+  active: boolean;
+}
+
+/** Every `gh` account available to import for the repo's host. */
+export interface GhAccounts {
+  /** Whether the `gh` CLI is on PATH. */
+  installed: boolean;
+  /** Signed-in accounts for the host (empty when not signed in). */
+  accounts: GhAccount[];
 }
 
 export interface BlameLine {
@@ -512,6 +535,8 @@ export interface ForgeApi {
   ) => Promise<Result<GitCredentialTest>>;
   /** Import the repo host's login + token from the `gh` CLI (browser-based sign-in). */
   gitGhAuth: (rootPath: string) => Promise<Result<GhAuth>>;
+  /** List every `gh` account signed in for the repo's host, each importable in one click. */
+  gitGhAccounts: (rootPath: string) => Promise<Result<GhAccounts>>;
   search: (rootPath: string, options: SearchOptions) => Promise<Result<SearchMatch[]>>;
   replaceInFiles: (
     rootPath: string,
