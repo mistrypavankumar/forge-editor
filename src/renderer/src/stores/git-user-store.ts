@@ -32,7 +32,7 @@ export interface GitUserState {
   removeUser: (email: string) => void;
 }
 
-export const useGitUserStore = create<GitUserState>((set, get) => ({
+export const useGitUserStore = create<GitUserState>((set) => ({
   users: [],
   active: null,
   pickerOpen: false,

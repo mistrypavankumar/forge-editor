@@ -7,10 +7,12 @@ import {
   Lock,
   Cloud,
   Check,
+  User,
 } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useAwsStore } from '../stores/aws-store';
+import { useGitUserStore } from '../stores/git-user-store';
 import { isProtectedBranch } from '../lib/protected-branch';
 import { useWorkbenchStatusStore, markerCounts } from '../stores/workbench-status-store';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
@@ -63,6 +65,8 @@ export function StatusBar(): React.JSX.Element {
   const awsActive = useAwsStore((s) => s.active);
   const awsStatuses = useAwsStore((s) => s.statuses);
   const openAwsPicker = useAwsStore((s) => s.openPicker);
+  const gitUser = useGitUserStore((s) => s.active);
+  const openGitUserPicker = useGitUserStore((s) => s.openPicker);
   const awsActiveStatus = awsActive ? awsStatuses[awsActive] : undefined;
   const awsValid = Boolean(awsActiveStatus && awsActiveStatus !== 'pending' && awsActiveStatus.valid);
   // After a project-wide check, show its codebase counts; otherwise the open-file markers.
@@ -92,6 +96,12 @@ export function StatusBar(): React.JSX.Element {
           >
             {isProtectedBranch(branch) ? <Lock size={12} /> : <GitBranch size={12} />}
             {branch ?? basename(rootPath)}
+          </Segment>
+        ) : null}
+        {rootPath ? (
+          <Segment onClick={openGitUserPicker} title="Switch git user">
+            <User size={12} />
+            {gitUser?.name || 'Set git user'}
           </Segment>
         ) : null}
         <Segment onClick={openProblems}>

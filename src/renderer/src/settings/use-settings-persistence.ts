@@ -7,6 +7,7 @@ import { useEditorStore } from '../stores/editor-store';
 import { useFormatterStore } from '../stores/formatter-store';
 import { useKeybindingsStore } from '../stores/keybindings-store';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
+import { useGitUserStore } from '../stores/git-user-store';
 import type { FormatterId } from '../lib/detect-formatters';
 
 export function useSettingsPersistence(): void {
@@ -25,6 +26,7 @@ export function useSettingsPersistence(): void {
   const autoFormat = useFormatterStore((s) => s.autoFormat);
   const keybindings = useKeybindingsStore((s) => s.overrides);
   const autoCheckProblems = useDiagnosticsStore((s) => s.autoRun);
+  const gitUsers = useGitUserStore((s) => s.users);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -63,6 +65,7 @@ export function useSettingsPersistence(): void {
         if (typeof res.data.autoCheckProblems === 'boolean') {
           useDiagnosticsStore.getState().setAutoRun(res.data.autoCheckProblems);
         }
+        if (res.data.gitUsers) useGitUserStore.getState().setUsers(res.data.gitUsers);
       }
       hydrated.current = true;
     });
@@ -86,6 +89,7 @@ export function useSettingsPersistence(): void {
       autoFormat,
       keybindings,
       autoCheckProblems,
+      gitUsers,
     });
-  }, [themeId, editorScheme, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems]);
+  }, [themeId, editorScheme, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, gitUsers]);
 }

@@ -38,6 +38,8 @@ import { Palette } from './Palette';
 import { AwsConnectionPicker } from './AwsConnectionPicker';
 import { AwsCredentialsEditor } from './AwsCredentialsEditor';
 import { useAwsStore } from '../stores/aws-store';
+import { GitUserPicker } from './GitUserPicker';
+import { useGitUserStore } from '../stores/git-user-store';
 import { SettingsView } from './SettingsView';
 import { FeaturesView } from './FeaturesView';
 import { ContextMenu } from './ui/ContextMenu';
@@ -59,6 +61,11 @@ export function AppShell(): React.JSX.Element {
   useEffect(() => {
     void useAwsStore.getState().load();
   }, []);
+
+  // Reflect the open repo's git identity in the status bar (re-reads when the folder changes).
+  useEffect(() => {
+    if (rootPath) void useGitUserStore.getState().loadActive(rootPath);
+  }, [rootPath]);
 
   const onSidebarContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault();
@@ -173,6 +180,7 @@ export function AppShell(): React.JSX.Element {
         <Palette />
         <AwsConnectionPicker />
         <AwsCredentialsEditor />
+        <GitUserPicker />
         <SettingsView />
         <FeaturesView />
       </div>
@@ -260,6 +268,7 @@ export function AppShell(): React.JSX.Element {
       <Palette />
       <AwsConnectionPicker />
       <AwsCredentialsEditor />
+      <GitUserPicker />
       <SettingsView />
       <FeaturesView />
       {menu ? (
