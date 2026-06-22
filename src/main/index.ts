@@ -129,6 +129,11 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // Packaged builds get their icon from the app bundle (build/icon.icns). During
+  // `electron-vite dev` there is no bundle, so set the dock icon from source.
+  if (isMac && !app.isPackaged) {
+    app.dock?.setIcon(join(process.cwd(), 'build', 'icon.png'));
+  }
   buildAppMenu();
   ipcMain.handle(IpcChannels.ping, (_event, msg: string) => pongOf(msg));
   ipcMain.handle(IpcChannels.openFolder, async () => {

@@ -1,0 +1,40 @@
+appId: com.pavankumar.forge
+productName: Forge
+copyright: Copyright © Pavankumar Mistry
+
+directories:
+  buildResources: build
+  output: dist
+
+# electron-vite emits the runnable app into out/; production dependencies
+# (node-pty, typescript) are collected automatically from package.json.
+files:
+  - out/**
+  - package.json
+
+# node-pty ships a native .node binary that cannot run from inside the asar.
+asarUnpack:
+  - '**/node_modules/node-pty/**'
+
+mac:
+  category: public.app-category.developer-tools
+  icon: build/icon.icns
+  target:
+    - target: dmg
+      arch: arm64
+  # Personal/unsigned build — skip code signing so packaging never needs a cert.
+  identity: null
+
+dmg:
+  title: Forge
+
+win:
+  icon: build/icon.png
+  target:
+    - nsis
+
+linux:
+  icon: build/icon.png
+  category: Development
+  target:
+    - AppImage
