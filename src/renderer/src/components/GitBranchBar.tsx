@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GitBranch, Check, Plus, DownloadCloud, UploadCloud, RefreshCcw } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
-import { ContextMenu, type MenuItem } from './ui/ContextMenu';
+import { BranchPicker } from './BranchPicker';
 import { cn } from '../lib/cn';
 import type { GitBranches } from '@shared/ipc-contract';
 
@@ -77,16 +77,7 @@ export function GitBranchBar({ root, onChanged }: { root: string; onChanged: () 
     if (r) setMenu({ x: r.left, y: r.bottom });
   };
 
-  const items: MenuItem[] = [
-    ...branches.all.map((b) => ({
-      label: b,
-      checked: b === branches.current,
-      onSelect: () => checkout(b),
-    })),
-    { label: 'Create new branch…', dividerAfter: false, onSelect: () => setCreating(true) },
-  ];
-
-  const opBtn = (op: Op, Icon: typeof DownloadCloud, label: string): React.JSX.Element => (
+  const opBtn =(op: Op, Icon: typeof DownloadCloud, label: string): React.JSX.Element => (
     <button
       type="button"
       title={label}
@@ -145,7 +136,17 @@ export function GitBranchBar({ root, onChanged }: { root: string; onChanged: () 
 
       {error ? <p className="mt-1 truncate px-1 text-[11px] text-danger" title={error}>{error}</p> : null}
 
-      {menu ? <ContextMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} /> : null}
+      {menu ? (
+        <BranchPicker
+          x={menu.x}
+          y={menu.y}
+          branches={branches.all}
+          current={branches.current}
+          onSelect={checkout}
+          onCreate={() => setCreating(true)}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -2,16 +2,32 @@ import { createRequire } from 'node:module';
 import type { IPty } from 'node-pty';
 import type { WebContents } from 'electron';
 import { IpcChannels, type TerminalCreateArgs } from '@shared/ipc-contract';
+import { getActiveAwsEnv } from '../aws/aws-service';
 
 // node-pty is a native CJS addon kept external from the bundle; load via require.
 const require = createRequire(import.meta.url);
 const pty = require('node-pty') as typeof import('node-pty');
 
 const sessions = new Map<string, IPty>();
+/** Per-session foreground-process pollers (drive the task "running" indicator). */
+const pollers = new Map<string, ReturnType<typeof setInterval>>();
+const BUSY_POLL_MS = 400;
 
 function defaultShell(): string {
   if (process.platform === 'win32') return process.env.COMSPEC ?? 'powershell.exe';
   return process.env.SHELL ?? '/bin/zsh';
+}
+
+function shellName(): string {
+  return (defaultShell().split('/').pop() ?? 'sh').replace(/^-/, '');
+}
+
+function stopPoller(id: string): void {
+  const t = pollers.get(id);
+  if (t) {
+    clearInterval(t);
+    pollers.delete(id);
+  }
 }
 
 export function createTerminal(sender: WebContents, args: TerminalCreateArgs): void {
@@ -22,7 +38,14 @@ export function createTerminal(sender: WebContents, args: TerminalCreateArgs): v
     cols: Math.max(args.cols, 2),
     rows: Math.max(args.rows, 1),
     cwd: args.cwd ?? process.env.HOME ?? process.cwd(),
-    env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor' },
+    // getActiveAwsEnv() injects AWS_PROFILE/region for the active connection, so terminals
+    // and run-tasks (which write into ptys created here) use the chosen profile.
+    env: {
+      ...process.env,
+      ...getActiveAwsEnv(),
+      TERM: 'xterm-256color',
+      COLORTERM: 'truecolor',
+    },
   });
   sessions.set(args.id, proc);
 
@@ -34,11 +57,33 @@ export function createTerminal(sender: WebContents, args: TerminalCreateArgs): v
     // re-create (e.g. React StrictMode remount) may have replaced it already.
     if (sessions.get(args.id) === proc) {
       sessions.delete(args.id);
+      stopPoller(args.id);
       if (!sender.isDestroyed()) {
         sender.send(IpcChannels.terminalExit, { id: args.id, code: exitCode });
       }
     }
   });
+
+  // Watch the foreground process so the UI can show a task as running and clear it the moment
+  // the command returns to the shell (finished, failed, or interrupted). Emit only on change;
+  // the initial idle state is never emitted, so the first event a task sees is "busy".
+  const shell = shellName();
+  let busy = false;
+  const poll = setInterval(() => {
+    if (sessions.get(args.id) !== proc) return;
+    let fg = '';
+    try {
+      fg = proc.process;
+    } catch {
+      fg = '';
+    }
+    const next = fg !== '' && fg.replace(/^-/, '') !== shell;
+    if (next !== busy) {
+      busy = next;
+      if (!sender.isDestroyed()) sender.send(IpcChannels.terminalBusy, { id: args.id, busy });
+    }
+  }, BUSY_POLL_MS);
+  pollers.set(args.id, poll);
 }
 
 export function writeTerminal(id: string, data: string): void {
@@ -56,4 +101,5 @@ export function resizeTerminal(id: string, cols: number, rows: number): void {
 export function killTerminal(id: string): void {
   sessions.get(id)?.kill();
   sessions.delete(id);
+  stopPoller(id);
 }

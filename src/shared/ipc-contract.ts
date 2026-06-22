@@ -26,6 +26,8 @@ export const IpcChannels = {
   gitPull: 'forge:git:pull',
   gitFetch: 'forge:git:fetch',
   gitLog: 'forge:git:log',
+  gitCommitFiles: 'forge:git:commitFiles',
+  gitFileAt: 'forge:git:fileAt',
   search: 'forge:search',
   replaceInFiles: 'forge:search:replace',
   watchWorkspace: 'forge:fs:watch',
@@ -49,6 +51,7 @@ export const IpcChannels = {
   terminalKill: 'forge:terminal:kill',
   terminalData: 'forge:terminal:data',
   terminalExit: 'forge:terminal:exit',
+  terminalBusy: 'forge:terminal:busy',
   openExternal: 'forge:shell:openExternal',
   // TypeScript Language Service (real IDE intelligence).
   langInit: 'forge:lang:init',
@@ -64,6 +67,12 @@ export const IpcChannels = {
   langRename: 'forge:lang:rename',
   langFormat: 'forge:lang:format',
   langSemanticTokens: 'forge:lang:semanticTokens',
+  // AWS connection switcher.
+  awsListProfiles: 'forge:aws:listProfiles',
+  awsValidateProfile: 'forge:aws:validateProfile',
+  awsSetActiveProfile: 'forge:aws:setActiveProfile',
+  awsGetActiveProfile: 'forge:aws:getActiveProfile',
+  awsConfigPaths: 'forge:aws:configPaths',
 } as const;
 
 export interface DirEntry {
@@ -104,11 +113,21 @@ export interface GitBranches {
   all: string[];
 }
 
+/** A ref pointing at a commit, as shown on the graph: branch, remote-tracking branch, or tag. */
+export interface GitRef {
+  name: string;
+  /** 'head' = the checked-out branch (HEAD), 'branch' = other local, 'remote' = remote-tracking, 'tag' = tag. */
+  kind: 'head' | 'branch' | 'remote' | 'tag';
+}
+
 export interface GitCommit {
   hash: string;
   author: string;
   date: string;
   subject: string;
+  refs: GitRef[];
+  /** Abbreviated parent hashes (matching `hash`); 2+ for merges, 0 for the root commit. */
+  parents: string[];
 }
 
 export interface BlameLine {
@@ -293,6 +312,41 @@ export interface EditorLanguageApi {
   getSemanticTokens: (filePath: string) => Promise<Result<LsSemanticTokens>>;
 }
 
+// ---- AWS connection switcher ------------------------------------------------
+
+/** A credential profile discovered in ~/.aws/config or ~/.aws/credentials. */
+export interface AwsProfile {
+  /** Profile name as referenced on the CLI (`--profile <name>`); `default` for the default. */
+  name: string;
+  /** `sso` when the profile resolves credentials via SSO; otherwise long-lived IAM keys. */
+  kind: 'sso' | 'iam';
+  /** Human-readable source file, e.g. '~/.aws/config'. */
+  source: string;
+  /** Configured region, if any. */
+  region?: string;
+}
+
+/** Result of probing a profile with `aws sts get-caller-identity`. */
+export interface AwsValidation {
+  valid: boolean;
+  /** AWS account id when valid. */
+  accountId?: string;
+  /** Short error message when invalid/expired. */
+  error?: string;
+}
+
+/** The currently-active connection, injected into new terminals/run-tasks. */
+export interface AwsActive {
+  profile: string | null;
+  region: string | null;
+}
+
+/** Absolute paths to the AWS config files (for "Edit Credentials"). */
+export interface AwsConfigPaths {
+  config: string;
+  credentials: string;
+}
+
 export interface RecentEntry {
   type: 'folder' | 'file';
   path: string;
@@ -320,6 +374,10 @@ export interface ForgeSettings {
   autoFormat?: boolean;
   /** Run a project-wide type-check automatically after changes settle. */
   autoCheckProblems?: boolean;
+  /** Active AWS profile, injected as AWS_PROFILE into new terminals/run-tasks. */
+  awsProfile?: string;
+  /** Region paired with the active AWS profile. */
+  awsRegion?: string;
 }
 
 /** Outcome of running a formatter CLI against a file. */
@@ -353,6 +411,12 @@ export interface TerminalExitEvent {
   code: number;
 }
 
+/** Emitted when a terminal's foreground process starts (busy) or returns to the shell (idle). */
+export interface TerminalBusyEvent {
+  id: string;
+  busy: boolean;
+}
+
 export interface ForgeApi {
   ping: (msg: string) => Promise<string>;
   openFolder: () => Promise<Result<WorkspaceData | null>>;
@@ -379,6 +443,10 @@ export interface ForgeApi {
   gitPull: (rootPath: string) => Promise<Result<void>>;
   gitFetch: (rootPath: string) => Promise<Result<void>>;
   gitLog: (rootPath: string, limit?: number) => Promise<Result<GitCommit[]>>;
+  /** Files changed by a single commit (status + path), for the graph's expandable file list. */
+  gitCommitFiles: (rootPath: string, hash: string) => Promise<Result<GitChange[]>>;
+  /** A file's content at a given ref (e.g. a commit hash), or null if absent at that ref. */
+  gitFileAt: (rootPath: string, ref: string, relPath: string) => Promise<Result<string | null>>;
   search: (rootPath: string, options: SearchOptions) => Promise<Result<SearchMatch[]>>;
   replaceInFiles: (
     rootPath: string,
@@ -414,8 +482,15 @@ export interface ForgeApi {
   openExternal: (url: string) => Promise<Result<void>>;
   onTerminalData: (cb: (e: TerminalDataEvent) => void) => () => void;
   onTerminalExit: (cb: (e: TerminalExitEvent) => void) => () => void;
+  onTerminalBusy: (cb: (e: TerminalBusyEvent) => void) => () => void;
   /** Real TypeScript/JavaScript IDE intelligence backed by the main-process Language Service. */
   editorLanguage: EditorLanguageApi;
+  // AWS connection switcher.
+  awsListProfiles: () => Promise<Result<AwsProfile[]>>;
+  awsValidateProfile: (name: string) => Promise<Result<AwsValidation>>;
+  awsSetActiveProfile: (name: string | null, region?: string | null) => Promise<Result<void>>;
+  awsGetActiveProfile: () => Promise<Result<AwsActive>>;
+  awsConfigPaths: () => Promise<Result<AwsConfigPaths>>;
 }
 
 export function pongOf(msg: string): string {

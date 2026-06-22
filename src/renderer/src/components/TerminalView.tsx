@@ -80,6 +80,18 @@ export function TerminalView({
     termRef.current = term;
     fitRef.current = fit;
 
+    // xterm measures the glyph cell from whatever font is available at open time. If the
+    // JetBrains Mono webfont finishes loading later, that measurement is stale and columns
+    // misalign (garbled output). Re-assigning the font forces a re-measure; then refit/repaint.
+    let disposed = false;
+    void document.fonts?.ready.then(() => {
+      if (disposed) return;
+      term.options.fontFamily = "'JetBrains Mono', 'SF Mono', Menlo, monospace";
+      fit.fit();
+      term.refresh(0, Math.max(term.rows - 1, 0));
+      window.forge.resizeTerminal(sessionId, term.cols, term.rows);
+    });
+
     // URLs: Cmd/Ctrl+click opens in the external browser.
     term.loadAddon(
       new WebLinksAddon((event, uri) => {
@@ -139,7 +151,7 @@ export function TerminalView({
     });
 
     // Spawn the real shell (PTY) for this session.
-    void window.forge.createTerminal({
+    const created = window.forge.createTerminal({
       id: sessionId,
       cwd: rootRef.current ?? undefined,
       cols: term.cols,
@@ -172,7 +184,10 @@ export function TerminalView({
     // Raw passthrough — the shell handles editing, history, programs like `claude`.
     const dataSub = term.onData((d) => window.forge.sendInput(sessionId, d));
 
-    registerExec(sessionId, (command) => window.forge.sendInput(sessionId, `${command}\r`));
+    // Wait for the PTY to exist before writing — a task may run in a just-created terminal.
+    registerExec(sessionId, (command) => {
+      void created.then(() => window.forge.sendInput(sessionId, `${command}\r`));
+    });
 
     const resizeObs = new ResizeObserver(() => {
       fit.fit();
@@ -186,6 +201,7 @@ export function TerminalView({
     el.addEventListener('mousedown', focusOnClick);
 
     return () => {
+      disposed = true;
       unregisterExec(sessionId);
       offData();
       offExit();

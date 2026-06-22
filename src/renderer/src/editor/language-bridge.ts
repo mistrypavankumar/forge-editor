@@ -39,10 +39,20 @@ export function closeLanguageDocument(path: string): void {
 }
 
 /**
- * Debounced: push the live buffer to the Language Service, then refresh inline diagnostics.
- * Keeps the renderer responsive while typing — nothing blocks on the LS round-trip.
+ * Push the live buffer to the Language Service immediately on every edit. This is a cheap
+ * fire-and-forget message and MUST stay un-debounced so completions/hover/signature-help (which
+ * fire per keystroke) are computed against exactly what the user just typed — not stale text.
  */
-export function syncLanguageDocument(monaco: typeof monacoNs, model: editor.ITextModel): void {
+export function updateLanguageDocument(model: editor.ITextModel): void {
+  if (model.isDisposed() || !isTsModel(model)) return;
+  window.forge.editorLanguage.updateDocument(model.uri.path, model.getValue());
+}
+
+/**
+ * Debounced inline-diagnostics refresh. A full type-check pass is expensive, so unlike the buffer
+ * sync above we wait for typing to settle before recomputing squiggles.
+ */
+export function scheduleDiagnostics(monaco: typeof monacoNs, model: editor.ITextModel): void {
   if (model.isDisposed() || !isTsModel(model)) return;
   const path = model.uri.path;
   const existing = debounceTimers.get(path);
@@ -51,8 +61,6 @@ export function syncLanguageDocument(monaco: typeof monacoNs, model: editor.ITex
     path,
     setTimeout(() => {
       debounceTimers.delete(path);
-      if (model.isDisposed()) return;
-      window.forge.editorLanguage.updateDocument(path, model.getValue());
       void refreshDiagnostics(monaco, model);
     }, SYNC_DEBOUNCE_MS),
   );

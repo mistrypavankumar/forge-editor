@@ -110,6 +110,30 @@ const MONOKAI: Palette = {
   variable: 'F8F8F2', constant: 'AE81FF', parameter: 'FD971F', parameterStyle: 'italic', property: 'F8F8F2',
 };
 
+// Diff-editor highlight colours. vs-dark's inherited defaults are nearly invisible on Forge's very
+// dark background, so we set vivid green (added) / red (removed) line + inline backgrounds.
+const DIFF_DARK: Record<string, string> = {
+  'diffEditor.insertedLineBackground': '#2EA04328',
+  'diffEditor.removedLineBackground': '#F8514928',
+  'diffEditor.insertedTextBackground': '#2EA04345',
+  'diffEditor.removedTextBackground': '#F8514945',
+  'diffEditorGutter.insertedLineBackground': '#2EA04366',
+  'diffEditorGutter.removedLineBackground': '#F8514966',
+  'diffEditorOverview.insertedForeground': '#2EA043AA',
+  'diffEditorOverview.removedForeground': '#F85149AA',
+  'diffEditor.diagonalFill': '#2D3A5277',
+};
+
+const DIFF_LIGHT: Record<string, string> = {
+  'diffEditor.insertedLineBackground': '#2EA04322',
+  'diffEditor.removedLineBackground': '#F8514922',
+  'diffEditor.insertedTextBackground': '#2EA04340',
+  'diffEditor.removedTextBackground': '#F8514940',
+  'diffEditorGutter.insertedLineBackground': '#2EA04355',
+  'diffEditorGutter.removedLineBackground': '#F8514955',
+  'diffEditor.diagonalFill': '#d0d0d8',
+};
+
 const FORGE_DARK_COLORS: Record<string, string> = {
   'editor.background': '#080B12',
   'editor.foreground': '#E6EDF7',
@@ -180,20 +204,24 @@ export function getMonaco(): typeof monaco {
     monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(tsDiagnostics);
 
     monaco.editor.defineTheme('forge-dark', {
-      base: 'vs-dark', inherit: true, rules: buildRules(DARK_PLUS), colors: FORGE_DARK_COLORS,
+      base: 'vs-dark', inherit: true, rules: buildRules(DARK_PLUS),
+      colors: { ...DIFF_DARK, ...FORGE_DARK_COLORS },
     });
     monaco.editor.defineTheme('forge-light', {
-      base: 'vs', inherit: true, rules: buildRules(LIGHT_PLUS), colors: FORGE_LIGHT_COLORS,
+      base: 'vs', inherit: true, rules: buildRules(LIGHT_PLUS),
+      colors: { ...DIFF_LIGHT, ...FORGE_LIGHT_COLORS },
     });
     // Original minimal look: base vs-dark token colors, Forge chrome.
     monaco.editor.defineTheme('forge-minimal-dark', {
-      base: 'vs-dark', inherit: true, rules: [], colors: FORGE_DARK_COLORS,
+      base: 'vs-dark', inherit: true, rules: [], colors: { ...DIFF_DARK, ...FORGE_DARK_COLORS },
     });
     monaco.editor.defineTheme('github-dark', {
-      base: 'vs-dark', inherit: true, rules: buildRules(GITHUB_DARK), colors: GITHUB_DARK_COLORS,
+      base: 'vs-dark', inherit: true, rules: buildRules(GITHUB_DARK),
+      colors: { ...DIFF_DARK, ...GITHUB_DARK_COLORS },
     });
     monaco.editor.defineTheme('monokai', {
-      base: 'vs-dark', inherit: true, rules: buildRules(MONOKAI), colors: MONOKAI_COLORS,
+      base: 'vs-dark', inherit: true, rules: buildRules(MONOKAI),
+      colors: { ...DIFF_DARK, ...MONOKAI_COLORS },
     });
     configured = true;
   }

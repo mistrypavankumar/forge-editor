@@ -33,7 +33,9 @@ export function DiffView({ original, modified, name }: DiffViewProps): React.JSX
       lineNumbersMinChars: 4,
       minimap: { enabled: false },
       scrollBeyondLastLine: false,
-      renderOverviewRuler: false,
+      renderOverviewRuler: true,
+      // Collapse unchanged regions so the actual changes are immediately visible (VS Code-style).
+      hideUnchangedRegions: { enabled: true, contextLineCount: 3, minimumLineCount: 4, revealLineCount: 20 },
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     });
     diffRef.current = diff;

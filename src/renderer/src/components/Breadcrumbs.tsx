@@ -4,8 +4,10 @@ import { useFormatterStore } from '../stores/formatter-store';
 import { FileTypeIcon } from './file-icon';
 import { cn } from '../lib/cn';
 
-export function Breadcrumbs(): React.JSX.Element | null {
-  const activePath = useEditorStore((s) => s.activePath);
+export function Breadcrumbs({ groupId = 'main' }: { groupId?: string }): React.JSX.Element | null {
+  const activePath = useEditorStore(
+    (s) => (s.groups.find((g) => g.id === groupId) ?? s.groups[0])?.activePath ?? null,
+  );
   const tabs = useEditorStore((s) => s.tabs);
   const mdPreview = useEditorStore((s) => s.mdPreview);
   const toggleMdPreview = useEditorStore((s) => s.toggleMdPreview);

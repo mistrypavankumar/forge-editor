@@ -16,12 +16,13 @@ import { registerLanguageProviders } from '../editor/monaco-providers';
 import {
   initLanguageProject,
   openLanguageDocument,
-  syncLanguageDocument,
+  updateLanguageDocument,
+  scheduleDiagnostics,
   closeLanguageDocument,
 } from '../editor/language-bridge';
 import { registerAutoCloseTag } from '../editor/auto-close-tag';
 import { registerTabOut } from '../editor/tab-out';
-import { setActiveEditor } from '../editor/active-editor';
+import { setActiveEditor, getActiveEditor } from '../editor/active-editor';
 import { saveAllFiles } from '../lib/save-actions';
 import { useFormatterStore } from '../stores/formatter-store';
 import type { FormatterId } from '../lib/detect-formatters';
@@ -49,7 +50,7 @@ function severityName(level: number): MarkerSeverity {
   return 'info';
 }
 
-export function CodeEditor(): React.JSX.Element {
+export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const modelsRef = useRef<Map<string, editor.ITextModel>>(new Map());
@@ -61,7 +62,12 @@ export function CodeEditor(): React.JSX.Element {
   const diffTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const tabs = useEditorStore((s) => s.tabs);
-  const activePath = useEditorStore((s) => s.activePath);
+  // Stable key of the open file set — changes only when tabs are added/removed/renamed, NOT on
+  // content edits (which rebuild `tabs` every keystroke). Used to gate the diagnostics projection.
+  const openPathsKey = useEditorStore((s) => s.tabs.map((t) => t.path).join('\n'));
+  const activePath = useEditorStore(
+    (s) => (s.groups.find((g) => g.id === groupId) ?? s.groups[0])?.activePath ?? null,
+  );
   const updateContent = useEditorStore((s) => s.updateContent);
   const reveal = useEditorStore((s) => s.reveal);
   const pendingRevert = useEditorStore((s) => s.pendingRevert);
@@ -123,7 +129,9 @@ export function CodeEditor(): React.JSX.Element {
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     });
     editorRef.current = instance;
-    setActiveEditor(instance);
+    // Become the active editor on mount if this is the focused group; thereafter, focus drives it
+    // (so commands like save/format/reveal target whichever split pane the user is editing).
+    if (useEditorStore.getState().activeGroupId === groupId) setActiveEditor(instance);
     decoRef.current = instance.createDecorationsCollection();
     peekRef.current = new DiffPeek(instance, monaco, {
       getHunks: () => hunksRef.current,
@@ -147,6 +155,14 @@ export function CodeEditor(): React.JSX.Element {
 
     const status = useWorkbenchStatusStore.getState();
     const disposables: IDisposable[] = [];
+
+    // Focusing this pane makes it the active editor + active group.
+    disposables.push(
+      instance.onDidFocusEditorText(() => {
+        setActiveEditor(instance);
+        useEditorStore.getState().setActiveGroup(groupId);
+      }),
+    );
 
     // Monaco swallows some app shortcuts when focused (e.g. Cmd+K is a Monaco chord
     // prefix), so they never reach the window listener. Resolve app bindings here first
@@ -178,8 +194,10 @@ export function CodeEditor(): React.JSX.Element {
         const model = instance.getModel();
         if (model) {
           updateContent(model.uri.path, instance.getValue());
-          // Push the live buffer to the Language Service (debounced) + refresh inline diagnostics.
-          syncLanguageDocument(monaco, model);
+          // Sync the buffer to the LS immediately (keeps completions in step with typing),
+          // then refresh diagnostics on a debounce (the expensive part).
+          updateLanguageDocument(model);
+          scheduleDiagnostics(monaco, model);
         }
         clearTimeout(diffTimer.current);
         diffTimer.current = setTimeout(recomputeDiff, 250);
@@ -247,7 +265,7 @@ export function CodeEditor(): React.JSX.Element {
       clearTimeout(diffTimer.current);
       peekRef.current?.dispose();
       disposables.forEach((d) => d.dispose());
-      setActiveEditor(null);
+      if (getActiveEditor() === instance) setActiveEditor(null);
       instance.dispose();
     };
   }, [updateContent, recomputeDiff]);
@@ -266,10 +284,14 @@ export function CodeEditor(): React.JSX.Element {
     const monaco = getMonaco();
     let model = modelsRef.current.get(activePath);
     if (!model) {
-      model = monaco.editor.createModel(tab.content, languageFor(tab.name), monaco.Uri.file(activePath));
+      // Models are keyed by URI globally, so a file open in both split panes shares one buffer
+      // (edits sync, one dirty state). Reuse the existing model when the other pane already made it.
+      const uri = monaco.Uri.file(activePath);
+      const existing = monaco.editor.getModel(uri);
+      model = existing ?? monaco.editor.createModel(tab.content, languageFor(tab.name), uri);
       modelsRef.current.set(activePath, model);
-      // Register the new buffer with the Language Service and run a first diagnostics pass.
-      openLanguageDocument(monaco, model);
+      // Register a newly created buffer with the Language Service and run a first diagnostics pass.
+      if (!existing) openLanguageDocument(monaco, model);
     }
     instance.setModel(model);
     instance.updateOptions({ readOnly: tab.readOnly ?? false });
@@ -338,11 +360,15 @@ export function CodeEditor(): React.JSX.Element {
   }, [syncTick, rootPath]);
 
   useEffect(() => {
+    // `tabs` is the shared document list, so a model is disposed only once the file is closed in
+    // every group. Both split instances run this; guard against double-dispose.
     const openPaths = new Set(tabs.map((t) => t.path));
     for (const [path, model] of modelsRef.current) {
       if (!openPaths.has(path)) {
-        closeLanguageDocument(path);
-        model.dispose();
+        if (!model.isDisposed()) {
+          closeLanguageDocument(path);
+          model.dispose();
+        }
         modelsRef.current.delete(path);
       }
     }
@@ -396,7 +422,9 @@ export function CodeEditor(): React.JSX.Element {
       });
       monaco.editor.setModelMarkers(model, 'forge-tsc', markers);
     }
-  }, [projectDiagnostics, rootPath, tabs]);
+    // Gate on the open-file set (openPathsKey), never raw `tabs` — otherwise this rebuilds the
+    // marker map from every project diagnostic on each keystroke (laggy with thousands of errors).
+  }, [projectDiagnostics, rootPath, openPathsKey]);
 
   // Reveal a requested line/column (terminal path:line:col links, and Go to Definition targets).
   // When the reveal carries an end position, briefly highlight the target symbol.

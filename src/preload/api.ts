@@ -2,6 +2,7 @@ import { ipcRenderer } from 'electron';
 import {
   IpcChannels,
   type ForgeApi,
+  type TerminalBusyEvent,
   type TerminalDataEvent,
   type TerminalExitEvent,
 } from '@shared/ipc-contract';
@@ -33,6 +34,9 @@ export const api: ForgeApi = {
   gitPull: (rootPath) => ipcRenderer.invoke(IpcChannels.gitPull, rootPath),
   gitFetch: (rootPath) => ipcRenderer.invoke(IpcChannels.gitFetch, rootPath),
   gitLog: (rootPath, limit) => ipcRenderer.invoke(IpcChannels.gitLog, rootPath, limit),
+  gitCommitFiles: (rootPath, hash) => ipcRenderer.invoke(IpcChannels.gitCommitFiles, rootPath, hash),
+  gitFileAt: (rootPath, ref, relPath) =>
+    ipcRenderer.invoke(IpcChannels.gitFileAt, rootPath, ref, relPath),
   search: (rootPath, options) => ipcRenderer.invoke(IpcChannels.search, rootPath, options),
   replaceInFiles: (rootPath, options, replacement, files) =>
     ipcRenderer.invoke(IpcChannels.replaceInFiles, rootPath, options, replacement, files),
@@ -86,6 +90,12 @@ export const api: ForgeApi = {
     formatDocument: (file) => ipcRenderer.invoke(IpcChannels.langFormat, file),
     getSemanticTokens: (file) => ipcRenderer.invoke(IpcChannels.langSemanticTokens, file),
   },
+  awsListProfiles: () => ipcRenderer.invoke(IpcChannels.awsListProfiles),
+  awsValidateProfile: (name) => ipcRenderer.invoke(IpcChannels.awsValidateProfile, name),
+  awsSetActiveProfile: (name, region) =>
+    ipcRenderer.invoke(IpcChannels.awsSetActiveProfile, name, region ?? null),
+  awsGetActiveProfile: () => ipcRenderer.invoke(IpcChannels.awsGetActiveProfile),
+  awsConfigPaths: () => ipcRenderer.invoke(IpcChannels.awsConfigPaths),
   onTerminalData: (cb) => {
     const listener = (_e: unknown, payload: TerminalDataEvent): void => cb(payload);
     ipcRenderer.on(IpcChannels.terminalData, listener);
@@ -95,5 +105,10 @@ export const api: ForgeApi = {
     const listener = (_e: unknown, payload: TerminalExitEvent): void => cb(payload);
     ipcRenderer.on(IpcChannels.terminalExit, listener);
     return () => ipcRenderer.removeListener(IpcChannels.terminalExit, listener);
+  },
+  onTerminalBusy: (cb) => {
+    const listener = (_e: unknown, payload: TerminalBusyEvent): void => cb(payload);
+    ipcRenderer.on(IpcChannels.terminalBusy, listener);
+    return () => ipcRenderer.removeListener(IpcChannels.terminalBusy, listener);
   },
 };

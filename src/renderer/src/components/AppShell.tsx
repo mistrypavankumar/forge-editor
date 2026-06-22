@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Allotment } from 'allotment';
 import { useLayoutStore } from '../stores/layout-store';
 import { useThemeStore } from '../stores/theme-store';
@@ -11,6 +11,8 @@ import { detectPackageManager } from '../lib/detect-pm';
 import { detectFormatters } from '../lib/detect-formatters';
 import { useFormatterStore } from '../stores/formatter-store';
 import { useTasksStore } from '../stores/tasks-store';
+import { useTerminalStore } from '../stores/terminal-store';
+import { useNavigatorStore } from '../stores/navigator-store';
 import { useKeybindings } from '../keybindings/use-keybindings';
 import { useKeybindingsStore } from '../stores/keybindings-store';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
@@ -26,17 +28,16 @@ import { SourceControlPanel } from './SourceControlPanel';
 import { RunPanel } from './RunPanel';
 import { PlaceholderPanel } from './PlaceholderPanel';
 import { Database, Blocks } from 'lucide-react';
-import { EditorTabs } from './EditorTabs';
-import { Breadcrumbs } from './Breadcrumbs';
-import { CodeEditor } from './CodeEditor';
-import { MarkdownPreview } from './MarkdownPreview';
-import { DiffView } from './DiffView';
+import { EditorGroupView } from './EditorGroupView';
 import { Landing } from './Landing';
 import { useEditorStore } from '../stores/editor-store';
 import { RightPanel } from './RightPanel';
 import { BottomPanel } from './BottomPanel';
 import { StatusBar } from './StatusBar';
 import { Palette } from './Palette';
+import { AwsConnectionPicker } from './AwsConnectionPicker';
+import { AwsCredentialsEditor } from './AwsCredentialsEditor';
+import { useAwsStore } from '../stores/aws-store';
 import { SettingsView } from './SettingsView';
 import { FeaturesView } from './FeaturesView';
 import { ContextMenu } from './ui/ContextMenu';
@@ -54,6 +55,11 @@ export function AppShell(): React.JSX.Element {
   const tabCount = useEditorStore((s) => s.tabs.length);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
+  // Restore the active AWS connection (and profile list) for the status-bar indicator.
+  useEffect(() => {
+    void useAwsStore.getState().load();
+  }, []);
+
   const onSidebarContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault();
     setMenu({ x: e.clientX, y: e.clientY });
@@ -67,13 +73,25 @@ export function AppShell(): React.JSX.Element {
   useAutoDiagnostics();
 
   const autoSave = useEditorStore((s) => s.autoSave);
-  const tabs = useEditorStore((s) => s.tabs);
-  const activePath = useEditorStore((s) => s.activePath);
-  const mdPreview = useEditorStore((s) => s.mdPreview);
-  const activeTab = tabs.find((t) => t.path === activePath);
-  const showDiff = !!activeTab && activeTab.original !== undefined;
-  const showPreview =
-    mdPreview && !showDiff && !!activeTab && /\.mdx?$/i.test(activeTab.name);
+  const editorGroups = useEditorStore((s) => s.groups);
+
+  // When a task terminal's command returns to the shell (done/failed/interrupted), drop its
+  // running indicator. The first event a task session gets is "busy"; the next "idle" clears it.
+  useEffect(() => {
+    return window.forge.onTerminalBusy(({ id, busy }) => {
+      if (!busy) useTerminalStore.getState().clearTask(id);
+    });
+  }, []);
+
+  // Navigator follows the editor: jump to Changes when the first file opens, back to Structure when
+  // the last one closes. Only on that transition, so manual tab choices in between are respected.
+  const hadFiles = useRef(tabCount > 0);
+  useEffect(() => {
+    const hasFiles = tabCount > 0;
+    if (hasFiles && !hadFiles.current) useNavigatorStore.getState().setTab('changes');
+    else if (!hasFiles && hadFiles.current) useNavigatorStore.getState().setTab('structure');
+    hadFiles.current = hasFiles;
+  }, [tabCount]);
 
   // Native (mac) File-menu actions → run the matching command.
   useEffect(() => {
@@ -153,6 +171,8 @@ export function AppShell(): React.JSX.Element {
         <Landing />
         <StatusBar />
         <Palette />
+        <AwsConnectionPicker />
+        <AwsCredentialsEditor />
         <SettingsView />
         <FeaturesView />
       </div>
@@ -190,27 +210,24 @@ export function AppShell(): React.JSX.Element {
     <Allotment.Pane key="center" minSize={420}>
       <Allotment vertical proportionalLayout={false}>
         <Allotment.Pane minSize={160}>
-          <div data-testid="editor-region" className="flex h-full flex-col bg-bg">
-            <EditorTabs />
-            <Breadcrumbs />
-            <div className="relative min-h-0 flex-1">
-              <CodeEditor />
-              {showPreview && activeTab ? <MarkdownPreview content={activeTab.content} /> : null}
-              {showDiff && activeTab ? (
-                <DiffView
-                  original={activeTab.original ?? ''}
-                  modified={activeTab.content}
-                  name={activeTab.name}
-                />
-              ) : null}
-            </div>
-          </div>
+          {editorGroups.length > 1 ? (
+            <Allotment proportionalLayout>
+              {editorGroups.map((g) => (
+                <Allotment.Pane key={g.id} minSize={320}>
+                  <EditorGroupView groupId={g.id} />
+                </Allotment.Pane>
+              ))}
+            </Allotment>
+          ) : (
+            <EditorGroupView groupId={editorGroups[0]?.id ?? 'main'} />
+          )}
         </Allotment.Pane>
-        {bottomVisible ? (
-          <Allotment.Pane preferredSize={240} minSize={120} snap>
-            <BottomPanel />
-          </Allotment.Pane>
-        ) : null}
+        {/* Always mounted; we toggle visibility (not mount) so live terminal PTY
+            sessions survive hiding/restoring the bottom panel. Unmounting it would
+            tear down every TerminalView and kill its shell. */}
+        <Allotment.Pane preferredSize={240} minSize={120} snap visible={bottomVisible}>
+          <BottomPanel />
+        </Allotment.Pane>
       </Allotment>
     </Allotment.Pane>
   );
@@ -241,6 +258,8 @@ export function AppShell(): React.JSX.Element {
       </div>
       <StatusBar />
       <Palette />
+      <AwsConnectionPicker />
+      <AwsCredentialsEditor />
       <SettingsView />
       <FeaturesView />
       {menu ? (

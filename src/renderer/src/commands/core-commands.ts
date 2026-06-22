@@ -149,6 +149,13 @@ export function registerCoreCommands(): void {
     isEnabled: () => useEditorStore.getState().closedStack.length > 0,
   });
   commandRegistry.register({
+    id: 'editor.splitRight',
+    title: 'Split Editor Right',
+    category: 'Editor',
+    run: () => useEditorStore.getState().splitRight(),
+    isEnabled: () => useEditorStore.getState().activePath !== null,
+  });
+  commandRegistry.register({
     id: 'editor.nextTab',
     title: 'Next Editor Tab',
     category: 'Editor',

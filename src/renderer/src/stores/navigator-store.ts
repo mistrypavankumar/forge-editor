@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type NavigatorTab = 'focus' | 'map' | 'recent' | 'structure';
+export type NavigatorTab = 'changes' | 'map' | 'recent' | 'structure';
 export type FilterChip = 'all' | 'changed' | 'errors' | 'recent' | 'config' | 'tests';
 
 export const filterChips: { id: FilterChip; label: string }[] = [
@@ -20,7 +20,7 @@ export interface NavigatorState {
 }
 
 export const useNavigatorStore = create<NavigatorState>((set) => ({
-  tab: 'focus',
+  tab: 'structure',
   filter: 'all',
   setTab: (tab) => set({ tab }),
   setFilter: (filter) => set({ filter }),

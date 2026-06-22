@@ -47,11 +47,26 @@ export const useTasksStore = create<TasksState>((set) => ({
       return { overrides };
     }),
   setOverrides: (overrides) => set({ overrides }),
-  addCustom: () => set((s) => ({ custom: [...s.custom, { id: newId(), label: '', command: '' }] })),
+  addCustom: () =>
+    set((s) => {
+      // Guarantee a fresh id even when `seq` was reset on reload but persisted tasks survive,
+      // otherwise duplicate ids collide on the React key and the new row mirrors an old one.
+      const taken = new Set(s.custom.map((c) => c.id));
+      let id = newId();
+      while (taken.has(id)) id = newId();
+      return { custom: [...s.custom, { id, label: '', command: '' }] };
+    }),
   updateCustom: (id, patch) =>
     set((s) => ({ custom: s.custom.map((c) => (c.id === id ? { ...c, ...patch } : c)) })),
   removeCustom: (id) => set((s) => ({ custom: s.custom.filter((c) => c.id !== id) })),
-  setCustom: (custom) => set({ custom }),
+  setCustom: (custom) => {
+    // Advance the id counter past any restored ids so future adds never reuse one.
+    for (const c of custom) {
+      const m = /^custom-(\d+)-/.exec(c.id);
+      if (m) seq = Math.max(seq, Number(m[1]));
+    }
+    set({ custom });
+  },
 }));
 
 export function defaultCommand(pm: string, id: TaskId): string {

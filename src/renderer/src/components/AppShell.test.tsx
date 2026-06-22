@@ -6,6 +6,8 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 vi.mock('./CodeEditor', () => ({ CodeEditor: () => null }));
 vi.mock('./DiffView', () => ({ DiffView: () => null }));
 vi.mock('./BottomPanel', () => ({ BottomPanel: () => null }));
+// Pulls in monaco-editor (unresolvable under vitest), so stub like CodeEditor.
+vi.mock('./AwsCredentialsEditor', () => ({ AwsCredentialsEditor: () => null }));
 
 beforeAll(() => {
   (window as unknown as { forge: Record<string, unknown> }).forge = {
@@ -20,7 +22,10 @@ beforeAll(() => {
     watchWorkspace: () => {},
     onFsChanged: () => () => {},
     onMenuAction: () => () => {},
+    onTerminalBusy: () => () => {},
     syncMenuState: () => {},
+    awsGetActiveProfile: async () => ({ ok: true, data: { profile: null, region: null } }),
+    awsListProfiles: async () => ({ ok: true, data: [] }),
     isMac: false,
   };
 });

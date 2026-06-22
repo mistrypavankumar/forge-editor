@@ -32,6 +32,7 @@ export const defaultKeybindings: Record<string, string> = {
   'mod+shift+f': 'workbench.findInFiles',
   'mod+alt+arrowright': 'editor.nextTab',
   'mod+alt+arrowleft': 'editor.prevTab',
+  'mod+\\': 'editor.splitRight',
   'mod+shift+p': 'workbench.commandPalette',
   'mod+k': 'workbench.commandPalette',
   'mod+p': 'workbench.quickOpen',

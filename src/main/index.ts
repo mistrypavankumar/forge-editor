@@ -42,9 +42,13 @@ import {
   gitPull,
   gitFetch,
   getGitLog,
+  getCommitFiles,
+  getFileAtRef,
 } from './git/git-service';
 import { searchInFiles, replaceInFiles } from './search/search-service';
 import { registerLanguageIpc } from './ipc/editor-language-ipc';
+import { registerAwsIpc } from './ipc/aws-ipc';
+import { setActiveProfile } from './aws/aws-service';
 import { watchWorkspace } from './fs/watcher';
 import {
   createTerminal,
@@ -191,6 +195,12 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannels.gitLog, (_e, rootPath: string, limit?: number) =>
     toResult(() => getGitLog(rootPath, limit)),
   );
+  ipcMain.handle(IpcChannels.gitCommitFiles, (_e, rootPath: string, hash: string) =>
+    toResult(() => getCommitFiles(rootPath, hash)),
+  );
+  ipcMain.handle(IpcChannels.gitFileAt, (_e, rootPath: string, ref: string, relPath: string) =>
+    toResult(() => getFileAtRef(rootPath, ref, relPath)),
+  );
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, options: SearchOptions) =>
     toResult(() => searchInFiles(rootPath, options)),
   );
@@ -249,6 +259,9 @@ app.whenReady().then(() => {
     toResult(() => shell.openExternal(url)),
   );
   registerLanguageIpc(ipcMain);
+  registerAwsIpc(ipcMain, SETTINGS_PATH);
+  // Restore the active AWS connection so new terminals get AWS_PROFILE from the first launch.
+  void readSettings(SETTINGS_PATH).then((s) => setActiveProfile(s.awsProfile ?? null, s.awsRegion ?? null));
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

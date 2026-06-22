@@ -1,7 +1,7 @@
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useRecentsStore } from '../stores/recents-store';
-import type { DirEntry } from '@shared/ipc-contract';
+import type { DirEntry, GitChange } from '@shared/ipc-contract';
 
 function base(p: string): string {
   const parts = p.split('/').filter(Boolean);
@@ -52,6 +52,30 @@ export async function openGitStagedDiff(rootPath: string, relPath: string): Prom
   useEditorStore.getState().openFile({
     path: `git-index://${filePath}`,
     name: base(relPath),
+    content,
+    original,
+    readOnly: true,
+    filePath,
+  });
+}
+
+/** Open a read-only diff of a file as changed by a single commit (commit vs its parent). */
+export async function openGitCommitDiff(
+  rootPath: string,
+  hash: string,
+  relPath: string,
+  status: GitChange['status'],
+): Promise<void> {
+  const filePath = `${rootPath}/${relPath}`;
+  const [parentRes, commitRes] = await Promise.all([
+    status === 'A' ? Promise.resolve(null) : window.forge.gitFileAt(rootPath, `${hash}^`, relPath),
+    status === 'D' ? Promise.resolve(null) : window.forge.gitFileAt(rootPath, hash, relPath),
+  ]);
+  const original = parentRes && parentRes.ok && parentRes.data != null ? parentRes.data : '';
+  const content = commitRes && commitRes.ok && commitRes.data != null ? commitRes.data : '';
+  useEditorStore.getState().openFile({
+    path: `git-commit://${hash}/${filePath}`,
+    name: `${base(relPath)} @ ${hash}`,
     content,
     original,
     readOnly: true,

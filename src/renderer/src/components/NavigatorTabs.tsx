@@ -2,7 +2,7 @@ import { useNavigatorStore, type NavigatorTab } from '../stores/navigator-store'
 import { cn } from '../lib/cn';
 
 const TABS: { id: NavigatorTab; label: string }[] = [
-  { id: 'focus', label: 'Focus' },
+  { id: 'changes', label: 'Changes' },
   { id: 'map', label: 'Map' },
   { id: 'recent', label: 'Recent' },
   { id: 'structure', label: 'Structure' },
