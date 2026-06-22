@@ -97,11 +97,21 @@ export function GitUserPicker(): React.JSX.Element | null {
   };
 
   // Launch the gh browser login in a terminal; the user finishes there, then re-clicks sign-in.
+  // When already signed in, gh prompts to re-authenticate (answered in the pty) — logging in as
+  // another account adds it and makes it active, so the next import picks it up.
   const launchGhLogin = (): void => {
     const id = newTerminal('gh auth login');
     setBottomTab('terminal');
     setPanelVisible('bottom', true);
-    runInTerminal(id, 'gh auth login --web --git-protocol https');
+    runInTerminal(id, 'gh auth login --web --git-protocol https --skip-ssh-key');
+  };
+
+  const signInDifferent = (): void => {
+    launchGhLogin();
+    setTestResult({
+      ok: false,
+      message: 'Pick the account in the browser/terminal, then click "Sign in with GitHub".',
+    });
   };
 
   const ghSignIn = (): void => {
@@ -267,6 +277,14 @@ export function GitUserPicker(): React.JSX.Element | null {
                 >
                   {signingIn ? <Loader2 size={14} className="animate-spin" /> : <Github size={14} />}
                   Sign in with GitHub
+                </button>
+                <button
+                  type="button"
+                  disabled={signingIn || !rootPath}
+                  onClick={signInDifferent}
+                  className="text-center text-[10px] text-faint underline-offset-2 hover:text-fg hover:underline disabled:opacity-40"
+                >
+                  Use a different GitHub account
                 </button>
                 <div className="text-center text-[10px] text-faint">or enter manually</div>
                 <input
