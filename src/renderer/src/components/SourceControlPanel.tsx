@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshCw, GitCommitVertical, GitBranch, Cloud, CircleDot, Tag, FileDiff, Plus, Minus, Undo2, FileSymlink, ChevronRight, ChevronDown, Lock } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { useLayoutStore } from '../stores/layout-store';
 import { openFilePath, openGitStagedDiff, openGitCommitDiff } from '../lib/workspace-actions';
 import { isProtectedBranch } from '../lib/protected-branch';
 import { deleteEntry } from '../lib/fs-actions';
@@ -12,11 +13,12 @@ import { cn } from '../lib/cn';
 import type { GitChange, GitCommit, GitRef } from '@shared/ipc-contract';
 
 // Geometry for the commit-graph rail. Row height drives both the SVG and the rows (kept in sync).
-const ROW_H = 22;
+const ROW_H = 24;
 const FILE_ROW_H = 22; // a file row inside an expanded commit
-const LANE_W = 13;
-const PAD_X = 10;
-const NODE_R = 3.5;
+const LANE_W = 14;
+const PAD_X = 12;
+const NODE_R = 4.5;
+const EDGE_W = 2; // connector stroke width
 
 const STATUS_CLS: Record<GitChange['status'], string> = {
   M: 'text-warning',
@@ -112,6 +114,31 @@ export function SourceControlPanel(): React.JSX.Element {
   const [openCommit, setOpenCommit] = useState<string | null>(null);
   const [commitFiles, setCommitFiles] = useState<GitChange[]>([]);
 
+  // Resizable commit-graph pane: height lives in the layout store so it survives tab switches.
+  const graphHeight = useLayoutStore((s) => s.scmGraphHeight);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Drag the divider above the graph to resize it; height is measured up from the panel bottom.
+  const startGraphResize = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    const panel = panelRef.current;
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    const onMove = (ev: PointerEvent): void => {
+      const fromBottom = rect.bottom - ev.clientY;
+      const max = Math.max(120, rect.height - 240); // leave room for the changes list + commit box
+      useLayoutStore.getState().setScmGraphHeight(Math.max(120, Math.min(fromBottom, max)));
+    };
+    const onUp = (): void => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      document.body.style.cursor = '';
+    };
+    document.body.style.cursor = 'row-resize';
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }, []);
+
   const refresh = useCallback(() => {
     if (!rootPath) return;
     void window.forge.gitChangedFiles(rootPath).then((res) => {
@@ -126,6 +153,14 @@ export function SourceControlPanel(): React.JSX.Element {
 
   const graph = useMemo(() => computeGitGraph(commits), [commits]);
   const graphWidth = PAD_X + graph.lanes * LANE_W + 4;
+
+  // Two-tone rail (VS Code-style): commits ahead of the remote — those above the first commit
+  // carrying a remote-tracking ref — get the branch colour; the published history keeps its lane
+  // colour. When no remote ref is in view we can't tell, so fall back to plain lane colours.
+  const AHEAD_COLOR = 'var(--color-accent)'; // matches the current-branch (HEAD) chip
+  const aheadCount = commits.findIndex((c) => c.refs.some((r) => r.kind === 'remote'));
+  const railColor = (row: number, col: number): string =>
+    aheadCount > 0 && row < aheadCount ? AHEAD_COLOR : laneColor(col);
 
   // Per-commit vertical offsets. The expanded commit's files push everything below it down, so the
   // SVG node/edge Y positions must account for that inserted block to stay aligned with the rows.
@@ -211,7 +246,7 @@ export function SourceControlPanel(): React.JSX.Element {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div ref={panelRef} className="flex h-full flex-col">
       <PanelHeader
         title="Source Control"
         actions={
@@ -320,38 +355,54 @@ export function SourceControlPanel(): React.JSX.Element {
             ))}
           </>
         ) : null}
+      </div>
 
-        {commits.length > 0 ? (
-          <div className="mt-2 border-t border-line-soft pt-1">
-            <div className="flex items-center gap-1 px-3 py-1">
-              <button
-                type="button"
-                onClick={() => setShowHistory((v) => !v)}
-                className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-faint hover:text-muted"
-              >
-                {showHistory ? <ChevronDown size={12} /> : <ChevronRight size={12} />} Graph
-              </button>
-              {showHistory ? (
-                <span className="ml-auto flex items-center gap-1.5">
-                  {branch ? (
-                    <span className="flex items-center gap-1 text-[11px] text-muted" title="Current branch">
-                      <GitBranch size={12} /> {branch}
-                    </span>
-                  ) : null}
-                  <button
-                    type="button"
-                    aria-label="Refresh graph"
-                    title="Refresh"
-                    onClick={refresh}
-                    className="flex h-5 w-5 items-center justify-center rounded text-faint hover:bg-surface-3 hover:text-fg"
-                  >
-                    <RefreshCw size={12} />
-                  </button>
-                </span>
-              ) : null}
+      {/* Commit graph — a bottom pane the user can drag (the divider above) to resize. */}
+      {commits.length > 0 ? (
+        <div
+          className="flex shrink-0 flex-col"
+          style={showHistory ? { height: graphHeight } : undefined}
+        >
+          {showHistory ? (
+            <div
+              onPointerDown={startGraphResize}
+              title="Drag to resize"
+              className="group relative h-1.5 shrink-0 cursor-row-resize"
+            >
+              <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-line-soft transition-colors group-hover:bg-accent/60" />
             </div>
+          ) : (
+            <div className="border-t border-line-soft" />
+          )}
+          <div className="flex shrink-0 items-center gap-1 px-3 py-1">
+            <button
+              type="button"
+              onClick={() => setShowHistory((v) => !v)}
+              className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-faint hover:text-muted"
+            >
+              {showHistory ? <ChevronDown size={12} /> : <ChevronRight size={12} />} Graph
+            </button>
             {showHistory ? (
-              <div className="relative">
+              <span className="ml-auto flex items-center gap-1.5">
+                {branch ? (
+                  <span className="flex items-center gap-1 text-[11px] text-muted" title="Current branch">
+                    <GitBranch size={12} /> {branch}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  aria-label="Refresh graph"
+                  title="Refresh"
+                  onClick={refresh}
+                  className="flex h-5 w-5 items-center justify-center rounded text-faint hover:bg-surface-3 hover:text-fg"
+                >
+                  <RefreshCw size={12} />
+                </button>
+              </span>
+            ) : null}
+          </div>
+          {showHistory ? (
+            <div className="relative min-h-0 flex-1 overflow-auto pb-2">
                 {/* Commit graph: coloured lanes + curved branch/merge connectors, drawn once
                     behind the rows. Rows are padded left to clear it. */}
                 <svg
@@ -372,22 +423,24 @@ export function SourceControlPanel(): React.JSX.Element {
                         ROW_H * 0.7,
                       )}
                       fill="none"
-                      stroke={e.color}
-                      strokeWidth={1.5}
+                      stroke={e.merge ? e.color : railColor(e.fromRow, e.fromCol)}
+                      strokeWidth={EDGE_W}
+                      strokeLinecap="round"
                     />
                   ))}
                   {commits.map((c, i) => {
-                    const color = laneColor(graph.cols[i]);
+                    const color = railColor(i, graph.cols[i]);
                     const isHead = c.refs.some((r) => r.kind === 'head');
+                    // HEAD reads as a hollow ring; every other commit is a solid filled node.
                     return (
                       <circle
                         key={c.hash}
                         cx={cx(graph.cols[i])}
                         cy={cy(i)}
-                        r={NODE_R}
+                        r={isHead ? NODE_R + 0.5 : NODE_R}
                         fill={isHead ? 'var(--color-surface, #0d111b)' : color}
                         stroke={color}
-                        strokeWidth={isHead ? 2 : 0}
+                        strokeWidth={isHead ? 2.5 : 0}
                       />
                     );
                   })}
@@ -421,12 +474,12 @@ export function SourceControlPanel(): React.JSX.Element {
                               key={`${ref.kind}:${ref.name}`}
                               title={ref.name}
                               className={cn(
-                                'flex shrink-0 items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium',
+                                'flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium',
                                 cls,
                               )}
                             >
                               <Icon size={10} />
-                              <span className="max-w-[140px] truncate">{ref.name}</span>
+                              <span className="max-w-[200px] truncate">{ref.name}</span>
                             </span>
                           );
                         })}
@@ -485,9 +538,8 @@ export function SourceControlPanel(): React.JSX.Element {
                 })}
               </div>
             ) : null}
-          </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

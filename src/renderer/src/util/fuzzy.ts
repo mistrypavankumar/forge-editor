@@ -1,4 +1,27 @@
-export function fuzzyMatch(query: string, target: string): { matched: boolean; score: number } {
+export interface FuzzyResult {
+  matched: boolean;
+  score: number;
+}
+
+/**
+ * Match a whitespace-separated, order-independent query against a target: every term
+ * must fuzzy-match somewhere in the target, and the score is the sum of per-term scores.
+ * This lets a query like `business-objects equipment` find a file by folder + name in
+ * either order — the way VS Code / fzf quick-open behaves.
+ */
+export function fuzzyMatchTerms(query: string, target: string): FuzzyResult {
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return { matched: true, score: 0 };
+  let score = 0;
+  for (const term of terms) {
+    const r = fuzzyMatch(term, target);
+    if (!r.matched) return { matched: false, score: 0 };
+    score += r.score;
+  }
+  return { matched: true, score };
+}
+
+export function fuzzyMatch(query: string, target: string): FuzzyResult {
   if (query.length === 0) return { matched: true, score: 0 };
   const q = query.toLowerCase();
   const t = target.toLowerCase();

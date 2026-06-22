@@ -47,25 +47,53 @@ async function clearStaleIndexLock(rootPath: string): Promise<boolean> {
   }
 }
 
+/** How long to keep waiting for a live git process to release `index.lock`, and the poll gap. */
+const LOCK_WAIT_MS = 5000;
+const LOCK_POLL_MS = 120;
+
+const delay = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
 /**
- * `git -C <root> <args>` via execFile, with one-shot recovery from a stale index
- * lock: if the command fails because a crashed git left `.git/index.lock` behind,
- * remove the stale lock and retry once. Resolves with stdout; rejects with the
- * trimmed stderr (matching runGit's error shape) when there's nothing to recover.
+ * Per-repo command queue. git serializes index access through `.git/index.lock` but
+ * *fails* rather than waits when it's held, so two of our own commands overlapping (e.g.
+ * a post-commit `git status` refresh racing the next `git commit`) would collide. Running
+ * each repo's commands one-at-a-time removes that self-inflicted contention entirely.
+ */
+const repoQueues = new Map<string, Promise<unknown>>();
+
+function serializeByRepo<T>(rootPath: string, fn: () => Promise<T>): Promise<T> {
+  const prev = (repoQueues.get(rootPath) ?? Promise.resolve()).catch(() => {});
+  const next = prev.then(fn);
+  // Keep the chain alive even if this command rejects, so the next one still runs.
+  repoQueues.set(rootPath, next.catch(() => {}));
+  return next;
+}
+
+/**
+ * `git -C <root> <args>` via execFile, serialized per repo and resilient to `index.lock`
+ * contention: a stale lock (left by a crashed git) is removed, while a lock held by a
+ * *live* git process is waited out (polling up to LOCK_WAIT_MS) before giving up. Resolves
+ * with stdout; rejects with the trimmed stderr (matching runGit's error shape).
  */
 async function execGit(rootPath: string, args: string[], maxBuffer = 16 * 1024 * 1024): Promise<string> {
-  try {
-    const { stdout } = await run('git', ['-C', rootPath, ...args], { maxBuffer });
-    return stdout;
-  } catch (e) {
-    const ex = e as { stderr?: string; message?: string };
-    const message = (ex.stderr || ex.message || 'git command failed').trim();
-    if (isIndexLockError(message) && (await clearStaleIndexLock(rootPath))) {
-      const { stdout } = await run('git', ['-C', rootPath, ...args], { maxBuffer });
-      return stdout;
+  return serializeByRepo(rootPath, async () => {
+    const deadline = Date.now() + LOCK_WAIT_MS;
+    for (;;) {
+      try {
+        const { stdout } = await run('git', ['-C', rootPath, ...args], { maxBuffer });
+        return stdout;
+      } catch (e) {
+        const ex = e as { stderr?: string; message?: string };
+        const message = (ex.stderr || ex.message || 'git command failed').trim();
+        if (!isIndexLockError(message)) throw new Error(message);
+        // Crashed-git leftover → remove and retry immediately. Otherwise it's a live lock
+        // (e.g. git running in the integrated terminal): wait briefly and try again.
+        if (await clearStaleIndexLock(rootPath)) continue;
+        if (Date.now() >= deadline) throw new Error(message);
+        await delay(LOCK_POLL_MS);
+      }
     }
-    throw new Error(message);
-  }
+  });
 }
 
 /** Byte that separates `git log` fields (emitted by the %x00 in the pretty format). */
@@ -100,9 +128,9 @@ export function getGitStagedContent(rootPath: string, filePath: string): Promise
 
 export async function getGitChanges(rootPath: string): Promise<GitChange[]> {
   try {
-    const { stdout } = await run('git', ['-C', rootPath, 'status', '--porcelain'], {
-      maxBuffer: 4 * 1024 * 1024,
-    });
+    // `git status` refreshes (and may lock) the index, so it must share the serialized,
+    // lock-aware path — otherwise a status refresh races a concurrent commit/stage.
+    const stdout = await execGit(rootPath, ['status', '--porcelain'], 4 * 1024 * 1024);
     const changes: GitChange[] = [];
     for (const raw of stdout.split('\n')) {
       if (!raw.trim()) continue;
@@ -144,10 +172,10 @@ export async function gitCommit(rootPath: string, message: string): Promise<void
   // Commit staged changes; if nothing is staged, stage everything first (VS Code-style).
   let nothingStaged = false;
   try {
-    await run('git', ['-C', rootPath, 'diff', '--cached', '--quiet']);
+    await execGit(rootPath, ['diff', '--cached', '--quiet']);
     nothingStaged = true; // exit 0 = no staged changes
   } catch {
-    nothingStaged = false; // exit 1 = staged changes exist
+    nothingStaged = false; // exit 1 = staged changes exist (or a non-zero we treat as "commit anyway")
   }
   if (nothingStaged) await execGit(rootPath, ['add', '-A']);
   await execGit(rootPath, ['commit', '-m', message]);
@@ -614,6 +642,23 @@ export async function getIgnoredNames(dirPath: string, names: string[]): Promise
   } catch {
     // exit 1 = none ignored; exit 128 = not a repo. Either way: nothing to dim.
     return new Set();
+  }
+}
+
+/**
+ * Every file in the repo that isn't excluded by .gitignore: tracked files plus
+ * untracked-but-not-ignored ones. Paths are repo-relative with forward slashes.
+ * Returns null when `rootPath` isn't a git repo (caller should fall back to a walk).
+ */
+export async function listProjectFiles(rootPath: string): Promise<string[] | null> {
+  try {
+    // -z gives NUL-separated, unquoted paths; --exclude-standard applies .gitignore.
+    const stdout = await execGit(rootPath, [
+      'ls-files', '--cached', '--others', '--exclude-standard', '-z',
+    ]);
+    return [...new Set(stdout.split('\0').filter(Boolean))];
+  } catch {
+    return null;
   }
 }
 

@@ -166,7 +166,10 @@ app.whenReady().then(async () => {
     toResult(() => writeFileText(path, content)),
   );
   ipcMain.handle(IpcChannels.listFiles, (_e, rootPath: string) =>
-    toResult(() => listFilesRecursive(rootPath)),
+    toResult(async () => {
+      const settings = await readSettings(SETTINGS_PATH);
+      return listFilesRecursive(rootPath, settings.searchExclude ?? []);
+    }),
   );
   ipcMain.handle(IpcChannels.gitBranch, (_e, rootPath: string) =>
     toResult(() => readGitBranch(rootPath)),

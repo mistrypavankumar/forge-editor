@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fuzzyMatch } from './fuzzy';
+import { fuzzyMatch, fuzzyMatchTerms } from './fuzzy';
 
 describe('fuzzyMatch', () => {
   it('matches a subsequence case-insensitively', () => {
@@ -19,5 +19,23 @@ describe('fuzzyMatch', () => {
     const contiguous = fuzzyMatch('app', 'app-store').score;
     const scattered = fuzzyMatch('app', 'a-p-p-store').score;
     expect(contiguous).toBeGreaterThan(scattered);
+  });
+});
+
+describe('fuzzyMatchTerms', () => {
+  const path = 'apps/scm/src/sections/business-objects/equipment-group-list.tsx';
+
+  it('matches when all space-separated terms are present, in any order', () => {
+    expect(fuzzyMatchTerms('business-objects equipment', path).matched).toBe(true);
+    expect(fuzzyMatchTerms('equipment business-objects', path).matched).toBe(true);
+  });
+
+  it('fails when any single term is absent', () => {
+    expect(fuzzyMatchTerms('business-objects zzz', path).matched).toBe(false);
+  });
+
+  it('empty / whitespace query matches everything', () => {
+    expect(fuzzyMatchTerms('', path)).toEqual({ matched: true, score: 0 });
+    expect(fuzzyMatchTerms('   ', path)).toEqual({ matched: true, score: 0 });
   });
 });
