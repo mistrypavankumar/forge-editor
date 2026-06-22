@@ -48,6 +48,7 @@ import {
   getGitUser,
   setGitUser,
   testGitCredential,
+  ghAuth,
 } from './git/git-service';
 import { searchInFiles, replaceInFiles } from './search/search-service';
 import { registerLanguageIpc } from './ipc/editor-language-ipc';
@@ -218,6 +219,7 @@ app.whenReady().then(() => {
     (_e, rootPath: string, username: string, token: string) =>
       toResult(() => testGitCredential(rootPath, username, token)),
   );
+  ipcMain.handle(IpcChannels.gitGhAuth, (_e, rootPath: string) => toResult(() => ghAuth(rootPath)));
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, options: SearchOptions) =>
     toResult(() => searchInFiles(rootPath, options)),
   );

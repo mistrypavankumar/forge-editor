@@ -14,6 +14,7 @@ import {
 import { useGitUserStore } from '../stores/git-user-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import type { GitCredentialTest, GitUser } from '@shared/ipc-contract';
+import { cn } from '../lib/cn';
 
 export function GitUserPicker(): React.JSX.Element | null {
   const open = useGitUserStore((s) => s.pickerOpen);
@@ -30,6 +31,8 @@ export function GitUserPicker(): React.JSX.Element | null {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [token, setToken] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<GitCredentialTest | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -38,8 +41,14 @@ export function GitUserPicker(): React.JSX.Element | null {
       setEmail('');
       setUsername('');
       setToken('');
+      setTestResult(null);
     }
   }, [open]);
+
+  // Invalidate a stale test result whenever the credentials being tested change.
+  useEffect(() => {
+    setTestResult(null);
+  }, [username, token]);
 
   if (!open) return null;
 
@@ -72,7 +81,20 @@ export function GitUserPicker(): React.JSX.Element | null {
 
   const pick = (u: GitUser): void => apply(u);
 
+  const runTest = (): void => {
+    if (!rootPath || !username.trim() || !token.trim()) return;
+    setTesting(true);
+    setTestResult(null);
+    void window.forge.gitTestCredential(rootPath, username.trim(), token.trim()).then((res) => {
+      setTesting(false);
+      setTestResult(
+        res.ok ? res.data : { ok: false, message: res.error.split('\n')[0] || 'Test failed.' },
+      );
+    });
+  };
+
   const canSave = name.trim() !== '' && email.trim() !== '';
+  const canTest = username.trim() !== '' && token.trim() !== '' && !testing;
   const saveForm = (): void => {
     if (!canSave) return;
     // Renaming the email of an existing entry: drop the stale one (matched by old email).
@@ -209,22 +231,48 @@ export function GitUserPicker(): React.JSX.Element | null {
                     if (e.key === 'Enter') saveForm();
                   }}
                 />
-                <div className="flex items-center justify-end gap-2">
+                {testResult ? (
+                  <div
+                    className={cn(
+                      'flex items-start gap-1.5 rounded px-2 py-1.5 text-[11px]',
+                      testResult.ok ? 'text-accent' : 'text-danger',
+                    )}
+                  >
+                    {testResult.ok ? (
+                      <CircleCheck size={13} className="mt-px shrink-0" />
+                    ) : (
+                      <CircleAlert size={13} className="mt-px shrink-0" />
+                    )}
+                    <span>{testResult.message}</span>
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between gap-2">
                   <button
                     type="button"
-                    onClick={() => setEditing(null)}
-                    className="rounded px-2.5 py-1 text-[12px] text-muted hover:bg-surface-3 hover:text-fg"
+                    disabled={!canTest}
+                    onClick={runTest}
+                    className="flex items-center gap-1.5 rounded px-2.5 py-1 text-[12px] text-muted hover:bg-surface-3 hover:text-fg disabled:opacity-40"
                   >
-                    Cancel
+                    {testing ? <Loader2 size={13} className="animate-spin" /> : <KeyRound size={13} />}
+                    Test connection
                   </button>
-                  <button
-                    type="button"
-                    disabled={!canSave}
-                    onClick={saveForm}
-                    className="rounded bg-accent px-2.5 py-1 text-[12px] text-white disabled:opacity-40"
-                  >
-                    Use this user
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(null)}
+                      className="rounded px-2.5 py-1 text-[12px] text-muted hover:bg-surface-3 hover:text-fg"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canSave}
+                      onClick={saveForm}
+                      className="rounded bg-accent px-2.5 py-1 text-[12px] text-white disabled:opacity-40"
+                    >
+                      Use this user
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (

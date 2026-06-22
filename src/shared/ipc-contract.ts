@@ -31,6 +31,7 @@ export const IpcChannels = {
   gitGetUser: 'forge:git:getUser',
   gitSetUser: 'forge:git:setUser',
   gitTestCredential: 'forge:git:testCredential',
+  gitGhAuth: 'forge:git:ghAuth',
   search: 'forge:search',
   replaceInFiles: 'forge:search:replace',
   watchWorkspace: 'forge:fs:watch',
@@ -160,6 +161,20 @@ export interface GitCredentialTest {
   scopes?: string;
   /** Human-readable summary for the UI. */
   message: string;
+}
+
+/** What the `gh` CLI knows for the repo's host — used to import a login without pasting a token. */
+export interface GhAuth {
+  /** Whether the `gh` CLI is on PATH. */
+  installed: boolean;
+  /** Authenticated login for the host, when signed in. */
+  login?: string;
+  /** Profile name, for prefilling the commit author. */
+  name?: string;
+  /** Public/no-reply email, for prefilling the commit author. */
+  email?: string;
+  /** OAuth token gh holds for the host, when signed in. */
+  token?: string;
 }
 
 export interface BlameLine {
@@ -495,6 +510,8 @@ export interface ForgeApi {
     username: string,
     token: string,
   ) => Promise<Result<GitCredentialTest>>;
+  /** Import the repo host's login + token from the `gh` CLI (browser-based sign-in). */
+  gitGhAuth: (rootPath: string) => Promise<Result<GhAuth>>;
   search: (rootPath: string, options: SearchOptions) => Promise<Result<SearchMatch[]>>;
   replaceInFiles: (
     rootPath: string,

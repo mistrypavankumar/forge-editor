@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import { basename, relative, sep } from 'node:path';
 import type {
   BlameLine,
+  GhAuth,
   GitBranches,
   GitChange,
   GitCommit,
@@ -197,6 +198,43 @@ export async function setGitUser(
   if (user.username) {
     await applyCredential(rootPath, credentialsPath, user.username, user.token ?? '');
   }
+}
+
+/**
+ * What `gh` can tell us for the repo's host without any browser interaction: whether it's
+ * installed, and (if already signed in) the login/profile/token to import. When `installed` is
+ * true but there's no token, the caller should launch `gh auth login` for the browser flow.
+ */
+export async function ghAuth(rootPath: string): Promise<GhAuth> {
+  try {
+    await run('gh', ['--version']);
+  } catch {
+    return { installed: false };
+  }
+  const host = await originHost(rootPath);
+  let token = '';
+  try {
+    token = (await run('gh', ['auth', 'token', '--hostname', host])).stdout.trim();
+  } catch {
+    return { installed: true }; // installed but not signed in for this host
+  }
+  if (!token) return { installed: true };
+
+  let login: string | undefined;
+  let name: string | undefined;
+  let email: string | undefined;
+  try {
+    const out = (await run('gh', ['api', 'user', '--hostname', host])).stdout;
+    const u = JSON.parse(out) as { login?: string; name?: string; email?: string; id?: number };
+    login = u.login ?? undefined;
+    name = u.name ?? undefined;
+    // GitHub hides the real email when "keep my email private" is on; the no-reply alias still
+    // attributes commits correctly, so prefill that when no public email is exposed.
+    email = u.email ?? (u.login && u.id ? `${u.id}+${u.login}@users.noreply.github.com` : undefined);
+  } catch {
+    /* token is usable even if the profile fetch fails */
+  }
+  return { installed: true, login, name, email, token };
 }
 
 /** A bounded fetch (8s) so a hung network call can't wedge the picker's "Test connection". */
