@@ -38,8 +38,7 @@ export const api: ForgeApi = {
   gitFileAt: (rootPath, ref, relPath) =>
     ipcRenderer.invoke(IpcChannels.gitFileAt, rootPath, ref, relPath),
   gitGetUser: (rootPath) => ipcRenderer.invoke(IpcChannels.gitGetUser, rootPath),
-  gitSetUser: (rootPath, name, email) =>
-    ipcRenderer.invoke(IpcChannels.gitSetUser, rootPath, name, email),
+  gitSetUser: (rootPath, user) => ipcRenderer.invoke(IpcChannels.gitSetUser, rootPath, user),
   search: (rootPath, options) => ipcRenderer.invoke(IpcChannels.search, rootPath, options),
   replaceInFiles: (rootPath, options, replacement, files) =>
     ipcRenderer.invoke(IpcChannels.replaceInFiles, rootPath, options, replacement, files),

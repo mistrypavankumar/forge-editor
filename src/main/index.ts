@@ -5,6 +5,7 @@ import {
   IpcChannels,
   pongOf,
   type ForgeSettings,
+  type GitUser,
   type SearchOptions,
   type TerminalCreateArgs,
 } from '@shared/ipc-contract';
@@ -60,6 +61,8 @@ import {
 } from './terminal/command-runner';
 
 const SETTINGS_PATH = join(homedir(), '.forge', 'settings.json');
+/** Backing file for the per-repo git credential store the user-switcher writes to. */
+const CREDENTIALS_PATH = join(homedir(), '.forge', 'git-credentials');
 const isMac = process.platform === 'darwin';
 let autoSaveState = false;
 
@@ -206,8 +209,8 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannels.gitGetUser, (_e, rootPath: string) =>
     toResult(() => getGitUser(rootPath)),
   );
-  ipcMain.handle(IpcChannels.gitSetUser, (_e, rootPath: string, name: string, email: string) =>
-    toResult(() => setGitUser(rootPath, name, email)),
+  ipcMain.handle(IpcChannels.gitSetUser, (_e, rootPath: string, user: GitUser) =>
+    toResult(() => setGitUser(rootPath, user, CREDENTIALS_PATH)),
   );
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, options: SearchOptions) =>
     toResult(() => searchInFiles(rootPath, options)),

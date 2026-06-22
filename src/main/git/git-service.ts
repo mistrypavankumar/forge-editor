@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { basename, relative, sep } from 'node:path';
 import type { BlameLine, GitBranches, GitChange, GitCommit, GitRef, GitUser } from '@shared/ipc-contract';
@@ -108,10 +108,76 @@ export async function getGitUser(rootPath: string): Promise<GitUser> {
   return { name, email };
 }
 
-/** Set the repo-local author identity used for subsequent commits. */
-export async function setGitUser(rootPath: string, name: string, email: string): Promise<void> {
-  await runGit(rootPath, ['config', 'user.name', name]);
-  await runGit(rootPath, ['config', 'user.email', email]);
+/** Run `git <args>` in `rootPath`, feeding `input` on stdin; resolves with stdout. */
+function gitInput(rootPath: string, args: string[], input: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('git', ['-C', rootPath, ...args]);
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (d) => (stdout += d));
+    child.stderr.on('data', (d) => (stderr += d));
+    child.on('error', reject);
+    child.on('close', (code) =>
+      code === 0 ? resolve(stdout) : reject(new Error((stderr || `git exited ${code}`).trim())),
+    );
+    child.stdin.end(input);
+  });
+}
+
+/** The host the repo's `origin` points at (e.g. "github.com"); defaults to GitHub. */
+async function originHost(rootPath: string): Promise<string> {
+  try {
+    const url = (await runGit(rootPath, ['remote', 'get-url', 'origin'])).trim();
+    // https://host/... | https://user@host/... | git@host:owner/repo
+    const m = url.match(/^[a-z]+:\/\/(?:[^@/]+@)?([^/]+)/i) ?? url.match(/@([^:]+):/);
+    return m ? m[1] : 'github.com';
+  } catch {
+    return 'github.com';
+  }
+}
+
+/**
+ * Point the repo at a private credential store (so it no longer falls back to the OS keychain's
+ * stale account), seed it with `username`/`token`, and pin the username git authenticates with.
+ * Repo-local config means the integrated terminal honours it too. `credentialsPath` is a plain
+ * file written 0600 by git's `store` helper.
+ */
+async function applyCredential(
+  rootPath: string,
+  credentialsPath: string,
+  username: string,
+  token: string,
+): Promise<void> {
+  const host = await originHost(rootPath);
+  const helper = `store --file ${credentialsPath}`;
+  // Reset the repo's helper chain to *only* our store (leading empty value clears inherited
+  // helpers like osxkeychain), so the pinned account — not a cached one — is what git uses.
+  await runGit(rootPath, ['config', '--local', '--replace-all', 'credential.helper', '']);
+  await runGit(rootPath, ['config', '--local', '--add', 'credential.helper', helper]);
+  await runGit(rootPath, ['config', '--local', `credential.https://${host}.username`, username]);
+  if (token) {
+    await gitInput(
+      rootPath,
+      ['-c', `credential.helper=${helper}`, 'credential', 'approve'],
+      `protocol=https\nhost=${host}\nusername=${username}\npassword=${token}\n\n`,
+    );
+  }
+}
+
+/**
+ * Switch the repo's git user. Always sets the commit author (`user.name`/`user.email`); when the
+ * identity carries push credentials, also wires HTTPS auth so pushes go out as that account.
+ */
+export async function setGitUser(
+  rootPath: string,
+  user: GitUser,
+  credentialsPath: string,
+): Promise<void> {
+  await runGit(rootPath, ['config', 'user.name', user.name]);
+  await runGit(rootPath, ['config', 'user.email', user.email]);
+  if (user.username) {
+    await applyCredential(rootPath, credentialsPath, user.username, user.token ?? '');
+  }
 }
 
 /** Run a git subcommand, surfacing stderr as the error message on failure. */

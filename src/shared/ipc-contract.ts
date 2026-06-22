@@ -132,10 +132,17 @@ export interface GitCommit {
   parents: string[];
 }
 
-/** A git author identity (`user.name` / `user.email`), as configured in a repo. */
+/** A git author identity (`user.name` / `user.email`) plus optional push credentials. */
 export interface GitUser {
   name: string;
   email: string;
+  /**
+   * Login used for HTTPS push/pull auth (e.g. a GitHub username). When set together with
+   * `token`, switching to this user wires the repo to authenticate as this account.
+   */
+  username?: string;
+  /** Personal Access Token paired with `username`. Stored to seed git's credential store. */
+  token?: string;
 }
 
 export interface BlameLine {
@@ -459,8 +466,12 @@ export interface ForgeApi {
   gitFileAt: (rootPath: string, ref: string, relPath: string) => Promise<Result<string | null>>;
   /** The repo's configured author identity (empty strings when unset). */
   gitGetUser: (rootPath: string) => Promise<Result<GitUser>>;
-  /** Set the repo's author identity (writes repo-local `user.name`/`user.email`). */
-  gitSetUser: (rootPath: string, name: string, email: string) => Promise<Result<void>>;
+  /**
+   * Switch the repo's git user: writes repo-local `user.name`/`user.email`, and when the user
+   * carries `username`/`token`, wires the repo to authenticate pushes as that account (so both
+   * the app and the integrated terminal push as the chosen identity).
+   */
+  gitSetUser: (rootPath: string, user: GitUser) => Promise<Result<void>>;
   search: (rootPath: string, options: SearchOptions) => Promise<Result<SearchMatch[]>>;
   replaceInFiles: (
     rootPath: string,

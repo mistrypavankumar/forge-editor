@@ -48,14 +48,22 @@ export const useGitUserStore = create<GitUserState>((set) => ({
       set({ active: null });
       return;
     }
-    const user = res.data;
-    const active = user.name || user.email ? user : null;
-    // Remember the repo's existing identity so it shows up as a quick-switch option.
-    set((s) => ({ active, users: active ? upsert(s.users, active) : s.users }));
+    const cfg = res.data;
+    if (!cfg.name && !cfg.email) {
+      set({ active: null });
+      return;
+    }
+    set((s) => {
+      // The repo config only carries name/email — fold in any saved credentials for this email
+      // so switching back keeps the user's token, and remember the identity as a quick-switch option.
+      const saved = s.users.find((u) => sameUser(u, cfg));
+      const active = saved ? { ...saved, ...cfg } : cfg;
+      return { active, users: upsert(s.users, active) };
+    });
   },
 
   setActive: async (rootPath, user) => {
-    const res = await window.forge.gitSetUser(rootPath, user.name, user.email);
+    const res = await window.forge.gitSetUser(rootPath, user);
     if (res.ok) {
       set((s) => ({ active: user, users: upsert(s.users, user), error: null }));
     } else {
