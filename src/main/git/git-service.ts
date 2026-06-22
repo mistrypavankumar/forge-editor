@@ -1,6 +1,7 @@
 import { execFile, spawn } from 'node:child_process';
+import { rm, stat } from 'node:fs/promises';
 import { promisify } from 'node:util';
-import { basename, relative, sep } from 'node:path';
+import { basename, join, relative, sep } from 'node:path';
 import type {
   BlameLine,
   GhAuth,
@@ -13,6 +14,57 @@ import type {
 } from '@shared/ipc-contract';
 
 const run = promisify(execFile);
+
+/**
+ * A live git op holds `.git/index.lock` only momentarily; a lock older than this
+ * was almost certainly orphaned by a crashed git (or a force-quit GUI). We only
+ * remove locks past this age, so we never race a concurrently-running git.
+ */
+const STALE_LOCK_MS = 2000;
+
+/** True when git refused to run because it couldn't acquire `.git/index.lock`. */
+function isIndexLockError(message: string): boolean {
+  return /index\.lock/i.test(message) && /File exists|Unable to create/i.test(message);
+}
+
+/**
+ * Remove `.git/index.lock` only when it's demonstrably stale (mtime older than
+ * STALE_LOCK_MS) — i.e. left behind by a crashed git, not held by a live one.
+ * Returns true if a stale lock was removed. Never throws; a fresh lock, a missing
+ * lock, or a `.git` file (worktree/submodule pointer) all yield false.
+ */
+async function clearStaleIndexLock(rootPath: string): Promise<boolean> {
+  const lock = join(rootPath, '.git', 'index.lock');
+  try {
+    const { mtimeMs } = await stat(lock);
+    if (Date.now() - mtimeMs < STALE_LOCK_MS) return false;
+    await rm(lock, { force: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * `git -C <root> <args>` via execFile, with one-shot recovery from a stale index
+ * lock: if the command fails because a crashed git left `.git/index.lock` behind,
+ * remove the stale lock and retry once. Resolves with stdout; rejects with the
+ * trimmed stderr (matching runGit's error shape) when there's nothing to recover.
+ */
+async function execGit(rootPath: string, args: string[], maxBuffer = 16 * 1024 * 1024): Promise<string> {
+  try {
+    const { stdout } = await run('git', ['-C', rootPath, ...args], { maxBuffer });
+    return stdout;
+  } catch (e) {
+    const ex = e as { stderr?: string; message?: string };
+    const message = (ex.stderr || ex.message || 'git command failed').trim();
+    if (isIndexLockError(message) && (await clearStaleIndexLock(rootPath))) {
+      const { stdout } = await run('git', ['-C', rootPath, ...args], { maxBuffer });
+      return stdout;
+    }
+    throw new Error(message);
+  }
+}
 
 /** Byte that separates `git log` fields (emitted by the %x00 in the pretty format). */
 const FIELD_SEP = String.fromCharCode(0);
@@ -71,19 +123,19 @@ export async function getGitChanges(rootPath: string): Promise<GitChange[]> {
 }
 
 export async function gitStage(rootPath: string, path: string): Promise<void> {
-  await run('git', ['-C', rootPath, 'add', '--', path]);
+  await execGit(rootPath, ['add', '--', path]);
 }
 
 export async function gitUnstage(rootPath: string, path: string): Promise<void> {
-  await run('git', ['-C', rootPath, 'reset', '-q', 'HEAD', '--', path]);
+  await execGit(rootPath, ['reset', '-q', 'HEAD', '--', path]);
 }
 
 export async function gitDiscard(rootPath: string, path: string): Promise<void> {
-  await run('git', ['-C', rootPath, 'checkout', '--', path]);
+  await execGit(rootPath, ['checkout', '--', path]);
 }
 
 export async function gitStageAll(rootPath: string): Promise<void> {
-  await run('git', ['-C', rootPath, 'add', '-A']);
+  await execGit(rootPath, ['add', '-A']);
 }
 
 export async function gitCommit(rootPath: string, message: string): Promise<void> {
@@ -95,8 +147,8 @@ export async function gitCommit(rootPath: string, message: string): Promise<void
   } catch {
     nothingStaged = false; // exit 1 = staged changes exist
   }
-  if (nothingStaged) await run('git', ['-C', rootPath, 'add', '-A']);
-  await run('git', ['-C', rootPath, 'commit', '-m', message]);
+  if (nothingStaged) await execGit(rootPath, ['add', '-A']);
+  await execGit(rootPath, ['commit', '-m', message]);
 }
 
 /** A single git config value, or '' when the key is unset (git exits 1, which we swallow). */
@@ -321,14 +373,8 @@ export async function testGitCredential(
 }
 
 /** Run a git subcommand, surfacing stderr as the error message on failure. */
-async function runGit(rootPath: string, args: string[]): Promise<string> {
-  try {
-    const { stdout } = await run('git', ['-C', rootPath, ...args], { maxBuffer: 16 * 1024 * 1024 });
-    return stdout;
-  } catch (e) {
-    const ex = e as { stderr?: string; message?: string };
-    throw new Error((ex.stderr || ex.message || 'git command failed').trim());
-  }
+function runGit(rootPath: string, args: string[]): Promise<string> {
+  return execGit(rootPath, args);
 }
 
 export async function getBranches(rootPath: string): Promise<GitBranches> {

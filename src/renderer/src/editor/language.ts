@@ -18,6 +18,8 @@ export function languageFor(name: string): string {
     sh: 'shell',
     yml: 'yaml',
     yaml: 'yaml',
+    graphql: 'graphql',
+    gql: 'graphql',
   };
   return map[ext] ?? 'plaintext';
 }

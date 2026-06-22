@@ -99,12 +99,17 @@ export function TerminalView({
       }),
     );
 
-    // File paths: Cmd/Ctrl+click opens the file (or scopes the folder) in-editor.
+    // File paths: clicking opens the file (or scopes the folder) in-editor. Handles
+    // both absolute paths and relative ones (e.g. ripgrep output like
+    // `packages/foo/bar.ts:42`), resolving the latter against the terminal's root.
     const openPathLink = (token: string): void => {
       const lc = /:(\d+)(?::(\d+))?$/.exec(token);
-      const path = lc ? token.slice(0, lc.index) : token;
+      const rel = lc ? token.slice(0, lc.index) : token;
       const line = lc ? Number(lc[1]) : 0;
       const col = lc && lc[2] ? Number(lc[2]) : 1;
+      const root = rootRef.current;
+      const path =
+        rel.startsWith('/') || !root ? rel : `${root}/${rel.replace(/^\.\//, '')}`;
       void window.forge.readFile(path).then((res) => {
         if (res.ok) {
           const name = path.slice(path.lastIndexOf('/') + 1);
@@ -124,6 +129,13 @@ export function TerminalView({
       });
     };
 
+    // Only treat a token as a file path when it's absolute, contains a `/`, or ends
+    // in a file extension — so plain words, version strings (`v22.18.0`), and counts
+    // don't become spurious links. A miss is harmless: the click no-ops if the path
+    // can't be read.
+    const looksLikePath = (p: string): boolean =>
+      p.startsWith('/') || p.includes('/') || /\.[A-Za-z]\w*$/.test(p);
+
     term.registerLinkProvider({
       provideLinks(y, callback) {
         const bufferLine = term.buffer.active.getLine(y - 1);
@@ -132,18 +144,18 @@ export function TerminalView({
           return;
         }
         const text = bufferLine.translateToString(true);
-        const re = /(?<![\w:/])(\/[^\s:'"()[\]]+)(?::\d+)?(?::\d+)?/g;
+        // A path-ish token (no spaces/quotes/brackets/colons) plus an optional :line:col.
+        const re = /(?<![\w:/])([^\s:'"()[\]]+)(?::\d+)?(?::\d+)?/g;
         const links = [];
         let m: RegExpExecArray | null;
         while ((m = re.exec(text)) !== null) {
+          if (!looksLikePath(m[1])) continue;
           const full = m[0];
           const startX = m.index + 1;
           links.push({
             text: full,
             range: { start: { x: startX, y }, end: { x: startX + full.length - 1, y } },
-            activate: (event: MouseEvent) => {
-              if (event.metaKey || event.ctrlKey) openPathLink(full);
-            },
+            activate: () => openPathLink(full),
           });
         }
         callback(links.length > 0 ? links : undefined);

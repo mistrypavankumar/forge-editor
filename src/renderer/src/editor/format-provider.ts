@@ -6,6 +6,7 @@ import { formatTextWith } from '../lib/format-text';
 /** Languages our CLI formatters (prettier/eslint/biome/dprint) can handle. */
 const FORMAT_LANGUAGES = [
   'typescript', 'javascript', 'json', 'jsonc', 'css', 'scss', 'less', 'html', 'markdown', 'yaml',
+  'graphql',
 ];
 
 let registered = false;

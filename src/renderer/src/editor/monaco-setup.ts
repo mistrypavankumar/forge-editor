@@ -66,6 +66,9 @@ function buildRules(p: Palette): monaco.editor.ITokenThemeRule[] {
     { token: 'attribute.name', foreground: p.attrName },
     { token: 'attribute.value', foreground: p.attrValue },
     { token: 'delimiter.html', foreground: '808080' },
+    // GraphQL: directives (@include) read as functions; field/argument keys as properties.
+    { token: 'annotation', foreground: p.func },
+    { token: 'key.identifier', foreground: p.property },
     // Semantic tokens (legend names from SEMANTIC_TOKEN_TYPES)
     { token: 'class', foreground: p.type },
     { token: 'interface', foreground: p.type },

@@ -22,6 +22,15 @@ function shellName(): string {
   return (defaultShell().split('/').pop() ?? 'sh').replace(/^-/, '');
 }
 
+// Spawn POSIX shells as login shells (-l) so they source ~/.zprofile / ~/.zlogin
+// (or ~/.bash_profile). That's where Homebrew's `brew shellenv` puts /opt/homebrew/bin
+// on PATH. Without -l, a GUI-launched build (Finder/launchd) only gets the bare system
+// PATH and tools like starship/brew aren't found — even though .zshrc still sources.
+function shellArgs(): string[] {
+  if (process.platform === 'win32') return [];
+  return ['-l'];
+}
+
 function stopPoller(id: string): void {
   const t = pollers.get(id);
   if (t) {
@@ -33,7 +42,7 @@ function stopPoller(id: string): void {
 export function createTerminal(sender: WebContents, args: TerminalCreateArgs): void {
   sessions.get(args.id)?.kill();
 
-  const proc = pty.spawn(defaultShell(), [], {
+  const proc = pty.spawn(defaultShell(), shellArgs(), {
     name: 'xterm-256color',
     cols: Math.max(args.cols, 2),
     rows: Math.max(args.rows, 1),
