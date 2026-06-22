@@ -10,9 +10,13 @@ import {
   Pencil,
   Loader2,
   CircleCheck,
+  Github,
 } from 'lucide-react';
 import { useGitUserStore } from '../stores/git-user-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { useLayoutStore } from '../stores/layout-store';
+import { useTerminalStore } from '../stores/terminal-store';
+import { runInTerminal } from '../lib/terminal-exec';
 import type { GitCredentialTest, GitUser } from '@shared/ipc-contract';
 import { cn } from '../lib/cn';
 
@@ -25,6 +29,9 @@ export function GitUserPicker(): React.JSX.Element | null {
   const setActive = useGitUserStore((s) => s.setActive);
   const removeUser = useGitUserStore((s) => s.removeUser);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const setBottomTab = useLayoutStore((s) => s.setBottomTab);
+  const setPanelVisible = useLayoutStore((s) => s.setPanelVisible);
+  const newTerminal = useTerminalStore((s) => s.newTerminal);
 
   const [editing, setEditing] = useState<null | { originalEmail: string | null }>(null);
   const [name, setName] = useState('');
@@ -32,6 +39,7 @@ export function GitUserPicker(): React.JSX.Element | null {
   const [username, setUsername] = useState('');
   const [token, setToken] = useState('');
   const [testing, setTesting] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
   const [testResult, setTestResult] = useState<GitCredentialTest | null>(null);
 
   useEffect(() => {
@@ -44,11 +52,6 @@ export function GitUserPicker(): React.JSX.Element | null {
       setTestResult(null);
     }
   }, [open]);
-
-  // Invalidate a stale test result whenever the credentials being tested change.
-  useEffect(() => {
-    setTestResult(null);
-  }, [username, token]);
 
   if (!open) return null;
 
@@ -90,6 +93,53 @@ export function GitUserPicker(): React.JSX.Element | null {
       setTestResult(
         res.ok ? res.data : { ok: false, message: res.error.split('\n')[0] || 'Test failed.' },
       );
+    });
+  };
+
+  // Launch the gh browser login in a terminal; the user finishes there, then re-clicks sign-in.
+  const launchGhLogin = (): void => {
+    const id = newTerminal('gh auth login');
+    setBottomTab('terminal');
+    setPanelVisible('bottom', true);
+    runInTerminal(id, 'gh auth login --web --git-protocol https');
+  };
+
+  const ghSignIn = (): void => {
+    if (!rootPath) return;
+    setSigningIn(true);
+    setTestResult(null);
+    void window.forge.gitGhAuth(rootPath).then((res) => {
+      setSigningIn(false);
+      if (!res.ok) {
+        setTestResult({ ok: false, message: res.error.split('\n')[0] || 'gh sign-in failed.' });
+        return;
+      }
+      const gh = res.data;
+      if (!gh.installed) {
+        setTestResult({
+          ok: false,
+          message: "GitHub CLI (gh) isn't installed. Get it from cli.github.com, then try again.",
+        });
+        return;
+      }
+      if (gh.token && gh.login) {
+        setUsername(gh.login);
+        setToken(gh.token);
+        if (!name.trim()) setName(gh.name || gh.login);
+        if (!email.trim() && gh.email) setEmail(gh.email);
+        setTestResult({
+          ok: true,
+          login: gh.login,
+          message: `Signed in as ${gh.login} via gh — review and click "Use this user".`,
+        });
+        return;
+      }
+      // Installed but not signed in for this host → kick off the browser flow.
+      launchGhLogin();
+      setTestResult({
+        ok: false,
+        message: 'Finish "gh auth login" in the terminal, then click Sign in again.',
+      });
     });
   };
 
@@ -209,6 +259,16 @@ export function GitUserPicker(): React.JSX.Element | null {
                 <div className="mt-1 text-[11px] text-faint">
                   Optional — for pushing as this account over HTTPS:
                 </div>
+                <button
+                  type="button"
+                  disabled={signingIn || !rootPath}
+                  onClick={ghSignIn}
+                  className="flex items-center justify-center gap-2 rounded border border-line bg-surface px-2.5 py-1.5 text-[12px] text-fg hover:bg-surface-3 disabled:opacity-40"
+                >
+                  {signingIn ? <Loader2 size={14} className="animate-spin" /> : <Github size={14} />}
+                  Sign in with GitHub
+                </button>
+                <div className="text-center text-[10px] text-faint">or enter manually</div>
                 <input
                   className="w-full rounded border border-line bg-surface px-2 py-1.5 text-[13px] text-fg outline-none placeholder:text-faint focus:border-accent"
                   value={username}
@@ -216,7 +276,10 @@ export function GitUserPicker(): React.JSX.Element | null {
                   autoCapitalize="off"
                   autoCorrect="off"
                   spellCheck={false}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    setTestResult(null);
+                  }}
                 />
                 <input
                   className="w-full rounded border border-line bg-surface px-2 py-1.5 text-[13px] text-fg outline-none placeholder:text-faint focus:border-accent"
@@ -226,7 +289,10 @@ export function GitUserPicker(): React.JSX.Element | null {
                   autoCapitalize="off"
                   autoCorrect="off"
                   spellCheck={false}
-                  onChange={(e) => setToken(e.target.value)}
+                  onChange={(e) => {
+                    setToken(e.target.value);
+                    setTestResult(null);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') saveForm();
                   }}
