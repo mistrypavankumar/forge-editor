@@ -1,7 +1,15 @@
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { basename, relative, sep } from 'node:path';
-import type { BlameLine, GitBranches, GitChange, GitCommit, GitRef, GitUser } from '@shared/ipc-contract';
+import type {
+  BlameLine,
+  GitBranches,
+  GitChange,
+  GitCommit,
+  GitCredentialTest,
+  GitRef,
+  GitUser,
+} from '@shared/ipc-contract';
 
 const run = promisify(execFile);
 
@@ -136,6 +144,17 @@ async function originHost(rootPath: string): Promise<string> {
   }
 }
 
+/** "owner/repo" parsed from the repo's `origin` URL, or null when there's no usable remote. */
+async function originSlug(rootPath: string): Promise<string | null> {
+  try {
+    const url = (await runGit(rootPath, ['remote', 'get-url', 'origin'])).trim();
+    const m = url.match(/[:/]([^/]+\/[^/]+?)(?:\.git)?$/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Point the repo at a private credential store (so it no longer falls back to the OS keychain's
  * stale account), seed it with `username`/`token`, and pin the username git authenticates with.
@@ -178,6 +197,89 @@ export async function setGitUser(
   if (user.username) {
     await applyCredential(rootPath, credentialsPath, user.username, user.token ?? '');
   }
+}
+
+/** A bounded fetch (8s) so a hung network call can't wedge the picker's "Test connection". */
+async function fetchJson(
+  url: string,
+  token: string,
+): Promise<{ status: number; scopes: string | null; body: unknown }> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'forge-editor',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+    const body = res.status === 204 ? null : await res.json().catch(() => null);
+    return { status: res.status, scopes: res.headers.get('x-oauth-scopes'), body };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Confirm a username/token can actually push: resolve the token to a login via the host API,
+ * then (when origin is known) read the repo's permissions. Catches the "authenticates but lacks
+ * write scope / repo access" 403 in the UI instead of at push time.
+ */
+export async function testGitCredential(
+  rootPath: string,
+  username: string,
+  token: string,
+): Promise<GitCredentialTest> {
+  if (!token) return { ok: false, message: 'Enter a token to test.' };
+  const host = await originHost(rootPath);
+  const api = host === 'github.com' ? 'https://api.github.com' : `https://${host}/api/v3`;
+
+  let who: { status: number; scopes: string | null; body: unknown };
+  try {
+    who = await fetchJson(`${api}/user`, token);
+  } catch (e) {
+    const aborted = e instanceof Error && e.name === 'AbortError';
+    return { ok: false, message: aborted ? `Timed out reaching ${host}.` : `Couldn't reach ${host}.` };
+  }
+  if (who.status === 401) return { ok: false, message: 'Token is invalid or expired (401).' };
+  if (who.status >= 400) return { ok: false, message: `Host rejected the token (HTTP ${who.status}).` };
+
+  const login = (who.body as { login?: string } | null)?.login;
+  const scopes = who.scopes ?? undefined;
+  const repo = (await originSlug(rootPath)) ?? undefined;
+  const mismatch = login && login.toLowerCase() !== username.trim().toLowerCase()
+    ? ` (note: token belongs to ${login}, not ${username})`
+    : '';
+
+  if (!repo) {
+    return { ok: true, login, scopes, message: `Token valid — authenticates as ${login}.${mismatch}` };
+  }
+
+  const repoRes = await fetchJson(`${api}/repos/${repo}`, token).catch(() => null);
+  if (!repoRes || repoRes.status === 404) {
+    return {
+      ok: false,
+      login,
+      repo,
+      scopes,
+      canPush: false,
+      message: `Authenticated as ${login}, but ${repo} isn't visible to this token — repo not found or no access${mismatch}.`,
+    };
+  }
+  const canPush = Boolean((repoRes.body as { permissions?: { push?: boolean } } | null)?.permissions?.push);
+  return {
+    ok: canPush,
+    login,
+    repo,
+    scopes,
+    canPush,
+    message: canPush
+      ? `Ready — ${login} can push to ${repo}.${mismatch}`
+      : `Authenticated as ${login}, but no push access to ${repo}. Grant the token 'repo' scope (or Contents: write) / repo access${mismatch}.`,
+  };
 }
 
 /** Run a git subcommand, surfacing stderr as the error message on failure. */

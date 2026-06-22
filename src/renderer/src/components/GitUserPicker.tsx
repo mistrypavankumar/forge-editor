@@ -1,8 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Check, Plus, Trash2, User, X, CircleAlert, KeyRound, Pencil } from 'lucide-react';
+import {
+  Check,
+  Plus,
+  Trash2,
+  User,
+  X,
+  CircleAlert,
+  KeyRound,
+  Pencil,
+  Loader2,
+  CircleCheck,
+} from 'lucide-react';
 import { useGitUserStore } from '../stores/git-user-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
-import type { GitUser } from '@shared/ipc-contract';
+import type { GitCredentialTest, GitUser } from '@shared/ipc-contract';
 
 export function GitUserPicker(): React.JSX.Element | null {
   const open = useGitUserStore((s) => s.pickerOpen);

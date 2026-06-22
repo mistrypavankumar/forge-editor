@@ -30,6 +30,7 @@ export const IpcChannels = {
   gitFileAt: 'forge:git:fileAt',
   gitGetUser: 'forge:git:getUser',
   gitSetUser: 'forge:git:setUser',
+  gitTestCredential: 'forge:git:testCredential',
   search: 'forge:search',
   replaceInFiles: 'forge:search:replace',
   watchWorkspace: 'forge:fs:watch',
@@ -143,6 +144,22 @@ export interface GitUser {
   username?: string;
   /** Personal Access Token paired with `username`. Stored to seed git's credential store. */
   token?: string;
+}
+
+/** Result of probing a git host's API with a username/token (the picker's "Test connection"). */
+export interface GitCredentialTest {
+  /** True when the token authenticates AND (if the repo is known) can push to it. */
+  ok: boolean;
+  /** Login the token actually resolves to (may differ from the entered username). */
+  login?: string;
+  /** "owner/repo" parsed from origin, when available. */
+  repo?: string;
+  /** Whether `login` can push to `repo`; undefined when the repo couldn't be checked. */
+  canPush?: boolean;
+  /** Classic-token OAuth scopes (from the x-oauth-scopes header); empty for fine-grained tokens. */
+  scopes?: string;
+  /** Human-readable summary for the UI. */
+  message: string;
 }
 
 export interface BlameLine {
@@ -472,6 +489,12 @@ export interface ForgeApi {
    * the app and the integrated terminal push as the chosen identity).
    */
   gitSetUser: (rootPath: string, user: GitUser) => Promise<Result<void>>;
+  /** Probe the repo's git host with a username/token to confirm it authenticates and can push. */
+  gitTestCredential: (
+    rootPath: string,
+    username: string,
+    token: string,
+  ) => Promise<Result<GitCredentialTest>>;
   search: (rootPath: string, options: SearchOptions) => Promise<Result<SearchMatch[]>>;
   replaceInFiles: (
     rootPath: string,
