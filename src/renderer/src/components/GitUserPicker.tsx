@@ -17,7 +17,7 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { useTerminalStore } from '../stores/terminal-store';
 import { runInTerminal } from '../lib/terminal-exec';
-import type { GitCredentialTest, GitUser } from '@shared/ipc-contract';
+import type { GhAuth, GitCredentialTest, GitUser } from '@shared/ipc-contract';
 import { cn } from '../lib/cn';
 
 export function GitUserPicker(): React.JSX.Element | null {
@@ -41,17 +41,24 @@ export function GitUserPicker(): React.JSX.Element | null {
   const [testing, setTesting] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [testResult, setTestResult] = useState<GitCredentialTest | null>(null);
+  // The active `gh` account for this repo's host, surfaced as a one-click import row.
+  const [ghAccount, setGhAccount] = useState<GhAuth | null>(null);
 
   useEffect(() => {
-    if (open) {
-      setEditing(null);
-      setName('');
-      setEmail('');
-      setUsername('');
-      setToken('');
-      setTestResult(null);
+    if (!open) return;
+    setEditing(null);
+    setName('');
+    setEmail('');
+    setUsername('');
+    setToken('');
+    setTestResult(null);
+    setGhAccount(null);
+    if (rootPath) {
+      void window.forge.gitGhAuth(rootPath).then((res) => {
+        if (res.ok && res.data.installed && res.data.token && res.data.login) setGhAccount(res.data);
+      });
     }
-  }, [open]);
+  }, [open, rootPath]);
 
   if (!open) return null;
 
@@ -84,6 +91,22 @@ export function GitUserPicker(): React.JSX.Element | null {
 
   const pick = (u: GitUser): void => apply(u);
 
+  // The gh account is worth offering only when it isn't already a saved user.
+  const ghImportable =
+    ghAccount?.login &&
+    !users.some((u) => u.username?.trim().toLowerCase() === ghAccount.login!.trim().toLowerCase())
+      ? ghAccount
+      : null;
+
+  const importGh = (gh: GhAuth): void => {
+    apply({
+      name: gh.name || gh.login || '',
+      email: gh.email || '',
+      username: gh.login,
+      token: gh.token,
+    });
+  };
+
   const runTest = (): void => {
     if (!rootPath || !username.trim() || !token.trim()) return;
     setTesting(true);
@@ -96,23 +119,20 @@ export function GitUserPicker(): React.JSX.Element | null {
     });
   };
 
-  // Launch the gh browser login in a terminal; the user finishes there, then re-clicks sign-in.
-  // When already signed in, gh prompts to re-authenticate (answered in the pty) — logging in as
-  // another account adds it and makes it active, so the next import picks it up.
+  // `gh auth login` is interactive, so the full-screen picker must close first — otherwise its
+  // backdrop covers the terminal and swallows the prompts. We print the next step in the terminal
+  // since there's no modal left to show a message in.
   const launchGhLogin = (): void => {
     const id = newTerminal('gh auth login');
     setBottomTab('terminal');
     setPanelVisible('bottom', true);
-    runInTerminal(id, 'gh auth login --web --git-protocol https --skip-ssh-key');
+    close();
+    const next =
+      "echo; echo '→ When done: open Switch Git User → Add User → Sign in with GitHub to use this account.'";
+    runInTerminal(id, `gh auth login --web --git-protocol https --skip-ssh-key; ${next}`);
   };
 
-  const signInDifferent = (): void => {
-    launchGhLogin();
-    setTestResult({
-      ok: false,
-      message: 'Pick the account in the browser/terminal, then click "Sign in with GitHub".',
-    });
-  };
+  const signInDifferent = (): void => launchGhLogin();
 
   const ghSignIn = (): void => {
     if (!rootPath) return;
@@ -144,12 +164,8 @@ export function GitUserPicker(): React.JSX.Element | null {
         });
         return;
       }
-      // Installed but not signed in for this host → kick off the browser flow.
+      // Installed but not signed in for this host → kick off the browser flow (closes the picker).
       launchGhLogin();
-      setTestResult({
-        ok: false,
-        message: 'Finish "gh auth login" in the terminal, then click Sign in again.',
-      });
     });
   };
 
@@ -250,6 +266,20 @@ export function GitUserPicker(): React.JSX.Element | null {
                 )}
               </div>
             ))}
+
+            {ghImportable && !editing ? (
+              <button
+                type="button"
+                onClick={() => importGh(ghImportable)}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left hover:bg-surface-3"
+              >
+                <span className="flex w-4 shrink-0 items-center justify-center text-accent">
+                  <Github size={13} />
+                </span>
+                <span className="truncate text-[13px] text-fg">Import {ghImportable.login}</span>
+                <span className="ml-1 truncate text-[11px] text-faint">from GitHub CLI</span>
+              </button>
+            ) : null}
 
             {editing ? (
               <div className="flex flex-col gap-2 rounded-lg bg-surface-2 p-2.5">
