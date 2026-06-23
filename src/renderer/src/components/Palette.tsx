@@ -92,16 +92,17 @@ export function Palette(): React.JSX.Element | null {
     }));
   }, [mode, files]);
 
-  // Recently opened files, shown when the file palette opens with an empty query.
+  // Recently opened files, shown when the file palette opens with an empty query. Scoped to the
+  // current workspace: only files under the open folder are shown, so switching projects shows
+  // that project's recents (not stale entries from other folders).
   const recentRows: Row[] = useMemo(() => {
-    if (mode !== 'files') return [];
+    if (mode !== 'files' || !rootPath) return [];
     return recents
-      .filter((r) => r.type === 'file')
+      .filter((r) => r.type === 'file' && r.path.startsWith(`${rootPath}/`))
       .map((r) => ({
         id: r.path,
         primary: r.name,
-        secondary:
-          rootPath && r.path.startsWith(`${rootPath}/`) ? r.path.slice(rootPath.length + 1) : r.path,
+        secondary: r.path.slice(rootPath.length + 1),
         isFile: true,
         invoke: () => openFilePath(r.path, r.name, true),
       }));
