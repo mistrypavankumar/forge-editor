@@ -3,12 +3,17 @@
 /* Map Tailwind color utilities to runtime CSS variables so theme switching
    (handled by theme-service.applyCssVariables) updates every utility live. */
 @theme {
-  --color-bg: var(--bg);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-surface-3: var(--surface-3);
-  --color-elevated: var(--elevated);
-  --color-active: var(--active);
+  /* Background-family tokens are made translucent so the macOS window vibrancy (the
+     blurred desktop) shows through, giving the whole chrome a frosted-glass look.
+     Alpha increases with elevation so stacked layers (sidebar > panel > popover) stay
+     legible. The blur itself is the OS vibrancy material — no backdrop-filter needed.
+     Foreground, line, and accent tokens stay fully opaque for crisp text and borders. */
+  --color-bg: color-mix(in srgb, var(--bg) 30%, transparent);
+  --color-surface: color-mix(in srgb, var(--surface) 42%, transparent);
+  --color-surface-2: color-mix(in srgb, var(--surface-2) 55%, transparent);
+  --color-surface-3: color-mix(in srgb, var(--surface-3) 66%, transparent);
+  --color-elevated: color-mix(in srgb, var(--elevated) 80%, transparent);
+  --color-active: color-mix(in srgb, var(--active) 60%, transparent);
   --color-line: var(--line);
   --color-line-soft: var(--line-soft);
   --color-line-strong: var(--line-strong);
@@ -65,7 +70,9 @@ body,
 }
 
 body {
-  background: var(--bg);
+  /* Transparent so the window's vibrancy material is the backdrop; the app's own
+     translucent surfaces (bg-bg / bg-surface…) layer their frosted tint on top. */
+  background: transparent;
   color: var(--fg);
   font-family: var(--font-sans);
   font-size: 13px;

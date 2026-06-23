@@ -110,7 +110,13 @@ function createWindow(): void {
     show: false,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 14, y: 14 },
-    backgroundColor: '#0a0a0c',
+    // On macOS use a native vibrancy material so the blurred desktop shows through any
+    // translucent pixel of the renderer (the frosted-glass look). The window background
+    // must be fully transparent for the material to be visible; `visualEffectState:
+    // 'active'` keeps the blur lit even when the window is unfocused. Other platforms
+    // keep an opaque background (vibrancy is macOS-only).
+    backgroundColor: isMac ? '#00000000' : '#0a0a0c',
+    ...(isMac ? { vibrancy: 'under-window' as const, visualEffectState: 'active' as const } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),
       contextIsolation: true,

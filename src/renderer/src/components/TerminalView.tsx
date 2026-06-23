@@ -72,8 +72,11 @@ export function TerminalView({
       letterSpacing: 0,
       cursorBlink: true,
       cursorStyle: 'bar',
+      // Let the panel's translucent background and the window vibrancy show through the
+      // terminal, matching the frosted-glass look of the editor and chrome.
+      allowTransparency: true,
       theme: {
-        background: '#080B12',
+        background: 'rgba(0, 0, 0, 0)',
         foreground: '#C7D2E3',
         cursor: '#8B73FF',
         cursorAccent: '#080B12',
