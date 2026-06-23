@@ -138,16 +138,32 @@ const DIFF_LIGHT: Record<string, string> = {
 };
 
 const FORGE_DARK_COLORS: Record<string, string> = {
-  'editor.background': '#080B12',
+  // Transparent so the editor host's translucent `bg-bg` (and the window vibrancy behind
+  // it) shows through — matching the frosted-glass look of the rest of the chrome.
+  'editor.background': '#00000000',
+  // No focus ring around the editor — the default blue frame became visible once the
+  // background went transparent.
+  focusBorder: '#00000000',
   'editor.foreground': '#E6EDF7',
-  'editorGutter.background': '#080B12',
+  'editorGutter.background': '#00000000',
+  'minimap.background': '#00000000',
+  'editorOverviewRuler.background': '#00000000',
   'editorLineNumber.foreground': '#4a576d',
   'editorLineNumber.activeForeground': '#A8B3C7',
-  'editor.lineHighlightBackground': '#0D111B',
+  // Faint light wash for the current line instead of an opaque band.
+  'editor.lineHighlightBackground': '#FFFFFF0A',
   'editor.lineHighlightBorder': '#00000000',
   'editor.selectionBackground': '#7C5CFF40',
   'editor.inactiveSelectionBackground': '#7C5CFF22',
   'editorCursor.foreground': '#8B73FF',
+  // Sticky-scroll pins the enclosing scope, so it must opaquely cover the code beneath
+  // it (no bleed-through). Use a near-opaque frosted tint with a soft accent border and
+  // a gentle shadow instead of the default hard black edge.
+  'editorStickyScroll.background': '#0D111BF2',
+  'editorStickyScrollHover.background': '#161F2EF2',
+  'editorStickyScroll.border': '#2D3A5266',
+  'editorStickyScroll.shadow': '#00000033',
+  'widget.shadow': '#00000033',
   'editorWidget.background': '#161F2E',
   'editorWidget.border': '#2D3A52',
   'editorSuggestWidget.background': '#161F2E',
@@ -158,13 +174,21 @@ const FORGE_DARK_COLORS: Record<string, string> = {
 };
 
 const FORGE_LIGHT_COLORS: Record<string, string> = {
-  'editor.background': '#ffffff',
+  'editor.background': '#00000000',
+  focusBorder: '#00000000',
   'editor.foreground': '#18181b',
+  'minimap.background': '#00000000',
+  'editorOverviewRuler.background': '#00000000',
   'editorLineNumber.foreground': '#a0a0a8',
   'editorLineNumber.activeForeground': '#52525b',
-  'editor.lineHighlightBackground': '#f4f4f6',
+  'editor.lineHighlightBackground': '#0000000A',
   'editor.selectionBackground': '#6366f133',
   'editorCursor.foreground': '#6366f1',
+  'editorStickyScroll.background': '#ffffffF2',
+  'editorStickyScrollHover.background': '#eef1f6F2',
+  'editorStickyScroll.border': '#d2d9e4aa',
+  'editorStickyScroll.shadow': '#00000022',
+  'widget.shadow': '#00000022',
   'editorWidget.background': '#f7f7f8',
   'editorWidget.border': '#e3e3e7',
 };
