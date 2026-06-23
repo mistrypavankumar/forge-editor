@@ -73,6 +73,9 @@ export const IpcChannels = {
   langRename: 'forge:lang:rename',
   langFormat: 'forge:lang:format',
   langSemanticTokens: 'forge:lang:semanticTokens',
+  // Java (jdtls) language-server status, for the status-bar indicator.
+  jdtlsGetStatus: 'forge:java:getStatus',
+  jdtlsStatus: 'forge:java:status',
   // AWS connection switcher.
   awsListProfiles: 'forge:aws:listProfiles',
   awsValidateProfile: 'forge:aws:validateProfile',
@@ -357,6 +360,13 @@ export interface LsRenameResult {
   edits: LsTextEdit[];
 }
 
+/**
+ * Java (jdtls) language-server lifecycle, surfaced in the status bar:
+ * `idle` (not started — no Java file opened yet), `starting` (spawning + handshake),
+ * `ready` (initialized), `unavailable` (jdtls/JDK not found or failed to start).
+ */
+export type JdtlsStatus = 'idle' | 'starting' | 'ready' | 'unavailable';
+
 /** Renderer-facing surface for the main-process TypeScript Language Service. */
 export interface EditorLanguageApi {
   initializeProject: (workspaceRoot: string) => Promise<Result<void>>;
@@ -593,6 +603,10 @@ export interface ForgeApi {
   onTerminalBusy: (cb: (e: TerminalBusyEvent) => void) => () => void;
   /** Real TypeScript/JavaScript IDE intelligence backed by the main-process Language Service. */
   editorLanguage: EditorLanguageApi;
+  /** Current Java (jdtls) language-server status, for the status-bar indicator. */
+  getJavaStatus: () => Promise<JdtlsStatus>;
+  /** Subscribe to Java (jdtls) status changes; returns an unsubscribe fn. */
+  onJavaStatus: (cb: (status: JdtlsStatus) => void) => () => void;
   // AWS connection switcher.
   awsListProfiles: () => Promise<Result<AwsProfile[]>>;
   awsValidateProfile: (name: string) => Promise<Result<AwsValidation>>;

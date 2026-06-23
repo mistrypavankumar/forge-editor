@@ -8,6 +8,8 @@ import {
   Cloud,
   Check,
   User,
+  Coffee,
+  Loader,
 } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
@@ -16,8 +18,30 @@ import { useGitUserStore } from '../stores/git-user-store';
 import { isProtectedBranch } from '../lib/protected-branch';
 import { useWorkbenchStatusStore, markerCounts } from '../stores/workbench-status-store';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
+import { useJavaStatusStore } from '../stores/java-status-store';
 import { FormatterSegment } from './FormatterSegment';
 import { cn } from '../lib/cn';
+import type { JdtlsStatus } from '@shared/ipc-contract';
+
+/** Status-bar presentation for the jdtls lifecycle. */
+const JAVA_STATUS: Record<JdtlsStatus, { label: string; title: string; className?: string }> = {
+  idle: { label: 'Java', title: 'Java language server not started yet' },
+  starting: {
+    label: 'Java: starting…',
+    title: 'Eclipse JDT language server is starting and importing the project',
+    className: 'text-warning',
+  },
+  ready: {
+    label: 'Java: ready',
+    title: 'Eclipse JDT language server is running (completions, hover, go-to-definition)',
+    className: 'text-accent',
+  },
+  unavailable: {
+    label: 'Java: not available',
+    title: 'jdtls was not found. Install a JDK 17+ and jdtls (e.g. `brew install jdtls`), then reopen.',
+    className: 'text-danger',
+  },
+};
 
 function basename(p: string): string {
   const parts = p.split('/').filter(Boolean);
@@ -67,6 +91,7 @@ export function StatusBar(): React.JSX.Element {
   const openAwsPicker = useAwsStore((s) => s.openPicker);
   const gitUser = useGitUserStore((s) => s.active);
   const openGitUserPicker = useGitUserStore((s) => s.openPicker);
+  const javaStatus = useJavaStatusStore((s) => s.status);
   const awsActiveStatus = awsActive ? awsStatuses[awsActive] : undefined;
   const awsValid = Boolean(awsActiveStatus && awsActiveStatus !== 'pending' && awsActiveStatus.valid);
   // After a project-wide check, show its codebase counts; otherwise the open-file markers.
@@ -125,6 +150,16 @@ export function StatusBar(): React.JSX.Element {
           <Segment className="text-faint">
             <GitCommitVertical size={12} />
             {blame}
+          </Segment>
+        ) : null}
+        {language === 'java' ? (
+          <Segment className={JAVA_STATUS[javaStatus].className} title={JAVA_STATUS[javaStatus].title}>
+            {javaStatus === 'starting' ? (
+              <Loader size={12} className="animate-spin" />
+            ) : (
+              <Coffee size={12} />
+            )}
+            {JAVA_STATUS[javaStatus].label}
           </Segment>
         ) : null}
         <FormatterSegment />

@@ -24,6 +24,8 @@ beforeAll(() => {
     onFsChanged: () => () => {},
     onMenuAction: () => () => {},
     onTerminalBusy: () => () => {},
+    getJavaStatus: async () => 'idle',
+    onJavaStatus: () => () => {},
     syncMenuState: () => {},
     awsGetActiveProfile: async () => ({ ok: true, data: { profile: null, region: null } }),
     awsListProfiles: async () => ({ ok: true, data: [] }),
