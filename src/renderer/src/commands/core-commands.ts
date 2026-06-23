@@ -9,6 +9,7 @@ import { saveAllFiles } from '../lib/save-actions';
 import { getActiveEditor } from '../editor/active-editor';
 import { getMonaco } from '../editor/monaco-setup';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
+import { useInlineRunStore } from '../stores/inline-run-store';
 
 let untitledSeq = 0;
 
@@ -126,6 +127,12 @@ export function registerCoreCommands(): void {
     category: 'Editor',
     run: formatActiveFile,
     isEnabled: () => useEditorStore.getState().activePath !== null,
+  });
+  commandRegistry.register({
+    id: 'editor.toggleInlineRun',
+    title: 'Toggle Live Inline Output (console.log)',
+    category: 'Editor',
+    run: () => useInlineRunStore.getState().toggle(),
   });
   commandRegistry.register({
     id: 'file.saveAll',

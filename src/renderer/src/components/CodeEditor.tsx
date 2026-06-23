@@ -22,6 +22,14 @@ import {
 } from '../editor/language-bridge';
 import { registerAutoCloseTag } from '../editor/auto-close-tag';
 import { registerTabOut } from '../editor/tab-out';
+import {
+  buildRunDecorations,
+  cancelInlineRun,
+  isRunnable,
+  runInlineNow,
+  scheduleInlineRun,
+} from '../editor/inline-run';
+import { useInlineRunStore } from '../stores/inline-run-store';
 import { setActiveEditor, getActiveEditor } from '../editor/active-editor';
 import { saveAllFiles } from '../lib/save-actions';
 import { useFormatterStore } from '../stores/formatter-store';
@@ -55,6 +63,7 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const modelsRef = useRef<Map<string, editor.ITextModel>>(new Map());
   const decoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+  const runDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   const peekRef = useRef<DiffPeek | null>(null);
   const hunksRef = useRef<DiffHunk[]>([]);
   const blameRef = useRef<BlameLine[]>([]);
@@ -77,6 +86,8 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
   const editorScheme = useThemeStore((s) => s.editorScheme);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const syncTick = useWorkspaceStore((s) => s.syncTick);
+  const inlineRunEnabled = useInlineRunStore((s) => s.enabled);
+  const inlineRunByPath = useInlineRunStore((s) => s.byPath);
 
   // Recompute the git change gutter for the active model against its HEAD content.
   const recomputeDiff = useCallback(() => {
@@ -133,6 +144,8 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     // (so commands like save/format/reveal target whichever split pane the user is editing).
     if (useEditorStore.getState().activeGroupId === groupId) setActiveEditor(instance);
     decoRef.current = instance.createDecorationsCollection();
+    // Separate collection for the live console.log output (kept apart from the git gutter).
+    runDecoRef.current = instance.createDecorationsCollection();
     peekRef.current = new DiffPeek(instance, monaco, {
       getHunks: () => hunksRef.current,
       fileName: () => {
@@ -198,6 +211,8 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
           // then refresh diagnostics on a debounce (the expensive part).
           updateLanguageDocument(model);
           scheduleDiagnostics(monaco, model);
+          // Re-run the buffer (debounced) so the inline console.log output follows the edits.
+          if (useInlineRunStore.getState().enabled && isRunnable(model)) scheduleInlineRun(model);
         }
         clearTimeout(diffTimer.current);
         diffTimer.current = setTimeout(recomputeDiff, 250);
@@ -367,6 +382,8 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
       if (!openPaths.has(path)) {
         if (!model.isDisposed()) {
           closeLanguageDocument(path);
+          cancelInlineRun(path);
+          useInlineRunStore.getState().clear(path);
           model.dispose();
         }
         modelsRef.current.delete(path);
@@ -383,6 +400,28 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
   useEffect(() => {
     editorRef.current?.updateOptions({ fontSize });
   }, [fontSize]);
+
+  // Render the live console.log output as end-of-line decorations whenever the captured results,
+  // the active file, or the feature toggle change.
+  useEffect(() => {
+    const instance = editorRef.current;
+    const collection = runDecoRef.current;
+    if (!instance || !collection) return;
+    const model = instance.getModel();
+    if (!model || !inlineRunEnabled || !isRunnable(model)) {
+      collection.clear();
+      return;
+    }
+    const state = useInlineRunStore.getState().get(model.uri.path);
+    collection.set(buildRunDecorations(getMonaco(), model, state));
+  }, [inlineRunEnabled, inlineRunByPath, activePath]);
+
+  // Kick off a run when the feature is switched on, or when switching to a runnable file.
+  useEffect(() => {
+    if (!inlineRunEnabled) return;
+    const model = editorRef.current?.getModel();
+    if (model && isRunnable(model)) runInlineNow(model);
+  }, [inlineRunEnabled, activePath]);
 
   // Spin up (or switch to) the main-process TypeScript Language Service for this workspace, then
   // (re-)register every already-open buffer so the project sees their live, possibly-dirty content.

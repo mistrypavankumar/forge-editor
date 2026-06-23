@@ -25,6 +25,7 @@ import {
 import { readSettings, writeSettings } from './settings/settings-service';
 import { runFormatter, formatText } from './format/format-service';
 import { runDiagnostics } from './diagnostics/diagnostics-service';
+import { runInline } from './execution/code-runner';
 import { resolveImport } from './navigation/resolve-import';
 import {
   getGitBlame,
@@ -291,6 +292,9 @@ app.whenReady().then(async () => {
   );
   ipcMain.handle(IpcChannels.runDiagnostics, (_e, rootPath: string) =>
     toResult(() => runDiagnostics(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.runInline, (_e, code: string, filePath: string, languageId: string) =>
+    toResult(() => runInline(code, filePath, languageId)),
   );
   ipcMain.handle(IpcChannels.resolveImport, (_e, rootPath: string, fromFile: string, spec: string) =>
     toResult(() => resolveImport(rootPath, fromFile, spec)),
