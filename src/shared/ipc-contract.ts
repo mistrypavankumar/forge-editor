@@ -428,6 +428,10 @@ export interface ForgeSettings {
   themeId?: string;
   /** Editor syntax color scheme id ('auto' follows the interface theme). */
   editorScheme?: string;
+  /** Frosted-glass transparency for the UI (macOS window vibrancy shows through). */
+  glass?: boolean;
+  /** Base background opacity (0.1–1) when glass is on; lower = more see-through. */
+  glassOpacity?: number;
   sidebarVisible?: boolean;
   sidebarSide?: 'left' | 'right';
   keybindings?: Record<string, string>;

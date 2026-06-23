@@ -5,15 +5,21 @@
 @theme {
   /* Background-family tokens are made translucent so the macOS window vibrancy (the
      blurred desktop) shows through, giving the whole chrome a frosted-glass look.
-     Alpha increases with elevation so stacked layers (sidebar > panel > popover) stay
-     legible. The blur itself is the OS vibrancy material — no backdrop-filter needed.
-     Foreground, line, and accent tokens stay fully opaque for crisp text and borders. */
-  --color-bg: color-mix(in srgb, var(--bg) 30%, transparent);
-  --color-surface: color-mix(in srgb, var(--surface) 42%, transparent);
-  --color-surface-2: color-mix(in srgb, var(--surface-2) 55%, transparent);
-  --color-surface-3: color-mix(in srgb, var(--surface-3) 66%, transparent);
-  --color-elevated: color-mix(in srgb, var(--elevated) 80%, transparent);
-  --color-active: color-mix(in srgb, var(--active) 60%, transparent);
+     The opacity is driven at runtime by `--glass-opacity` (set from Settings); the
+     per-surface offsets keep the elevation hierarchy (sidebar > panel > popover) legible.
+     `--glass-opacity: 1` (transparency off) makes every surface fully opaque. The blur
+     itself is the OS vibrancy material — no backdrop-filter needed. Foreground, line,
+     and accent tokens stay fully opaque for crisp text and borders. */
+  --glass-opacity: 0.3;
+  --color-bg: color-mix(in srgb, var(--bg) calc(var(--glass-opacity) * 100%), transparent);
+  --color-surface: color-mix(in srgb, var(--surface) calc((var(--glass-opacity) + 0.12) * 100%), transparent);
+  --color-surface-2: color-mix(in srgb, var(--surface-2) calc((var(--glass-opacity) + 0.25) * 100%), transparent);
+  --color-surface-3: color-mix(in srgb, var(--surface-3) calc((var(--glass-opacity) + 0.36) * 100%), transparent);
+  /* Popovers, menus, and the command palette use `elevated`. Keep them near-opaque
+     (floor of 94%) regardless of the background slider so content behind never bleeds
+     through and they read as a distinct layer above the frosted chrome. */
+  --color-elevated: color-mix(in srgb, var(--elevated) max(calc((var(--glass-opacity) + 0.5) * 100%), 94%), transparent);
+  --color-active: color-mix(in srgb, var(--active) calc((var(--glass-opacity) + 0.3) * 100%), transparent);
   --color-line: var(--line);
   --color-line-soft: var(--line-soft);
   --color-line-strong: var(--line-strong);

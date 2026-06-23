@@ -15,6 +15,8 @@ export function useSettingsPersistence(): void {
   const hydrated = useRef(false);
   const themeId = useThemeStore((s) => s.currentId);
   const editorScheme = useThemeStore((s) => s.editorScheme);
+  const glass = useThemeStore((s) => s.glass);
+  const glassOpacity = useThemeStore((s) => s.glassOpacity);
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
   const sidebarSide = useLayoutStore((s) => s.sidebarSide);
   const recents = useRecentsStore((s) => s.recents);
@@ -38,6 +40,10 @@ export function useSettingsPersistence(): void {
       if (res.ok) {
         if (res.data.themeId) useThemeStore.getState().setTheme(res.data.themeId);
         if (res.data.editorScheme) useThemeStore.getState().setEditorScheme(res.data.editorScheme);
+        if (typeof res.data.glass === 'boolean') useThemeStore.getState().setGlass(res.data.glass);
+        if (typeof res.data.glassOpacity === 'number') {
+          useThemeStore.getState().setGlassOpacity(res.data.glassOpacity);
+        }
         if (typeof res.data.sidebarVisible === 'boolean') {
           useLayoutStore.getState().setPanelVisible('sidebar', res.data.sidebarVisible);
         }
@@ -94,6 +100,8 @@ export function useSettingsPersistence(): void {
     void window.forge.saveSettings({
       themeId,
       editorScheme,
+      glass,
+      glassOpacity,
       sidebarVisible,
       sidebarSide,
       recents,
@@ -111,7 +119,7 @@ export function useSettingsPersistence(): void {
       searchExcludeSeeded,
       scmGraphHeight,
     });
-  }, [themeId, editorScheme, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight]);
+  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight]);
 
   // Drop the quick-open cache when excludes change so the next search re-lists with them.
   useEffect(() => {

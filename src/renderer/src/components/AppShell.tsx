@@ -52,6 +52,8 @@ export function AppShell(): React.JSX.Element {
   const sidebarSide = useLayoutStore((s) => s.sidebarSide);
   const setSidebarSide = useLayoutStore((s) => s.setSidebarSide);
   const themeId = useThemeStore((s) => s.currentId);
+  const glass = useThemeStore((s) => s.glass);
+  const glassOpacity = useThemeStore((s) => s.glassOpacity);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const rootEntries = useWorkspaceStore((s) => s.rootEntries);
   const tabCount = useEditorStore((s) => s.tabs.length);
@@ -131,6 +133,11 @@ export function AppShell(): React.JSX.Element {
     const theme = builtInThemes[themeId];
     if (theme) applyCssVariables(theme);
   }, [themeId]);
+
+  // Drive the frosted-glass translucency. Transparency off → fully opaque surfaces.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--glass-opacity', String(glass ? glassOpacity : 1));
+  }, [glass, glassOpacity]);
 
   const syncTick = useWorkspaceStore((s) => s.syncTick);
 
