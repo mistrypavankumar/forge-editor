@@ -229,10 +229,9 @@ export function SourceControlPanel(): React.JSX.Element {
 
   const commit = async (): Promise<void> => {
     if (!message.trim() || changes.length === 0) return;
-    // Block direct commits to protected branches (main/dev/…) unless explicitly overridden.
-    if (locked && !window.confirm(`"${branch}" is a protected branch. Commit directly anyway?`)) {
-      return;
-    }
+    // Direct commits to protected branches (main/dev/…) are blocked — work belongs on a
+    // feature branch. The button is disabled too; this guards against programmatic calls.
+    if (locked) return;
     setCommitting(true);
     setCommitError(null);
     const res = await window.forge.gitCommit(root, message.trim());
@@ -277,10 +276,10 @@ export function SourceControlPanel(): React.JSX.Element {
         <button
           type="button"
           onClick={() => void commit()}
-          disabled={committing || !message.trim() || changes.length === 0}
+          disabled={locked || committing || !message.trim() || changes.length === 0}
           title={
             locked
-              ? `"${branch}" is a protected branch — committing requires confirmation`
+              ? `"${branch}" is a protected branch — commit to a feature branch instead`
               : undefined
           }
           className="flex items-center justify-center gap-1.5 rounded-md bg-accent py-1.5 text-xs font-medium text-accent-fg transition-opacity hover:bg-accent-hover disabled:opacity-40"
