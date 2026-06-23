@@ -103,6 +103,40 @@ function Stepper({
   );
 }
 
+function Slider({
+  value,
+  onChange,
+  min,
+  max,
+  step,
+  disabled,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  step: number;
+  disabled?: boolean;
+}): React.JSX.Element {
+  return (
+    <div className={cn('flex items-center gap-3', disabled && 'opacity-40')}>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="h-1 w-40 cursor-pointer appearance-none rounded-full bg-surface-3 accent-accent disabled:cursor-not-allowed"
+      />
+      <span className="min-w-[40px] text-right font-mono text-[12px] text-fg">
+        {Math.round(value * 100)}%
+      </span>
+    </div>
+  );
+}
+
 function SettingRow({
   label,
   hint,
@@ -134,6 +168,8 @@ export function SettingsView(): React.JSX.Element | null {
   const close = (): void => useLayoutStore.getState().setSettingsOpen(false);
   const themeId = useThemeStore((s) => s.currentId);
   const editorScheme = useThemeStore((s) => s.editorScheme);
+  const glass = useThemeStore((s) => s.glass);
+  const glassOpacity = useThemeStore((s) => s.glassOpacity);
   const autoSave = useEditorStore((s) => s.autoSave);
   const fontSize = useEditorStore((s) => s.fontSize);
   const autoCheckProblems = useDiagnosticsStore((s) => s.autoRun);
@@ -219,6 +255,25 @@ export function SettingsView(): React.JSX.Element | null {
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
+      </SettingRow>
+      <SettingRow
+        label="Window transparency"
+        hint="Frosted glass — the blurred desktop shows through the interface (macOS)"
+      >
+        <Toggle on={glass} onChange={(v) => useThemeStore.getState().setGlass(v)} />
+      </SettingRow>
+      <SettingRow
+        label="Background opacity"
+        hint="Lower is more see-through; higher is more solid. Editor and terminal follow this too."
+      >
+        <Slider
+          value={glassOpacity}
+          min={0.1}
+          max={1}
+          step={0.05}
+          disabled={!glass}
+          onChange={(v) => useThemeStore.getState().setGlassOpacity(v)}
+        />
       </SettingRow>
       <SettingRow label="Font size" hint="Editor font size in pixels">
         <Stepper
