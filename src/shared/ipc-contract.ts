@@ -50,6 +50,7 @@ export const IpcChannels = {
   runFormatter: 'forge:format:run',
   formatText: 'forge:format:text',
   runDiagnostics: 'forge:diagnostics:run',
+  runInline: 'forge:run:inline',
   resolveImport: 'forge:nav:resolveImport',
   terminalCreate: 'forge:terminal:create',
   terminalInput: 'forge:terminal:input',
@@ -248,6 +249,23 @@ export interface ProjectDiagnostic {
   /** Diagnostic code, e.g. "TS2322". */
   code: string;
   message: string;
+}
+
+// ---- Inline code runner (live console.log output) ---------------------------
+
+/** One captured `console.*` call (or uncaught error) from an inline run. */
+export interface InlineRunLog {
+  /** 1-based source line the call came from, or null when it couldn't be located. */
+  line: number | null;
+  level: 'log' | 'info' | 'warn' | 'error' | 'debug';
+  /** Rendered, single-or-multi-line text of the logged values. */
+  text: string;
+}
+
+export interface InlineRunResult {
+  logs: InlineRunLog[];
+  /** True when the snippet was killed for exceeding the run timeout. */
+  timedOut?: boolean;
 }
 
 // ---- TypeScript Language Service types --------------------------------------
@@ -459,6 +477,8 @@ export interface ForgeSettings {
   autoFormat?: boolean;
   /** Run a project-wide type-check automatically after changes settle. */
   autoCheckProblems?: boolean;
+  /** Live inline console.log output (Quokka-style) is enabled. */
+  inlineRun?: boolean;
   /** Active AWS profile, injected as AWS_PROFILE into new terminals/run-tasks. */
   awsProfile?: string;
   /** Region paired with the active AWS profile. */
@@ -592,6 +612,8 @@ export interface ForgeApi {
     input: string,
   ) => Promise<Result<FormatTextResult>>;
   runDiagnostics: (rootPath: string) => Promise<Result<ProjectDiagnostic[]>>;
+  /** Execute a JS/TS snippet in isolation and return each console.* call tagged with its line. */
+  runInline: (code: string, filePath: string, languageId: string) => Promise<Result<InlineRunResult>>;
   resolveImport: (rootPath: string, fromFile: string, spec: string) => Promise<Result<string | null>>;
   createTerminal: (args: TerminalCreateArgs) => Promise<Result<void>>;
   sendInput: (id: string, data: string) => void;

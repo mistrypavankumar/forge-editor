@@ -73,6 +73,8 @@ export const api: ForgeApi = {
   formatText: (rootPath, tool, args, input) =>
     ipcRenderer.invoke(IpcChannels.formatText, rootPath, tool, args, input),
   runDiagnostics: (rootPath) => ipcRenderer.invoke(IpcChannels.runDiagnostics, rootPath),
+  runInline: (code, filePath, languageId) =>
+    ipcRenderer.invoke(IpcChannels.runInline, code, filePath, languageId),
   resolveImport: (rootPath, fromFile, spec) =>
     ipcRenderer.invoke(IpcChannels.resolveImport, rootPath, fromFile, spec),
   createTerminal: (args) => ipcRenderer.invoke(IpcChannels.terminalCreate, args),

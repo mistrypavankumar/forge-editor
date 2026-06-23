@@ -10,9 +10,12 @@ import {
   User,
   Coffee,
   Loader,
+  Zap,
 } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { useEditorStore } from '../stores/editor-store';
+import { useInlineRunStore } from '../stores/inline-run-store';
 import { useAwsStore } from '../stores/aws-store';
 import { useGitUserStore } from '../stores/git-user-store';
 import { isProtectedBranch } from '../lib/protected-branch';
@@ -92,6 +95,15 @@ export function StatusBar(): React.JSX.Element {
   const gitUser = useGitUserStore((s) => s.active);
   const openGitUserPicker = useGitUserStore((s) => s.openPicker);
   const javaStatus = useJavaStatusStore((s) => s.status);
+  const activePath = useEditorStore((s) => s.activePath);
+  const inlineEnabled = useInlineRunStore((s) => s.enabled);
+  const inlineByPath = useInlineRunStore((s) => s.byPath);
+  const toggleInline = useInlineRunStore((s) => s.toggle);
+  const inlineState = activePath ? inlineByPath[activePath] : undefined;
+  const inlineRunning = inlineState?.running ?? false;
+  const inlineLogCount = inlineState?.logs.length ?? 0;
+  const inlineErrorCount =
+    (inlineState?.logs.filter((l) => l.level === 'error').length ?? 0) + (inlineState?.error ? 1 : 0);
   const awsActiveStatus = awsActive ? awsStatuses[awsActive] : undefined;
   const awsValid = Boolean(awsActiveStatus && awsActiveStatus !== 'pending' && awsActiveStatus.valid);
   // After a project-wide check, show its codebase counts; otherwise the open-file markers.
@@ -162,6 +174,20 @@ export function StatusBar(): React.JSX.Element {
             {JAVA_STATUS[javaStatus].label}
           </Segment>
         ) : null}
+        <Segment
+          onClick={toggleInline}
+          className={
+            inlineEnabled ? (inlineErrorCount ? 'text-danger' : 'text-accent') : undefined
+          }
+          title={
+            inlineEnabled
+              ? 'Live inline output is ON (⌘⇧L). console.log results appear next to executed lines. Only code that actually runs produces output.'
+              : 'Live inline output is OFF — click or press ⌘⇧L to show console.log results inline.'
+          }
+        >
+          {inlineRunning ? <Loader size={12} className="animate-spin" /> : <Zap size={12} />}
+          {inlineEnabled ? (inlineRunning ? 'Inline: running…' : `Inline: ${inlineLogCount}`) : 'Inline'}
+        </Segment>
         <FormatterSegment />
         <Segment className="uppercase">{language}</Segment>
         <Segment>

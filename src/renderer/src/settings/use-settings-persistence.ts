@@ -8,6 +8,7 @@ import { useFormatterStore } from '../stores/formatter-store';
 import { useKeybindingsStore } from '../stores/keybindings-store';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { useGitUserStore } from '../stores/git-user-store';
+import { useInlineRunStore } from '../stores/inline-run-store';
 import { clearFileCache } from '../lib/quickopen-cache';
 import type { FormatterId } from '../lib/detect-formatters';
 
@@ -29,6 +30,7 @@ export function useSettingsPersistence(): void {
   const autoFormat = useFormatterStore((s) => s.autoFormat);
   const keybindings = useKeybindingsStore((s) => s.overrides);
   const autoCheckProblems = useDiagnosticsStore((s) => s.autoRun);
+  const inlineRun = useInlineRunStore((s) => s.enabled);
   const gitUsers = useGitUserStore((s) => s.users);
   const searchExclude = useLayoutStore((s) => s.searchExclude);
   const searchExcludeSeeded = useLayoutStore((s) => s.searchExcludeSeeded);
@@ -75,6 +77,9 @@ export function useSettingsPersistence(): void {
         if (typeof res.data.autoCheckProblems === 'boolean') {
           useDiagnosticsStore.getState().setAutoRun(res.data.autoCheckProblems);
         }
+        if (typeof res.data.inlineRun === 'boolean') {
+          useInlineRunStore.getState().setEnabled(res.data.inlineRun);
+        }
         if (res.data.gitUsers) useGitUserStore.getState().setUsers(res.data.gitUsers);
         if (typeof res.data.scmGraphHeight === 'number') {
           useLayoutStore.getState().setScmGraphHeight(res.data.scmGraphHeight);
@@ -114,12 +119,13 @@ export function useSettingsPersistence(): void {
       autoFormat,
       keybindings,
       autoCheckProblems,
+      inlineRun,
       gitUsers,
       searchExclude,
       searchExcludeSeeded,
       scmGraphHeight,
     });
-  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight]);
+  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, inlineRun, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight]);
 
   // Drop the quick-open cache when excludes change so the next search re-lists with them.
   useEffect(() => {

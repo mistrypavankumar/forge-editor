@@ -387,3 +387,15 @@ body {
   border-radius: 3px;
   transition: background 0.6s ease-out;
 }
+
+/* Live console.log output rendered to the right of the line that produced it */
+.forge-inline-run {
+  color: color-mix(in srgb, var(--success) 80%, var(--fg));
+  opacity: 0.85;
+  font-style: italic;
+}
+.forge-inline-run-error {
+  color: var(--danger);
+  opacity: 0.95;
+  font-style: italic;
+}

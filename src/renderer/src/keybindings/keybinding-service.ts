@@ -30,6 +30,7 @@ export const defaultKeybindings: Record<string, string> = {
   'ctrl+`': 'view.toggleTerminal',
   'mod+`': 'view.toggleTerminal',
   'mod+g': 'editor.gotoLine',
+  'mod+shift+l': 'editor.toggleInlineRun',
   'mod+shift+f': 'workbench.findInFiles',
   'mod+alt+arrowright': 'editor.nextTab',
   'mod+alt+arrowleft': 'editor.prevTab',
