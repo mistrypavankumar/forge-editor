@@ -20,20 +20,24 @@ export const EDITOR_SCHEMES: EditorScheme[] = [
   { id: 'monokai', name: 'Monokai' },
 ];
 
-/** Resolve a scheme id (+ the current interface light/dark type) to a defined Monaco theme name. */
+/** Each forced scheme's Monaco theme name and whether it's a light or dark palette. */
+const SCHEME_THEMES: Record<string, { theme: string; type: 'dark' | 'light' }> = {
+  'dark-plus': { theme: 'forge-dark', type: 'dark' },
+  'light-plus': { theme: 'forge-light', type: 'light' },
+  'minimal-dark': { theme: 'forge-minimal-dark', type: 'dark' },
+  'github-dark': { theme: 'github-dark', type: 'dark' },
+  monokai: { theme: 'monokai', type: 'dark' },
+};
+
+/**
+ * Resolve a scheme id (+ the current interface light/dark type) to a defined Monaco theme name.
+ * `auto` follows the interface. A specific scheme whose palette type mismatches the interface
+ * (e.g. a dark scheme while the UI is light) is auto-swapped to the interface-matched default,
+ * so dark syntax colors never end up unreadable on a light background (or vice versa).
+ */
 export function monacoThemeForScheme(scheme: string, uiType: 'dark' | 'light'): string {
-  switch (scheme) {
-    case 'dark-plus':
-      return 'forge-dark';
-    case 'light-plus':
-      return 'forge-light';
-    case 'minimal-dark':
-      return 'forge-minimal-dark';
-    case 'github-dark':
-      return 'github-dark';
-    case 'monokai':
-      return 'monokai';
-    default:
-      return uiType === 'light' ? 'forge-light' : 'forge-dark';
-  }
+  const interfaceDefault = uiType === 'light' ? 'forge-light' : 'forge-dark';
+  const picked = SCHEME_THEMES[scheme];
+  if (!picked || picked.type !== uiType) return interfaceDefault;
+  return picked.theme;
 }

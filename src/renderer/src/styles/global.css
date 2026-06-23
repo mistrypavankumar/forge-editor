@@ -95,6 +95,16 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/* Terminal (xterm) — let the translucent panel background and the window vibrancy show
+   through, matching the frosted-glass chrome. The xterm theme background is transparent,
+   but the DOM renderer also paints the viewport/screen layers, so clear those too. The
+   terminal then reads as the panel's `bg-bg` tint — a lighter opacity than its frame. */
+.xterm,
+.xterm .xterm-viewport,
+.xterm .xterm-screen {
+  background-color: transparent !important;
+}
+
 /* Calm, slim scrollbars */
 ::-webkit-scrollbar {
   width: 10px;
