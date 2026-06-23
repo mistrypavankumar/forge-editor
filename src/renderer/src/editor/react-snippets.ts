@@ -177,6 +177,84 @@ export const REACT_SNIPPETS: ReactSnippet[] = [
       'const styles = StyleSheet.create({})',
   },
 
+  // ── TypeScript component variants ───────────────────────────────────────────
+  {
+    prefix: 'tsrfc',
+    description: 'TS React function component (default export inline)',
+    body:
+      "import React from 'react'\n\n" +
+      'type Props = {}\n\n' +
+      'export default function ${1:${TM_FILENAME_BASE}}(props: Props) {\n\treturn (\n\t\t<div>$0</div>\n\t)\n}',
+  },
+  {
+    prefix: 'tsrfce',
+    description: 'TS React function component, separate export',
+    body:
+      "import React from 'react'\n\n" +
+      'type Props = {}\n\n' +
+      'function ${1:${TM_FILENAME_BASE}}(props: Props) {\n\treturn (\n\t\t<div>$0</div>\n\t)\n}\n\n' +
+      'export default ${1:${TM_FILENAME_BASE}}',
+  },
+  {
+    prefix: 'tsrafc',
+    description: 'TS React arrow function component (default export inline)',
+    body:
+      "import React from 'react'\n\n" +
+      'type Props = {}\n\n' +
+      'export const ${1:${TM_FILENAME_BASE}} = (props: Props) => {\n\treturn (\n\t\t<div>$0</div>\n\t)\n}',
+  },
+  {
+    prefix: 'tsrafce',
+    description: 'TS React arrow function component, separate export',
+    body:
+      "import React from 'react'\n\n" +
+      'type Props = {}\n\n' +
+      'const ${1:${TM_FILENAME_BASE}} = (props: Props) => {\n\treturn (\n\t\t<div>$0</div>\n\t)\n}\n\n' +
+      'export default ${1:${TM_FILENAME_BASE}}',
+  },
+  {
+    prefix: 'tsrcc',
+    description: 'TS React class component',
+    body:
+      "import React, { Component } from 'react'\n\n" +
+      'type Props = {}\n\n' +
+      'type State = {}\n\n' +
+      'export default class ${1:${TM_FILENAME_BASE}} extends Component<Props, State> {\n' +
+      '\trender() {\n\t\treturn (\n\t\t\t<div>$0</div>\n\t\t)\n\t}\n}',
+  },
+  {
+    prefix: 'rmc',
+    description: 'React memo function component',
+    body:
+      "import React, { memo } from 'react'\n\n" +
+      'const ${1:${TM_FILENAME_BASE}} = memo(() => {\n\treturn (\n\t\t<div>$0</div>\n\t)\n})\n\n' +
+      'export default ${1:${TM_FILENAME_BASE}}',
+  },
+  {
+    prefix: 'rafcp',
+    description: 'React arrow function component with PropTypes',
+    body:
+      "import React from 'react'\n" +
+      "import PropTypes from 'prop-types'\n\n" +
+      'const ${1:${TM_FILENAME_BASE}} = (props) => {\n\treturn (\n\t\t<div>$0</div>\n\t)\n}\n\n' +
+      '${1:${TM_FILENAME_BASE}}.propTypes = {}\n\n' +
+      'export default ${1:${TM_FILENAME_BASE}}',
+  },
+
+  // ── react-redux hooks ────────────────────────────────────────────────────────
+  { prefix: 'useselector', description: 'react-redux useSelector', body: 'const ${1:value} = useSelector((state) => state.${2:property})' },
+  { prefix: 'usedispatch', description: 'react-redux useDispatch', body: 'const dispatch = useDispatch()' },
+
+  // ── Class lifecycle methods ──────────────────────────────────────────────────
+  { prefix: 'cdm', description: 'componentDidMount', body: 'componentDidMount() {\n\t$0\n}' },
+  { prefix: 'cdu', description: 'componentDidUpdate', body: 'componentDidUpdate(prevProps, prevState) {\n\t$0\n}' },
+  { prefix: 'cwun', description: 'componentWillUnmount', body: 'componentWillUnmount() {\n\t$0\n}' },
+  { prefix: 'scu', description: 'shouldComponentUpdate', body: 'shouldComponentUpdate(nextProps, nextState) {\n\t$0\n}' },
+  { prefix: 'gdsfp', description: 'getDerivedStateFromProps', body: 'static getDerivedStateFromProps(props, state) {\n\t$0\n}' },
+  { prefix: 'gsbu', description: 'getSnapshotBeforeUpdate', body: 'getSnapshotBeforeUpdate(prevProps, prevState) {\n\t$0\n}' },
+  { prefix: 'cdc', description: 'componentDidCatch', body: 'componentDidCatch(error, info) {\n\t$0\n}' },
+  { prefix: 'sst', description: 'this.setState', body: 'this.setState((state) => ({ $0 }))' },
+
   // ── PropTypes ─────────────────────────────────────────────────────────────
   { prefix: 'pts', description: 'PropTypes.string', body: '${1:propName}: PropTypes.string,' },
   { prefix: 'ptn', description: 'PropTypes.number', body: '${1:propName}: PropTypes.number,' },
