@@ -156,23 +156,11 @@ export function SourceControlPanel(): React.JSX.Element {
     });
   }, [rootPath, refreshChanges]);
 
-  useEffect(() => refresh(), [refresh, syncTick]);
-
-  // Auto-sync the changes list while the panel is open. The fs watcher (recursive fs.watch) can
-  // miss editor saves on macOS, so poll the working-tree status on an interval and do a full
-  // refresh whenever the window regains focus — so changes appear without clicking refresh.
-  useEffect(() => {
-    if (!rootPath) return;
-    const id = setInterval(() => {
-      if (!document.hidden) refreshChanges();
-    }, 2000);
-    const onFocus = (): void => refresh();
-    window.addEventListener('focus', onFocus);
-    return () => {
-      clearInterval(id);
-      window.removeEventListener('focus', onFocus);
-    };
-  }, [rootPath, refresh, refreshChanges]);
+  // Full load on mount / folder switch (status + commit history).
+  useEffect(() => refresh(), [refresh]);
+  // Cheap working-tree status on every workspace sync tick — driven app-wide by AppShell's poll
+  // and the fs watcher, so changes appear automatically without re-fetching the commit log.
+  useEffect(() => refreshChanges(), [refreshChanges, syncTick]);
 
   const graph = useMemo(() => computeGitGraph(commits), [commits]);
   const graphWidth = PAD_X + graph.lanes * LANE_W + 4;

@@ -199,6 +199,28 @@ export function AppShell(): React.JSX.Element {
     return off;
   }, [rootPath]);
 
+  // App-wide git auto-sync. The fs watcher (recursive fs.watch) misses some editor saves on macOS,
+  // so bump the sync tick on an interval (paused when the window is hidden) — this drives the
+  // change-count badge and the Source Control panel everywhere, not just when that panel is open.
+  // On window focus also re-resolve the branch (it may have changed in an external terminal).
+  useEffect(() => {
+    if (!rootPath) return;
+    const poll = setInterval(() => {
+      if (!document.hidden) useWorkspaceStore.getState().bumpSync();
+    }, 2000);
+    const onFocus = (): void => {
+      void window.forge.gitBranch(rootPath).then((r) => {
+        useWorkspaceStore.getState().setBranch(r.ok ? r.data : null);
+      });
+      useWorkspaceStore.getState().bumpSync();
+    };
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(poll);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [rootPath]);
+
   const showLanding = !rootPath && tabCount === 0;
 
   if (showLanding) {
