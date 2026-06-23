@@ -1,6 +1,6 @@
 /**
  * Branches that shouldn't be committed to directly — work belongs on a feature branch and lands
- * via PR. Committing on these is blocked unless the user explicitly confirms the override.
+ * via PR. The commit button is disabled on these branches.
  */
 const PROTECTED_BRANCHES = new Set([
   'main',
