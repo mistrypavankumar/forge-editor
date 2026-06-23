@@ -7,6 +7,7 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { openFilePath } from '../lib/workspace-actions';
 import { importSpecForName, moduleSpecAtColumn, localDeclarationLine } from '../lib/go-to-definition';
+import { REACT_SNIPPETS } from './react-snippets';
 
 let registered = false;
 
@@ -278,6 +279,50 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
         useEditorStore.getState().requestReveal({ path, line, col, endLine, endColumn });
       });
       return true;
+    },
+  });
+
+  registerReactSnippets(monaco);
+}
+
+/** Render a snippet body as readable preview text (strip tab stops / variables). */
+function previewSnippet(body: string): string {
+  return body
+    .replace(/set\$\{1\/\(\.\*\)\/\$\{1:\/capitalize\}\/\}/g, 'setState')
+    .replace(/\$\{TM_FILENAME_BASE\}/g, 'ComponentName')
+    .replace(/\$\{\d+:([^}]*)\}/g, '$1')
+    .replace(/\$\{\d+\}/g, '')
+    .replace(/\$\d+/g, '');
+}
+
+/**
+ * ES7+ React/Redux/GraphQL/React-Native snippet completions (rfc, rafce, useState, imr, clg, …)
+ * for JS/TS — which also covers .jsx/.tsx. Registered as a separate completion provider; Monaco
+ * merges these snippet suggestions with the Language-Service completions above.
+ */
+function registerReactSnippets(monaco: typeof monacoNs): void {
+  const K = monaco.languages.CompletionItemKind.Snippet;
+  const insertAsSnippet = monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet;
+  monaco.languages.registerCompletionItemProvider(SELECTOR, {
+    provideCompletionItems(model, position) {
+      const word = model.getWordUntilPosition(position);
+      const range = new monaco.Range(
+        position.lineNumber,
+        word.startColumn,
+        position.lineNumber,
+        word.endColumn,
+      );
+      return {
+        suggestions: REACT_SNIPPETS.map((s) => ({
+          label: s.prefix,
+          kind: K,
+          insertText: s.body,
+          insertTextRules: insertAsSnippet,
+          detail: `⚛ ${s.description}`,
+          documentation: { value: '```tsx\n' + previewSnippet(s.body) + '\n```' },
+          range,
+        })),
+      };
     },
   });
 }
