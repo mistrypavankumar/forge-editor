@@ -21,6 +21,7 @@ export const defaultKeybindings: Record<string, string> = {
   'mod+s': 'file.save',
   'mod+alt+s': 'file.saveAll',
   'mod+n': 'file.newTextFile',
+  'mod+shift+n': 'file.newWindow',
   'mod+w': 'file.closeEditor',
   'mod+shift+t': 'file.reopenClosedEditor',
   'mod+o': 'file.openFolder',

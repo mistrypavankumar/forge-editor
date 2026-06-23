@@ -3,10 +3,11 @@ import { Search, CornerDownLeft, Command as CommandIcon } from 'lucide-react';
 import { commandRegistry } from '../commands/command-registry';
 import { fuzzyMatchTerms } from '../util/fuzzy';
 import { usePaletteStore } from '../stores/palette-store';
-import { useEditorStore } from '../stores/editor-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { useRecentsStore } from '../stores/recents-store';
 import { ModernFileIcon } from './ModernFileIcon';
 import { loadFiles } from '../lib/quickopen-cache';
+import { openFilePath } from '../lib/workspace-actions';
 import { cn } from '../lib/cn';
 import type { FileItem } from '@shared/ipc-contract';
 
@@ -57,7 +58,7 @@ export function Palette(): React.JSX.Element | null {
   const [files, setFiles] = useState<FileItem[]>([]);
 
   const rootPath = useWorkspaceStore((s) => s.rootPath);
-  const openFile = useEditorStore((s) => s.openFile);
+  const recents = useRecentsStore((s) => s.recents);
 
   useEffect(() => {
     if (open) {
@@ -87,21 +88,35 @@ export function Palette(): React.JSX.Element | null {
       primary: f.name,
       secondary: f.relPath,
       isFile: true,
-      invoke: async () => {
-        const res = await window.forge.readFile(f.path);
-        if (res.ok) openFile({ path: f.path, name: f.name, content: res.data });
-      },
+      invoke: () => openFilePath(f.path, f.name, true),
     }));
-  }, [mode, files, openFile]);
+  }, [mode, files]);
+
+  // Recently opened files, shown when the file palette opens with an empty query.
+  const recentRows: Row[] = useMemo(() => {
+    if (mode !== 'files') return [];
+    return recents
+      .filter((r) => r.type === 'file')
+      .map((r) => ({
+        id: r.path,
+        primary: r.name,
+        secondary:
+          rootPath && r.path.startsWith(`${rootPath}/`) ? r.path.slice(rootPath.length + 1) : r.path,
+        isFile: true,
+        invoke: () => openFilePath(r.path, r.name, true),
+      }));
+  }, [mode, recents, rootPath]);
+
+  const showingRecents = mode === 'files' && !query && recentRows.length > 0;
 
   const filtered = useMemo(() => {
-    if (!query) return rows;
+    if (!query) return mode === 'files' ? recentRows : rows;
     return rows
       .map((r) => ({ row: r, score: fuzzyMatchTerms(query, `${r.primary} ${r.secondary ?? ''}`) }))
       .filter((x) => x.score.matched)
       .sort((a, b) => b.score.score - a.score.score)
       .map((x) => x.row);
-  }, [rows, query]);
+  }, [rows, query, mode, recentRows]);
 
   const shown = filtered.slice(0, MAX_ROWS);
 
@@ -161,7 +176,9 @@ export function Palette(): React.JSX.Element | null {
               Open a folder to search files
             </div>
           ) : shown.length === 0 ? (
-            <div className="px-3 py-6 text-center text-[13px] text-faint">No results</div>
+            <div className="px-3 py-6 text-center text-[13px] text-faint">
+              {mode === 'files' && !query ? 'Start typing to search files' : 'No results'}
+            </div>
           ) : (
             shown.map((row, i) => (
               <button
@@ -196,9 +213,11 @@ export function Palette(): React.JSX.Element | null {
 
         <div className="flex items-center justify-between border-t border-line px-3 py-1.5 text-[11px] text-faint">
           <span>
-            {filtered.length > MAX_ROWS
-              ? `Showing ${MAX_ROWS} of ${filtered.length}`
-              : `${filtered.length} result${filtered.length === 1 ? '' : 's'}`}
+            {showingRecents
+              ? `Recently opened · ${filtered.length}`
+              : filtered.length > MAX_ROWS
+                ? `Showing ${MAX_ROWS} of ${filtered.length}`
+                : `${filtered.length} result${filtered.length === 1 ? '' : 's'}`}
           </span>
           <span className="flex items-center gap-3">
             <span className="flex items-center gap-1">

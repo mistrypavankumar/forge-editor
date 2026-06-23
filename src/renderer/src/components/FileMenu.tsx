@@ -29,7 +29,8 @@ export function FileMenu(): React.JSX.Element {
           onClose={() => setMenu(null)}
           items={[
             { label: 'New Text File', onSelect: () => run('file.newTextFile') },
-            { label: 'New File…', dividerAfter: true, onSelect: () => run('file.newFile') },
+            { label: 'New File…', onSelect: () => run('file.newFile') },
+            { label: 'New Window', dividerAfter: true, onSelect: () => run('file.newWindow') },
             { label: 'Open File…', onSelect: () => run('file.openFile') },
             { label: 'Open Folder…', dividerAfter: true, onSelect: () => run('file.openFolder') },
             { label: 'Save', dividerAfter: true, onSelect: () => run('file.save') },

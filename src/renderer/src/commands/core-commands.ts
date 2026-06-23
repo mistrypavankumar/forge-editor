@@ -228,6 +228,12 @@ export function registerCoreCommands(): void {
     },
   });
   commandRegistry.register({
+    id: 'file.newWindow',
+    title: 'New Window',
+    category: 'File',
+    run: () => window.forge.newWindow(),
+  });
+  commandRegistry.register({
     id: 'file.openFile',
     title: 'Open File…',
     category: 'File',

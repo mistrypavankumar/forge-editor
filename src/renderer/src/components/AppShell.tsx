@@ -67,6 +67,13 @@ export function AppShell(): React.JSX.Element {
     if (rootPath) void useGitUserStore.getState().loadActive(rootPath);
   }, [rootPath]);
 
+  // Name the window after the open folder so the dock/window menu lists folders, not "Forge".
+  // Electron derives each window's title from the page's document.title.
+  useEffect(() => {
+    const folder = rootPath ? (rootPath.split('/').filter(Boolean).pop() ?? rootPath) : null;
+    document.title = folder ?? 'Forge';
+  }, [rootPath]);
+
   const onSidebarContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault();
     setMenu({ x: e.clientX, y: e.clientY });
@@ -84,9 +91,13 @@ export function AppShell(): React.JSX.Element {
 
   // When a task terminal's command returns to the shell (done/failed/interrupted), drop its
   // running indicator. The first event a task session gets is "busy"; the next "idle" clears it.
+  // Also surface the live foreground-process name on the tab (vim, node, claude…), reverting
+  // to the base label when idle.
   useEffect(() => {
-    return window.forge.onTerminalBusy(({ id, busy }) => {
-      if (!busy) useTerminalStore.getState().clearTask(id);
+    return window.forge.onTerminalBusy(({ id, busy, proc }) => {
+      const store = useTerminalStore.getState();
+      if (!busy) store.clearTask(id);
+      store.setProc(id, busy ? proc : undefined);
     });
   }, []);
 

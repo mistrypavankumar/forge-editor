@@ -81,6 +81,7 @@ function buildAppMenu(): void {
     submenu: [
       { label: 'New Text File', click: () => menuAction('file.newTextFile') },
       { label: 'New File…', click: () => menuAction('file.newFile') },
+      { label: 'New Window', click: () => createWindow() },
       { type: 'separator' },
       { label: 'Open File…', click: () => menuAction('file.openFile') },
       { label: 'Open Folder…', click: () => menuAction('file.openFolder') },
@@ -252,6 +253,7 @@ app.whenReady().then(async () => {
     autoSaveState = autoSave;
     buildAppMenu();
   });
+  ipcMain.on(IpcChannels.newWindow, () => createWindow());
   ipcMain.handle(IpcChannels.rename, (_e, oldPath: string, newPath: string) =>
     toResult(() => renameEntry(oldPath, newPath)),
   );
