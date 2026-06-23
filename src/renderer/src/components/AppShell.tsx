@@ -135,9 +135,14 @@ export function AppShell(): React.JSX.Element {
   }, [themeId]);
 
   // Drive the frosted-glass translucency. Transparency off → fully opaque surfaces.
+  // Glass is a dark-theme effect: pale light surfaces over a bright blurred desktop wash
+  // out text and syntax colors, so light themes always render fully opaque (crisp, pure
+  // white) regardless of the slider.
   useEffect(() => {
-    document.documentElement.style.setProperty('--glass-opacity', String(glass ? glassOpacity : 1));
-  }, [glass, glassOpacity]);
+    const isLight = builtInThemes[themeId]?.type === 'light';
+    const effective = !glass || isLight ? 1 : Math.max(glassOpacity, 0.1);
+    document.documentElement.style.setProperty('--glass-opacity', String(effective));
+  }, [glass, glassOpacity, themeId]);
 
   const syncTick = useWorkspaceStore((s) => s.syncTick);
 
