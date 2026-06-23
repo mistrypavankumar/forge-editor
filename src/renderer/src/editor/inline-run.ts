@@ -18,12 +18,12 @@ export function isRunnable(model: editor.ITextModel): boolean {
 }
 
 /** Execute the model's current buffer now and push the captured logs into the store. */
-async function runNow(model: editor.ITextModel): Promise<void> {
+async function runNow(model: editor.ITextModel, runExport = false): Promise<void> {
   if (model.isDisposed() || !isRunnable(model)) return;
   const path = model.uri.path;
   const store = useInlineRunStore.getState();
   store.setRunning(path, true);
-  const res = await window.forge.runInline(model.getValue(), path, model.getLanguageId());
+  const res = await window.forge.runInline(model.getValue(), path, model.getLanguageId(), runExport);
   // The user may have toggled off or closed the file while we were running.
   if (model.isDisposed() || !useInlineRunStore.getState().enabled) return;
   if (res.ok) store.setResult(path, res.data.logs, res.data.timedOut ?? false);
@@ -33,6 +33,11 @@ async function runNow(model: editor.ITextModel): Promise<void> {
 /** Run immediately (e.g. on enabling the feature or switching to a file). */
 export function runInlineNow(model: editor.ITextModel): void {
   void runNow(model);
+}
+
+/** Run an exported function from the model (main, default export, or single export). */
+export function runInlineExport(model: editor.ITextModel): void {
+  void runNow(model, true);
 }
 
 /** Debounced run, called on every edit while the feature is enabled. */

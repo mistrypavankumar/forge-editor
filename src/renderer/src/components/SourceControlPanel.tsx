@@ -147,20 +147,48 @@ export function SourceControlPanel(): React.JSX.Element {
     });
   }, [rootPath]);
 
-  // Full refresh (status + commit history); used on mount, focus, and after git actions.
-  const refresh = useCallback(() => {
-    refreshChanges();
+  // Re-fetch the commit history (drives the graph). More expensive than status, so we only run it
+  // on mount, after git actions, and when the ref signature shows history actually moved.
+  const refreshLog = useCallback(() => {
     if (!rootPath) return;
     void window.forge.gitLog(rootPath, 50).then((res) => {
       if (res.ok) setCommits(res.data);
     });
-  }, [rootPath, refreshChanges]);
+  }, [rootPath]);
 
-  // Full load on mount / folder switch (status + commit history).
-  useEffect(() => refresh(), [refresh]);
-  // Cheap working-tree status on every workspace sync tick — driven app-wide by AppShell's poll
-  // and the fs watcher, so changes appear automatically without re-fetching the commit log.
-  useEffect(() => refreshChanges(), [refreshChanges, syncTick]);
+  // Full refresh (status + commit history); used on mount, focus, and after git actions.
+  const refresh = useCallback(() => {
+    refreshChanges();
+    refreshLog();
+  }, [refreshChanges, refreshLog]);
+
+  // Last seen ref signature (HEAD + branch/remote tips). Lets the poll detect history changes
+  // (rebase, commit, checkout, pull, reset) and refresh the graph only then — not every tick.
+  const lastSig = useRef<string | null>(null);
+
+  // Full load on mount / folder switch (status + commit history), priming the ref signature.
+  useEffect(() => {
+    lastSig.current = null; // forget the previous repo's signature so the first tick just primes
+    refresh();
+    if (!rootPath) return;
+    void window.forge.gitRefsSig(rootPath).then((res) => {
+      if (res.ok) lastSig.current = res.data;
+    });
+  }, [refresh, rootPath]);
+
+  // On every workspace sync tick (AppShell's poll + the fs watcher): always refresh the cheap
+  // working-tree status, and additionally re-fetch the commit log when the ref signature changed,
+  // so the graph auto-syncs after a rebase/commit/checkout without re-running git log every poll.
+  useEffect(() => {
+    refreshChanges();
+    if (!rootPath) return;
+    void window.forge.gitRefsSig(rootPath).then((res) => {
+      if (!res.ok) return;
+      const changed = lastSig.current !== null && res.data !== lastSig.current;
+      lastSig.current = res.data;
+      if (changed) refreshLog();
+    });
+  }, [refreshChanges, refreshLog, rootPath, syncTick]);
 
   const graph = useMemo(() => computeGitGraph(commits), [commits]);
   const graphWidth = PAD_X + graph.lanes * LANE_W + 4;
@@ -278,6 +306,13 @@ export function SourceControlPanel(): React.JSX.Element {
           onChange={(e) => {
             setMessage(e.target.value);
             if (commitError) setCommitError(null);
+          }}
+          onKeyDown={(e) => {
+            // Cmd/Ctrl+Enter commits, mirroring the Commit button's enabled state.
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+              e.preventDefault();
+              if (!locked && !committing && message.trim() && changes.length > 0) void commit();
+            }
           }}
           placeholder={
             locked ? `Message (${branch} is protected)` : `Message (commit on ${branch ?? 'branch'})`

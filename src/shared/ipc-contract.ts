@@ -26,6 +26,7 @@ export const IpcChannels = {
   gitPull: 'forge:git:pull',
   gitFetch: 'forge:git:fetch',
   gitLog: 'forge:git:log',
+  gitRefsSig: 'forge:git:refsSig',
   gitCommitFiles: 'forge:git:commitFiles',
   gitFileAt: 'forge:git:fileAt',
   gitGetUser: 'forge:git:getUser',
@@ -120,7 +121,10 @@ export interface GitChange {
 
 export interface GitBranches {
   current: string | null;
+  /** All local branches, most recently committed first. */
   all: string[];
+  /** The repo's default/integration branch (e.g. main or dev), to pin at the top of the picker. */
+  defaultBranch: string | null;
 }
 
 /** A ref pointing at a commit, as shown on the graph: branch, remote-tracking branch, or tag. */
@@ -561,6 +565,12 @@ export interface ForgeApi {
   gitPull: (rootPath: string) => Promise<Result<void>>;
   gitFetch: (rootPath: string) => Promise<Result<void>>;
   gitLog: (rootPath: string, limit?: number) => Promise<Result<GitCommit[]>>;
+  /**
+   * A cheap signature of all ref tips (HEAD + branches + remotes). Changes whenever history moves
+   * — commit, rebase, checkout, pull, fetch, reset — so the renderer can re-fetch the commit log
+   * only when it actually changed, instead of on every status poll.
+   */
+  gitRefsSig: (rootPath: string) => Promise<Result<string>>;
   /** Files changed by a single commit (status + path), for the graph's expandable file list. */
   gitCommitFiles: (rootPath: string, hash: string) => Promise<Result<GitChange[]>>;
   /** A file's content at a given ref (e.g. a commit hash), or null if absent at that ref. */
@@ -613,7 +623,7 @@ export interface ForgeApi {
   ) => Promise<Result<FormatTextResult>>;
   runDiagnostics: (rootPath: string) => Promise<Result<ProjectDiagnostic[]>>;
   /** Execute a JS/TS snippet in isolation and return each console.* call tagged with its line. */
-  runInline: (code: string, filePath: string, languageId: string) => Promise<Result<InlineRunResult>>;
+  runInline: (code: string, filePath: string, languageId: string, runExport?: boolean) => Promise<Result<InlineRunResult>>;
   resolveImport: (rootPath: string, fromFile: string, spec: string) => Promise<Result<string | null>>;
   createTerminal: (args: TerminalCreateArgs) => Promise<Result<void>>;
   sendInput: (id: string, data: string) => void;

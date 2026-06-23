@@ -1,13 +1,7 @@
 import { FolderOpen, FileText, Clock } from 'lucide-react';
 import { useRecentsStore } from '../stores/recents-store';
-import { ModernFileIcon } from './ModernFileIcon';
 import { ModernFolderIcon } from './ModernFolderIcon';
-import {
-  openFolderDialog,
-  openFileDialog,
-  openFolderPath,
-  openFilePath,
-} from '../lib/workspace-actions';
+import { openFolderDialog, openFileDialog, openFolderPath } from '../lib/workspace-actions';
 
 function dirOf(path: string): string {
   const i = path.lastIndexOf('/');
@@ -16,6 +10,7 @@ function dirOf(path: string): string {
 
 export function Landing(): React.JSX.Element {
   const recents = useRecentsStore((s) => s.recents);
+  const recentFolders = recents.filter((r) => r.type === 'folder');
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-bg px-6">
@@ -60,28 +55,20 @@ export function Landing(): React.JSX.Element {
         </button>
       </div>
 
-      {recents.length > 0 ? (
+      {recentFolders.length > 0 ? (
         <div className="mt-10 w-[26rem] max-w-full">
           <div className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wider text-faint">
             <Clock size={12} /> Recent
           </div>
           <div className="overflow-hidden rounded-lg border border-line bg-surface">
-            {recents.map((r) => (
+            {recentFolders.map((r) => (
               <button
                 key={`${r.type}:${r.path}`}
                 type="button"
-                onClick={() =>
-                  void (r.type === 'folder'
-                    ? openFolderPath(r.path)
-                    : openFilePath(r.path, r.name, true))
-                }
+                onClick={() => void openFolderPath(r.path)}
                 className="flex w-full items-center gap-2.5 border-b border-line-soft px-3 py-2 text-left last:border-b-0 hover:bg-surface-2"
               >
-                {r.type === 'folder' ? (
-                  <ModernFolderIcon name={r.name} />
-                ) : (
-                  <ModernFileIcon name={r.name} />
-                )}
+                <ModernFolderIcon name={r.name} />
                 <span className="truncate text-[13px] text-fg">{r.name}</span>
                 <span className="ml-auto truncate pl-3 text-[11px] text-faint">{dirOf(r.path)}</span>
               </button>

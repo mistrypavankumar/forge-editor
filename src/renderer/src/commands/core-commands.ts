@@ -10,6 +10,7 @@ import { getActiveEditor } from '../editor/active-editor';
 import { getMonaco } from '../editor/monaco-setup';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { useInlineRunStore } from '../stores/inline-run-store';
+import { runInlineExport } from '../editor/inline-run';
 
 let untitledSeq = 0;
 
@@ -133,6 +134,16 @@ export function registerCoreCommands(): void {
     title: 'Toggle Live Inline Output (console.log)',
     category: 'Editor',
     run: () => useInlineRunStore.getState().toggle(),
+  });
+  commandRegistry.register({
+    id: 'editor.runExportedFunction',
+    title: 'Run Exported Function (main, default, or single export)',
+    category: 'Editor',
+    run: () => {
+      const editor = getActiveEditor();
+      if (editor?.getModel()) runInlineExport(editor.getModel()!);
+    },
+    isEnabled: () => useEditorStore.getState().activePath !== null,
   });
   commandRegistry.register({
     id: 'file.saveAll',
