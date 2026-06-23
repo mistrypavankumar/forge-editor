@@ -5,7 +5,14 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useNavigatorStore } from '../stores/navigator-store';
+import { useTerminalStore } from '../stores/terminal-store';
 import { registerExec, unregisterExec } from '../lib/terminal-exec';
+
+// Single-quote a path for the shell so spaces/specials in the folder name survive
+// (closing the quote, escaping any embedded `'`, reopening).
+function shellQuote(p: string): string {
+  return `'${p.replace(/'/g, `'\\''`)}'`;
+}
 
 export function TerminalView({
   sessionId,
@@ -20,6 +27,22 @@ export function TerminalView({
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const rootRef = useRef(rootPath);
   rootRef.current = rootPath;
+
+  // Follow workspace folder switches: the live shell was spawned with the old root's
+  // cwd, so `cd` it into the new root. Skip the initial mount (the PTY already spawns
+  // in the right place) and any terminal currently running a foreground program — we
+  // don't want to inject `cd` into vim/node/claude. `\x15` (Ctrl+U) clears any
+  // half-typed line first so we don't append to the user's pending command.
+  const firstRoot = useRef(true);
+  useEffect(() => {
+    if (firstRoot.current) {
+      firstRoot.current = false;
+      return;
+    }
+    if (!rootPath) return;
+    if (useTerminalStore.getState().sessions[sessionId]?.proc) return;
+    window.forge.sendInput(sessionId, `\x15cd ${shellQuote(rootPath)}\r`);
+  }, [rootPath, sessionId]);
 
   // Refit + repaint when this pane becomes visible (split/tab switch).
   useEffect(() => {
