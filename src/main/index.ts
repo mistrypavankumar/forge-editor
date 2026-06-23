@@ -44,6 +44,7 @@ import {
   gitPull,
   gitFetch,
   getGitLog,
+  getGitRefsSig,
   getCommitFiles,
   getFileAtRef,
   getGitUser,
@@ -225,6 +226,9 @@ app.whenReady().then(async () => {
   ipcMain.handle(IpcChannels.gitLog, (_e, rootPath: string, limit?: number) =>
     toResult(() => getGitLog(rootPath, limit)),
   );
+  ipcMain.handle(IpcChannels.gitRefsSig, (_e, rootPath: string) =>
+    toResult(() => getGitRefsSig(rootPath)),
+  );
   ipcMain.handle(IpcChannels.gitCommitFiles, (_e, rootPath: string, hash: string) =>
     toResult(() => getCommitFiles(rootPath, hash)),
   );
@@ -293,8 +297,8 @@ app.whenReady().then(async () => {
   ipcMain.handle(IpcChannels.runDiagnostics, (_e, rootPath: string) =>
     toResult(() => runDiagnostics(rootPath)),
   );
-  ipcMain.handle(IpcChannels.runInline, (_e, code: string, filePath: string, languageId: string) =>
-    toResult(() => runInline(code, filePath, languageId)),
+  ipcMain.handle(IpcChannels.runInline, (_e, code: string, filePath: string, languageId: string, runExport?: boolean) =>
+    toResult(() => runInline(code, filePath, languageId, runExport)),
   );
   ipcMain.handle(IpcChannels.resolveImport, (_e, rootPath: string, fromFile: string, spec: string) =>
     toResult(() => resolveImport(rootPath, fromFile, spec)),

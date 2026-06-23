@@ -74,8 +74,11 @@ export class DiffPeek {
         afterLineNumber,
         heightInPx,
         domNode: node,
-        // Default (true) lays a transparent overlay over the zone that eats clicks;
-        // disable it so the toolbar buttons and body are interactive.
+        // Must be false: with true, Monaco's mouse handler reacts to a mousedown on the zone by
+        // focusing the hidden textarea (preventDefaulting the event) and starting a selection drag
+        // — which steals the press and kills the toolbar's click. With false the editor ignores
+        // the zone's mousedown, leaving our buttons' native click intact. (The peek is lifted
+        // above the text layer in CSS so the clicks actually reach it.)
         suppressMouseDown: false,
       });
     });
@@ -133,7 +136,9 @@ export class DiffPeek {
       this.button('next', '↓', 'Next change'),
       this.button('close', '✕', 'Close (Esc)'),
     );
-    actions.addEventListener('mousedown', (e) => {
+    // Use `click` (not `mousedown`): Monaco's pointer handler intercepts mousedown inside the
+    // editor for its drag/selection logic, so a mousedown delegate here never reliably fires.
+    actions.addEventListener('click', (e) => {
       const act = (e.target as HTMLElement).closest('button')?.dataset.act;
       if (!act) return;
       e.preventDefault();

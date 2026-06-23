@@ -465,14 +465,36 @@ function runGit(rootPath: string, args: string[]): Promise<string> {
   return execGit(rootPath, args);
 }
 
+/** The repo's default branch (local name), cheaply: origin/HEAD if set, else the first known
+ *  integration-branch name that exists locally. One git call; safe to run on the status poll. */
+async function defaultLocalBranch(rootPath: string, all: string[]): Promise<string | null> {
+  let remoteHead = '';
+  try {
+    remoteHead = (await runGit(rootPath, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])).trim();
+  } catch {
+    /* origin/HEAD not configured — fall back to common names below */
+  }
+  if (remoteHead) {
+    const local = remoteHead.slice(remoteHead.indexOf('/') + 1); // strip the "origin/" remote prefix
+    if (all.includes(local)) return local;
+  }
+  for (const cand of ['main', 'master', 'dev', 'develop', 'development', 'staging', 'prod', 'production']) {
+    if (all.includes(cand)) return cand;
+  }
+  return null;
+}
+
 export async function getBranches(rootPath: string): Promise<GitBranches> {
   try {
-    const stdout = await runGit(rootPath, ['branch', '--format=%(refname:short)']);
+    // --sort=-committerdate → most recently committed branches first, so the picker can show the
+    // few branches the user is actually working on without a search.
+    const stdout = await runGit(rootPath, ['branch', '--sort=-committerdate', '--format=%(refname:short)']);
     const all = stdout.split('\n').map((b) => b.trim()).filter(Boolean);
     const current = (await runGit(rootPath, ['rev-parse', '--abbrev-ref', 'HEAD'])).trim() || null;
-    return { current, all };
+    const defaultBranch = await defaultLocalBranch(rootPath, all);
+    return { current, all, defaultBranch };
   } catch {
-    return { current: null, all: [] };
+    return { current: null, all: [], defaultBranch: null };
   }
 }
 
@@ -593,6 +615,21 @@ export async function getGitLog(rootPath: string, limit = 50): Promise<GitCommit
       });
   } catch {
     return [];
+  }
+}
+
+/**
+ * A cheap signature of every ref tip (HEAD + local branches + remotes), so the renderer can tell
+ * when history actually moved (commit/rebase/checkout/pull/fetch/reset) and refresh the graph only
+ * then. `git show-ref --head` prints `<hash> <refname>` per ref; we return it verbatim — any tip
+ * moving, or a ref appearing/disappearing, changes the string. Empty string on failure (e.g. a
+ * brand-new repo with no refs) is a valid, stable signature.
+ */
+export async function getGitRefsSig(rootPath: string): Promise<string> {
+  try {
+    return (await execGit(rootPath, ['show-ref', '--head'])).trim();
+  } catch {
+    return '';
   }
 }
 

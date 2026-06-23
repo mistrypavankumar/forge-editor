@@ -6,12 +6,18 @@ import { cn } from '../lib/cn';
 interface BranchPickerProps {
   x: number;
   y: number;
+  /** All local branches, most recently committed first. */
   branches: string[];
   current: string | null;
+  /** Repo default/integration branch (main, dev, …), pinned to the top of the list. */
+  defaultBranch: string | null;
   onSelect: (name: string) => void;
   onCreate: () => void;
   onClose: () => void;
 }
+
+/** How many recent branches to show before the user searches. */
+const RECENT_LIMIT = 5;
 
 /** Anchored branch switcher with a search filter, for repos with many branches. */
 export function BranchPicker({
@@ -19,6 +25,7 @@ export function BranchPicker({
   y,
   branches,
   current,
+  defaultBranch,
   onSelect,
   onCreate,
   onClose,
@@ -27,10 +34,20 @@ export function BranchPicker({
   const [pos, setPos] = useState({ x, y });
   const [query, setQuery] = useState('');
 
-  const filtered = useMemo(() => {
+  // No query → default branch pinned on top, then the few most-recent branches (the user's working
+  // set). Searching switches to matching across every branch. The current branch is always kept
+  // visible so its check mark shows even if it falls outside the recent slice.
+  const { visible, hiddenCount } = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return q ? branches.filter((b) => b.toLowerCase().includes(q)) : branches;
-  }, [branches, query]);
+    if (q) {
+      return { visible: branches.filter((b) => b.toLowerCase().includes(q)), hiddenCount: 0 };
+    }
+    const head = defaultBranch && branches.includes(defaultBranch) ? [defaultBranch] : [];
+    const recent = branches.filter((b) => !head.includes(b)).slice(0, RECENT_LIMIT);
+    const display = [...head, ...recent];
+    if (current && branches.includes(current) && !display.includes(current)) display.push(current);
+    return { visible: display, hiddenCount: branches.length - display.length };
+  }, [branches, query, defaultBranch, current]);
 
   // Flip/clamp into the viewport (the list can be tall and open near a screen edge).
   useLayoutEffect(() => {
@@ -44,7 +61,7 @@ export function BranchPicker({
     if (nx < pad) nx = pad;
     if (y + height > window.innerHeight) ny = Math.max(pad, window.innerHeight - height - pad);
     setPos({ x: nx, y: ny });
-  }, [x, y, filtered.length]);
+  }, [x, y, visible.length]);
 
   useEffect(() => {
     // Defer so the click that opened the picker doesn't immediately close it.
@@ -76,8 +93,8 @@ export function BranchPicker({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') onClose();
-            else if (e.key === 'Enter' && filtered[0]) {
-              onSelect(filtered[0]);
+            else if (e.key === 'Enter' && visible[0]) {
+              onSelect(visible[0]);
               onClose();
             }
           }}
@@ -87,10 +104,10 @@ export function BranchPicker({
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto py-1">
-        {filtered.length === 0 ? (
+        {visible.length === 0 ? (
           <p className="px-3 py-2 text-[12px] text-faint">No matching branches</p>
         ) : null}
-        {filtered.map((b) => (
+        {visible.map((b) => (
           <button
             key={b}
             type="button"
@@ -104,8 +121,18 @@ export function BranchPicker({
               {b === current ? <Check size={13} /> : null}
             </span>
             <span className={cn('truncate', b === current && 'text-accent')}>{b}</span>
+            {b === defaultBranch ? (
+              <span className="ml-auto shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-[10px] text-faint">
+                default
+              </span>
+            ) : null}
           </button>
         ))}
+        {hiddenCount > 0 ? (
+          <p className="px-3 py-1.5 text-[11px] text-faint">
+            +{hiddenCount} more — type to search
+          </p>
+        ) : null}
       </div>
 
       <button

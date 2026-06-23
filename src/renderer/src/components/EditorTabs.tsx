@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, Lock, SplitSquareHorizontal } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { X, Lock, SplitSquareHorizontal, Copy, Check } from 'lucide-react';
 import { useEditorStore } from '../stores/editor-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { FileTypeIcon } from './file-icon';
@@ -26,14 +26,28 @@ export function EditorTabs({ groupId = 'main' }: { groupId?: string }): React.JS
   const rootPath = useWorkspaceStore((s) => s.rootPath);
 
   const [menu, setMenu] = useState<{ x: number; y: number; path: string } | null>(null);
+  const [copiedPath, setCopiedPath] = useState<string | null>(null);
+  const activeTabRef = useRef<HTMLDivElement | null>(null);
+
+  const activePath = group?.activePath;
+
+  // Scroll the active tab into view whenever it changes (e.g. opening a file
+  // whose tab sits past the visible edge of the scrollable tab strip).
+  useEffect(() => {
+    activeTabRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [activePath]);
 
   if (!group || group.paths.length === 0) return null;
-
-  const activePath = group.activePath;
   // Resolve the group's ordered paths to their shared document records.
   const groupTabs = group.paths.map((p) => tabs.find((t) => t.path === p)).filter((t) => t != null);
 
   const copy = (text: string): void => void navigator.clipboard?.writeText(text);
+
+  const copyRelative = (path: string): void => {
+    copy(relativeTo(path, rootPath));
+    setCopiedPath(path);
+    window.setTimeout(() => setCopiedPath((p) => (p === path ? null : p)), 1200);
+  };
 
   return (
     <div className="flex h-9 shrink-0 items-stretch bg-surface">
@@ -43,6 +57,7 @@ export function EditorTabs({ groupId = 'main' }: { groupId?: string }): React.JS
           return (
             <div
               key={tab.path}
+              ref={isActive ? activeTabRef : undefined}
               onClick={() => setActive(tab.path, groupId)}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -54,7 +69,27 @@ export function EditorTabs({ groupId = 'main' }: { groupId?: string }): React.JS
               )}
             >
               {isActive ? <span className="absolute inset-x-0 top-0 h-0.5 bg-accent" /> : null}
-              <FileTypeIcon name={tab.name} />
+              <span className="relative flex h-4 w-4 shrink-0 items-center justify-center">
+                <span className="group-hover:opacity-0">
+                  <FileTypeIcon name={tab.name} />
+                </span>
+                <button
+                  type="button"
+                  aria-label={`Copy relative path of ${tab.name}`}
+                  title="Copy relative path"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyRelative(tab.path);
+                  }}
+                  className="absolute inset-0 hidden items-center justify-center rounded text-faint hover:text-fg group-hover:flex"
+                >
+                  {copiedPath === tab.path ? (
+                    <Check size={12} className="text-success" />
+                  ) : (
+                    <Copy size={12} />
+                  )}
+                </button>
+              </span>
               <span className="truncate">{tab.name}</span>
               {tab.readOnly ? <Lock size={11} className="shrink-0 text-faint" /> : null}
               <button

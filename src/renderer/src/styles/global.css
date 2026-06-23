@@ -261,7 +261,17 @@ body {
 }
 
 /* Inline git diff peek (opened by clicking a change in the gutter) */
+/* Monaco paints `.view-lines` (the text layer) above `.view-zones`, and its full-height box —
+   which includes the vertical gap a view zone occupies — eats pointer events even where it's
+   transparent. Without this, the peek is visible but its toolbar buttons aren't clickable. Lift
+   the view-zones layer above the text layer (zones never overlap real lines, so this is safe);
+   stay below the minimap (5) and hovers/suggest widgets (40+). */
+.monaco-editor .view-zones {
+  z-index: 3;
+}
 .forge-peek {
+  position: relative;
+  z-index: 1;
   width: 100%;
   background: var(--surface);
   border-top: 1px solid var(--line-strong);
@@ -388,14 +398,23 @@ body {
   transition: background 0.6s ease-out;
 }
 
-/* Live console.log output rendered to the right of the line that produced it */
+/* Live console.log output rendered to the right of the line that produced it.
+   Styled as a subtle pill so it reads as runtime output, distinct from the code. */
+.forge-inline-run,
+.forge-inline-run-error {
+  font-style: normal;
+  border-radius: 4px;
+  padding: 0 6px;
+  margin-left: 4px;
+  border-left: 2px solid;
+}
 .forge-inline-run {
-  color: color-mix(in srgb, var(--success) 80%, var(--fg));
-  opacity: 0.85;
-  font-style: italic;
+  color: color-mix(in srgb, var(--success) 88%, var(--fg));
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  border-left-color: color-mix(in srgb, var(--success) 60%, transparent);
 }
 .forge-inline-run-error {
   color: var(--danger);
-  opacity: 0.95;
-  font-style: italic;
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  border-left-color: color-mix(in srgb, var(--danger) 65%, transparent);
 }

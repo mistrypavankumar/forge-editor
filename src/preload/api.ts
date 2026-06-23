@@ -35,6 +35,7 @@ export const api: ForgeApi = {
   gitPull: (rootPath) => ipcRenderer.invoke(IpcChannels.gitPull, rootPath),
   gitFetch: (rootPath) => ipcRenderer.invoke(IpcChannels.gitFetch, rootPath),
   gitLog: (rootPath, limit) => ipcRenderer.invoke(IpcChannels.gitLog, rootPath, limit),
+  gitRefsSig: (rootPath) => ipcRenderer.invoke(IpcChannels.gitRefsSig, rootPath),
   gitCommitFiles: (rootPath, hash) => ipcRenderer.invoke(IpcChannels.gitCommitFiles, rootPath, hash),
   gitFileAt: (rootPath, ref, relPath) =>
     ipcRenderer.invoke(IpcChannels.gitFileAt, rootPath, ref, relPath),
@@ -73,8 +74,8 @@ export const api: ForgeApi = {
   formatText: (rootPath, tool, args, input) =>
     ipcRenderer.invoke(IpcChannels.formatText, rootPath, tool, args, input),
   runDiagnostics: (rootPath) => ipcRenderer.invoke(IpcChannels.runDiagnostics, rootPath),
-  runInline: (code, filePath, languageId) =>
-    ipcRenderer.invoke(IpcChannels.runInline, code, filePath, languageId),
+  runInline: (code, filePath, languageId, runExport) =>
+    ipcRenderer.invoke(IpcChannels.runInline, code, filePath, languageId, runExport),
   resolveImport: (rootPath, fromFile, spec) =>
     ipcRenderer.invoke(IpcChannels.resolveImport, rootPath, fromFile, spec),
   createTerminal: (args) => ipcRenderer.invoke(IpcChannels.terminalCreate, args),

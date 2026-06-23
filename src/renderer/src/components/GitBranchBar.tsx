@@ -11,7 +11,7 @@ type Op = 'pull' | 'push' | 'fetch';
 export function GitBranchBar({ root, onChanged }: { root: string; onChanged: () => void }): React.JSX.Element {
   const branch = useWorkspaceStore((s) => s.branch);
   const syncTick = useWorkspaceStore((s) => s.syncTick);
-  const [branches, setBranches] = useState<GitBranches>({ current: branch, all: [] });
+  const [branches, setBranches] = useState<GitBranches>({ current: branch, all: [], defaultBranch: null });
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
@@ -142,6 +142,7 @@ export function GitBranchBar({ root, onChanged }: { root: string; onChanged: () 
           y={menu.y}
           branches={branches.all}
           current={branches.current}
+          defaultBranch={branches.defaultBranch}
           onSelect={checkout}
           onCreate={() => setCreating(true)}
           onClose={() => setMenu(null)}
