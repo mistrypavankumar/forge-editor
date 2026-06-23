@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import type {
+  JdtlsStatus,
   LsCompletionItem,
   LsCompletions,
   LsDiagnostic,
@@ -114,8 +115,25 @@ class JdtlsService {
   private startPromise: Promise<boolean> | null = null;
   private available = true;
   private workspaceRoot: string | null = null;
+  private status: JdtlsStatus = 'idle';
+  private statusNotifier: ((status: JdtlsStatus) => void) | undefined;
   private readonly docs = new Map<string, TrackedDoc>();
   private readonly diagnostics = new Map<string, LsDiagnostic[]>();
+
+  /** Wire a listener (the main process pushes status to the renderer status bar). */
+  setStatusNotifier(notifier: (status: JdtlsStatus) => void): void {
+    this.statusNotifier = notifier;
+  }
+
+  getStatus(): JdtlsStatus {
+    return this.status;
+  }
+
+  private setStatus(status: JdtlsStatus): void {
+    if (this.status === status) return;
+    this.status = status;
+    this.statusNotifier?.(status);
+  }
 
   /** Remember the workspace root (cheap — does not spawn jdtls until a Java file opens). */
   setWorkspace(root: string): void {
@@ -123,6 +141,8 @@ class JdtlsService {
     this.workspaceRoot = root;
     // A new workspace means a fresh server; tear down any prior one.
     this.shutdown();
+    this.available = true;
+    this.setStatus('idle');
   }
 
   openDocument(file: string, text: string): void {
@@ -262,6 +282,7 @@ class JdtlsService {
       // Don't respawn on every keystroke once start has failed.
       this.available = false;
       this.shutdown();
+      this.setStatus('unavailable');
       return false;
     });
     return this.startPromise;
@@ -272,6 +293,7 @@ class JdtlsService {
     if (!root) return false;
     const command = resolveJdtlsCommand();
     if (!command) return false;
+    this.setStatus('starting');
 
     // Per-workspace data dir keeps jdtls's index/build state isolated across projects.
     const dataDir = join(
@@ -286,6 +308,8 @@ class JdtlsService {
       this.client = null;
       this.startPromise = null;
       for (const doc of this.docs.values()) doc.open = false;
+      // Back to idle: the next opened Java doc will attempt a restart.
+      this.setStatus(this.available ? 'idle' : 'unavailable');
     });
 
     // Answer the server→client requests jdtls blocks the handshake on.
@@ -333,6 +357,7 @@ class JdtlsService {
       initializationOptions: { settings: { java: {} } },
     });
     client.notify('initialized', {});
+    this.setStatus('ready');
 
     // Replay didOpen for any documents opened while jdtls was starting.
     for (const file of this.docs.keys()) this.sendDidOpen(file);

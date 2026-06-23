@@ -8,6 +8,7 @@ import { useEditorStore } from '../stores/editor-store';
 import { openFilePath } from '../lib/workspace-actions';
 import { importSpecForName, moduleSpecAtColumn, localDeclarationLine } from '../lib/go-to-definition';
 import { REACT_SNIPPETS } from './react-snippets';
+import { JAVA_SNIPPETS } from './java-snippets';
 
 let registered = false;
 
@@ -286,28 +287,34 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
     },
   });
 
-  registerReactSnippets(monaco);
+  registerSnippets(monaco, SELECTOR, REACT_SNIPPETS, '⚛', 'tsx');
+  registerSnippets(monaco, ['java'], JAVA_SNIPPETS, '☕', 'java');
 }
 
 /** Render a snippet body as readable preview text (strip tab stops / variables). */
 function previewSnippet(body: string): string {
   return body
     .replace(/set\$\{1\/\(\.\*\)\/\$\{1:\/capitalize\}\/\}/g, 'setState')
-    .replace(/\$\{TM_FILENAME_BASE\}/g, 'ComponentName')
+    .replace(/\$\{TM_FILENAME_BASE\}/g, 'Name')
     .replace(/\$\{\d+:([^}]*)\}/g, '$1')
     .replace(/\$\{\d+\}/g, '')
     .replace(/\$\d+/g, '');
 }
 
 /**
- * ES7+ React/Redux/GraphQL/React-Native snippet completions (rfc, rafce, useState, imr, clg, …)
- * for JS/TS — which also covers .jsx/.tsx. Registered as a separate completion provider; Monaco
- * merges these snippet suggestions with the Language-Service completions above.
+ * Register snippet completions for a set of languages, merged by Monaco alongside the
+ * Language-Service completions. Used for the React/ES7 prefixes (JS/TS) and Java live templates.
  */
-function registerReactSnippets(monaco: typeof monacoNs): void {
-  const K = monaco.languages.CompletionItemKind.Snippet;
+function registerSnippets(
+  monaco: typeof monacoNs,
+  languages: string[],
+  snippets: { prefix: string; body: string; description: string }[],
+  badge: string,
+  previewLang: string,
+): void {
+  const kind = monaco.languages.CompletionItemKind.Snippet;
   const insertAsSnippet = monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet;
-  monaco.languages.registerCompletionItemProvider(SELECTOR, {
+  monaco.languages.registerCompletionItemProvider(languages, {
     provideCompletionItems(model, position) {
       const word = model.getWordUntilPosition(position);
       const range = new monaco.Range(
@@ -317,13 +324,13 @@ function registerReactSnippets(monaco: typeof monacoNs): void {
         word.endColumn,
       );
       return {
-        suggestions: REACT_SNIPPETS.map((s) => ({
+        suggestions: snippets.map((s) => ({
           label: s.prefix,
-          kind: K,
+          kind,
           insertText: s.body,
           insertTextRules: insertAsSnippet,
-          detail: `⚛ ${s.description}`,
-          documentation: { value: '```tsx\n' + previewSnippet(s.body) + '\n```' },
+          detail: `${badge} ${s.description}`,
+          documentation: { value: '```' + previewLang + '\n' + previewSnippet(s.body) + '\n```' },
           range,
         })),
       };

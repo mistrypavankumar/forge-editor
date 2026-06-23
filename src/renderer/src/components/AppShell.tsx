@@ -12,6 +12,7 @@ import { detectFormatters } from '../lib/detect-formatters';
 import { useFormatterStore } from '../stores/formatter-store';
 import { useTasksStore } from '../stores/tasks-store';
 import { useTerminalStore } from '../stores/terminal-store';
+import { useJavaStatusStore } from '../stores/java-status-store';
 import { useNavigatorStore } from '../stores/navigator-store';
 import { useKeybindings } from '../keybindings/use-keybindings';
 import { useKeybindingsStore } from '../stores/keybindings-store';
@@ -101,6 +102,12 @@ export function AppShell(): React.JSX.Element {
       if (!busy) store.clearTask(id);
       store.setProc(id, busy ? proc : undefined);
     });
+  }, []);
+
+  // Mirror the jdtls (Java language server) lifecycle for the status-bar indicator.
+  useEffect(() => {
+    void window.forge.getJavaStatus().then((s) => useJavaStatusStore.getState().setStatus(s));
+    return window.forge.onJavaStatus((s) => useJavaStatusStore.getState().setStatus(s));
   }, []);
 
   // Navigator follows the editor: jump to Changes when the first file opens, back to Structure when

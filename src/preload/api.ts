@@ -2,6 +2,7 @@ import { ipcRenderer } from 'electron';
 import {
   IpcChannels,
   type ForgeApi,
+  type JdtlsStatus,
   type TerminalBusyEvent,
   type TerminalDataEvent,
   type TerminalExitEvent,
@@ -96,6 +97,12 @@ export const api: ForgeApi = {
       ipcRenderer.invoke(IpcChannels.langRename, file, line, col, newName),
     formatDocument: (file) => ipcRenderer.invoke(IpcChannels.langFormat, file),
     getSemanticTokens: (file) => ipcRenderer.invoke(IpcChannels.langSemanticTokens, file),
+  },
+  getJavaStatus: () => ipcRenderer.invoke(IpcChannels.jdtlsGetStatus),
+  onJavaStatus: (cb) => {
+    const listener = (_e: unknown, status: JdtlsStatus): void => cb(status);
+    ipcRenderer.on(IpcChannels.jdtlsStatus, listener);
+    return () => ipcRenderer.removeListener(IpcChannels.jdtlsStatus, listener);
   },
   awsListProfiles: () => ipcRenderer.invoke(IpcChannels.awsListProfiles),
   awsValidateProfile: (name) => ipcRenderer.invoke(IpcChannels.awsValidateProfile, name),
