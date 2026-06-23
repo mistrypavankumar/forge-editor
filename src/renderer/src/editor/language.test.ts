@@ -8,6 +8,7 @@ describe('languageFor', () => {
     expect(languageFor('styles.css')).toBe('css');
     expect(languageFor('schema.graphql')).toBe('graphql');
     expect(languageFor('README.md')).toBe('markdown');
+    expect(languageFor('Main.java')).toBe('java');
   });
 
   it('detects dotenv files by name, not extension', () => {

@@ -20,6 +20,7 @@ export function languageFor(name: string): string {
     py: 'python',
     go: 'go',
     rs: 'rust',
+    java: 'java',
     sh: 'shell',
     yml: 'yaml',
     yaml: 'yaml',

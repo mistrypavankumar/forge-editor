@@ -13,6 +13,10 @@ let registered = false;
 
 const lang = window.forge.editorLanguage;
 const SELECTOR = ['typescript', 'javascript'];
+// Features served for both the TS Language Service and jdtls (Java). Semantic tokens,
+// signature help, and rename stay TS-only (jdtls isn't wired for them), and Java keeps
+// Monaco's grammar-based highlighting rather than LS semantic tokens.
+const FEATURE_SELECTOR = ['typescript', 'javascript', 'java'];
 
 function fileOf(model: editor.ITextModel): string {
   return model.uri.path;
@@ -135,7 +139,7 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
     });
   }
 
-  monaco.languages.registerDefinitionProvider(SELECTOR, {
+  monaco.languages.registerDefinitionProvider(FEATURE_SELECTOR, {
     async provideDefinition(model, position) {
       const res = await lang.getDefinition(fileOf(model), position.lineNumber, position.column);
       if (res.ok && res.data.length > 0) return res.data.map((l) => toMonacoLocation(monaco, l));
@@ -143,7 +147,7 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
     },
   });
 
-  monaco.languages.registerReferenceProvider(SELECTOR, {
+  monaco.languages.registerReferenceProvider(FEATURE_SELECTOR, {
     async provideReferences(model, position) {
       const res = await lang.getReferences(fileOf(model), position.lineNumber, position.column);
       if (!res.ok) return [];
@@ -151,7 +155,7 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
     },
   });
 
-  monaco.languages.registerHoverProvider(SELECTOR, {
+  monaco.languages.registerHoverProvider(FEATURE_SELECTOR, {
     async provideHover(model, position) {
       const res = await lang.getHover(fileOf(model), position.lineNumber, position.column);
       if (!res.ok || !res.data) return null;
@@ -165,7 +169,7 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
     },
   });
 
-  monaco.languages.registerCompletionItemProvider(SELECTOR, {
+  monaco.languages.registerCompletionItemProvider(FEATURE_SELECTOR, {
     triggerCharacters: ['.', '"', "'", '`', '/', '@', '<', ' '],
     async provideCompletionItems(model, position) {
       const res = await lang.getCompletions(fileOf(model), position.lineNumber, position.column);

@@ -2,9 +2,9 @@ import type * as monacoNs from 'monaco-editor';
 import type { editor } from 'monaco-editor';
 import type { LsDiagnostic } from '@shared/ipc-contract';
 
-/** Marker owner for inline diagnostics from the main-process Language Service. */
+/** Marker owner for inline diagnostics from the main-process language backends (TS LS + jdtls). */
 const TS_MARKER_OWNER = 'forge-ts';
-const LANG_IDS = new Set(['typescript', 'javascript']);
+const LANG_IDS = new Set(['typescript', 'javascript', 'java']);
 /** Time to wait after edits stop before re-syncing the buffer + recomputing diagnostics. */
 const SYNC_DEBOUNCE_MS = 300;
 /** Skip whole-file diagnostics above this size — a full type-check pass gets too costly. */
@@ -84,12 +84,15 @@ export async function refreshDiagnostics(
   }
   const res = await window.forge.editorLanguage.getDiagnostics(model.uri.path);
   if (!res.ok || model.isDisposed()) return;
+  // The TS LS reports numeric error codes (shown as "TS2345"); jdtls codes aren't TS, so
+  // only the TS/JS backends get the TS-prefixed code in the marker message.
+  const isTs = model.getLanguageId() === 'typescript' || model.getLanguageId() === 'javascript';
   monaco.editor.setModelMarkers(
     model,
     TS_MARKER_OWNER,
     res.data.map((d) => ({
       severity: toMarkerSeverity(monaco, d),
-      message: typeof d.code === 'number' ? `${d.message} (TS${d.code})` : d.message,
+      message: isTs && typeof d.code === 'number' ? `${d.message} (TS${d.code})` : d.message,
       startLineNumber: d.line,
       startColumn: d.column,
       endLineNumber: d.endLine,
