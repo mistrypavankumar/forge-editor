@@ -139,17 +139,40 @@ export function SourceControlPanel(): React.JSX.Element {
     window.addEventListener('pointerup', onUp);
   }, []);
 
-  const refresh = useCallback(() => {
+  // Cheap working-tree status only — safe to poll frequently.
+  const refreshChanges = useCallback(() => {
     if (!rootPath) return;
     void window.forge.gitChangedFiles(rootPath).then((res) => {
       if (res.ok) setChanges(res.data);
     });
+  }, [rootPath]);
+
+  // Full refresh (status + commit history); used on mount, focus, and after git actions.
+  const refresh = useCallback(() => {
+    refreshChanges();
+    if (!rootPath) return;
     void window.forge.gitLog(rootPath, 50).then((res) => {
       if (res.ok) setCommits(res.data);
     });
-  }, [rootPath]);
+  }, [rootPath, refreshChanges]);
 
   useEffect(() => refresh(), [refresh, syncTick]);
+
+  // Auto-sync the changes list while the panel is open. The fs watcher (recursive fs.watch) can
+  // miss editor saves on macOS, so poll the working-tree status on an interval and do a full
+  // refresh whenever the window regains focus — so changes appear without clicking refresh.
+  useEffect(() => {
+    if (!rootPath) return;
+    const id = setInterval(() => {
+      if (!document.hidden) refreshChanges();
+    }, 2000);
+    const onFocus = (): void => refresh();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [rootPath, refresh, refreshChanges]);
 
   const graph = useMemo(() => computeGitGraph(commits), [commits]);
   const graphWidth = PAD_X + graph.lanes * LANE_W + 4;
