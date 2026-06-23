@@ -58,6 +58,7 @@ export const api: ForgeApi = {
     return () => ipcRenderer.removeListener(IpcChannels.menuAction, listener);
   },
   syncMenuState: (autoSave) => ipcRenderer.send(IpcChannels.menuSyncState, autoSave),
+  newWindow: () => ipcRenderer.send(IpcChannels.newWindow),
   isMac: process.platform === 'darwin',
   rename: (oldPath, newPath) => ipcRenderer.invoke(IpcChannels.rename, oldPath, newPath),
   remove: (path) => ipcRenderer.invoke(IpcChannels.remove, path),

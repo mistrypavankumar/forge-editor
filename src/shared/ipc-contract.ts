@@ -39,6 +39,7 @@ export const IpcChannels = {
   fsChanged: 'forge:fs:changed',
   menuAction: 'forge:menu:action',
   menuSyncState: 'forge:menu:syncState',
+  newWindow: 'forge:window:new',
   rename: 'forge:fs:rename',
   remove: 'forge:fs:remove',
   copyEntry: 'forge:fs:copyEntry',
@@ -496,6 +497,8 @@ export interface TerminalExitEvent {
 export interface TerminalBusyEvent {
   id: string;
   busy: boolean;
+  /** Name of the current foreground process (e.g. "zsh", "node", "vim") — drives the tab title. */
+  proc: string;
 }
 
 export interface ForgeApi {
@@ -557,6 +560,8 @@ export interface ForgeApi {
   onFsChanged: (cb: () => void) => () => void;
   onMenuAction: (cb: (id: string) => void) => () => void;
   syncMenuState: (autoSave: boolean) => void;
+  /** Open a fresh, empty editor window where the user can open a folder. */
+  newWindow: () => void;
   isMac: boolean;
   rename: (oldPath: string, newPath: string) => Promise<Result<void>>;
   remove: (path: string) => Promise<Result<void>>;

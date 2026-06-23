@@ -3,6 +3,8 @@ import { create } from 'zustand';
 export interface TerminalSession {
   id: string;
   title: string;
+  /** Live foreground-process name (e.g. "node", "vim") shown instead of `title` while running. */
+  proc?: string;
   /** The task this terminal was launched for (if any) — drives the "running" indicator. */
   taskKey?: string;
 }
@@ -35,6 +37,8 @@ export interface TerminalState {
   newTerminal: (title?: string, taskKey?: string) => string;
   /** Clear a session's task tag (its command finished) — drops the running indicator. */
   clearTask: (id: string) => void;
+  /** Set the live foreground-process name for a session (undefined = back to the shell). */
+  setProc: (id: string, proc: string | undefined) => void;
   splitActive: () => void;
   closeSession: (id: string) => void;
   focusGroup: (groupId: string) => void;
@@ -64,6 +68,13 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       const s = st.sessions[id];
       if (!s || s.taskKey === undefined) return st;
       return { sessions: { ...st.sessions, [id]: { ...s, taskKey: undefined } } };
+    }),
+
+  setProc: (id, proc) =>
+    set((st) => {
+      const s = st.sessions[id];
+      if (!s || s.proc === proc) return st;
+      return { sessions: { ...st.sessions, [id]: { ...s, proc } } };
     }),
 
   splitActive: () => {

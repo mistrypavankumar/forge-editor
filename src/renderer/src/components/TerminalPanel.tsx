@@ -149,7 +149,7 @@ export function TerminalPanel(): React.JSX.Element {
                       size={13}
                       className={isActive ? 'text-accent' : 'text-faint'}
                     />
-                    <span className="flex-1 truncate">{s.title}</span>
+                    <span className="flex-1 truncate">{s.proc ?? s.title}</span>
                     <button
                       type="button"
                       aria-label={`Close ${s.title}`}

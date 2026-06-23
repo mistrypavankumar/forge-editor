@@ -78,6 +78,7 @@ export function createTerminal(sender: WebContents, args: TerminalCreateArgs): v
   // the initial idle state is never emitted, so the first event a task sees is "busy".
   const shell = shellName();
   let busy = false;
+  let lastProc = '';
   const poll = setInterval(() => {
     if (sessions.get(args.id) !== proc) return;
     let fg = '';
@@ -86,10 +87,16 @@ export function createTerminal(sender: WebContents, args: TerminalCreateArgs): v
     } catch {
       fg = '';
     }
-    const next = fg !== '' && fg.replace(/^-/, '') !== shell;
-    if (next !== busy) {
+    const name = fg.replace(/^-/, '');
+    const next = name !== '' && name !== shell;
+    // Emit when busy-state flips OR the foreground process name changes, so the tab
+    // title tracks the running program (vim, node, claude…) and reverts to the shell.
+    if (next !== busy || name !== lastProc) {
       busy = next;
-      if (!sender.isDestroyed()) sender.send(IpcChannels.terminalBusy, { id: args.id, busy });
+      lastProc = name;
+      if (!sender.isDestroyed()) {
+        sender.send(IpcChannels.terminalBusy, { id: args.id, busy, proc: name });
+      }
     }
   }, BUSY_POLL_MS);
   pollers.set(args.id, poll);
