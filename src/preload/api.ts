@@ -1,6 +1,8 @@
 import { ipcRenderer } from 'electron';
 import {
   IpcChannels,
+  type AssistantChunkEvent,
+  type AssistantDoneEvent,
   type ForgeApi,
   type JdtlsStatus,
   type TerminalBusyEvent,
@@ -45,6 +47,19 @@ export const api: ForgeApi = {
     ipcRenderer.invoke(IpcChannels.gitTestCredential, rootPath, username, token),
   gitGhAuth: (rootPath) => ipcRenderer.invoke(IpcChannels.gitGhAuth, rootPath),
   gitGhAccounts: (rootPath) => ipcRenderer.invoke(IpcChannels.gitGhAccounts, rootPath),
+  aiCommitMessage: (rootPath) => ipcRenderer.invoke(IpcChannels.aiCommitMessage, rootPath),
+  assistantSend: (args) => ipcRenderer.invoke(IpcChannels.assistantSend, args),
+  assistantCancel: (id) => ipcRenderer.send(IpcChannels.assistantCancel, id),
+  onAssistantChunk: (cb) => {
+    const listener = (_e: unknown, payload: AssistantChunkEvent): void => cb(payload);
+    ipcRenderer.on(IpcChannels.assistantChunk, listener);
+    return () => ipcRenderer.removeListener(IpcChannels.assistantChunk, listener);
+  },
+  onAssistantDone: (cb) => {
+    const listener = (_e: unknown, payload: AssistantDoneEvent): void => cb(payload);
+    ipcRenderer.on(IpcChannels.assistantDone, listener);
+    return () => ipcRenderer.removeListener(IpcChannels.assistantDone, listener);
+  },
   search: (rootPath, options) => ipcRenderer.invoke(IpcChannels.search, rootPath, options),
   replaceInFiles: (rootPath, options, replacement, files) =>
     ipcRenderer.invoke(IpcChannels.replaceInFiles, rootPath, options, replacement, files),

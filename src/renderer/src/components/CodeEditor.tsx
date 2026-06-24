@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { FolderOpen } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FolderOpen, ChevronUp, ChevronDown } from 'lucide-react';
 import type { editor, IDisposable } from 'monaco-editor';
 import { getMonaco } from '../editor/monaco-setup';
 import { monacoThemeForScheme } from '../editor/editor-schemes';
 import { languageFor } from '../editor/language';
 import { hunkAtLine, hunkToDecoration, revertHunk } from '../editor/git-gutter';
+import { goToChange, registerHunkSource, unregisterHunkSource } from '../editor/change-nav';
 import { DiffPeek } from '../editor/diff-peek';
 import { computeDiff, type DiffHunk } from '../lib/line-diff';
 import { commandRegistry } from '../commands/command-registry';
@@ -88,6 +89,8 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
   const syncTick = useWorkspaceStore((s) => s.syncTick);
   const inlineRunEnabled = useInlineRunStore((s) => s.enabled);
   const inlineRunByPath = useInlineRunStore((s) => s.byPath);
+  // Number of git-change hunks in the active file — drives the floating next/prev-change buttons.
+  const [changeCount, setChangeCount] = useState(0);
 
   // Recompute the git change gutter for the active model against its HEAD content.
   const recomputeDiff = useCallback(() => {
@@ -99,11 +102,13 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     if (!model || original == null) {
       collection.clear();
       hunksRef.current = [];
+      setChangeCount(0);
       return;
     }
     const monaco = getMonaco();
     const hunks = computeDiff(original.split(/\r?\n/), model.getLinesContent());
     hunksRef.current = hunks;
+    setChangeCount(hunks.length);
     collection.set(hunks.map((h) => hunkToDecoration(h, monaco)));
     if (hunks.length === 0) peekRef.current?.close();
   }, []);
@@ -146,6 +151,8 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     decoRef.current = instance.createDecorationsCollection();
     // Separate collection for the live console.log output (kept apart from the git gutter).
     runDecoRef.current = instance.createDecorationsCollection();
+    // Publish this editor's live hunks so the global next/prev-change commands can navigate it.
+    registerHunkSource(instance, () => hunksRef.current);
     peekRef.current = new DiffPeek(instance, monaco, {
       getHunks: () => hunksRef.current,
       fileName: () => {
@@ -280,6 +287,7 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
       clearTimeout(diffTimer.current);
       peekRef.current?.dispose();
       disposables.forEach((d) => d.dispose());
+      unregisterHunkSource(instance);
       if (getActiveEditor() === instance) setActiveEditor(null);
       instance.dispose();
     };
@@ -501,6 +509,9 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
   }, [pendingRevert]);
 
   const hasTabs = tabs.length > 0;
+  const isMac = window.forge.isMac;
+  const nextChangeHint = isMac ? '⌥F5' : 'Alt+F5';
+  const prevChangeHint = isMac ? '⌥⇧F5' : 'Alt+Shift+F5';
 
   const onPickFormatter = (id: FormatterId): void => {
     useFormatterStore.getState().setSelected(id);
@@ -511,6 +522,34 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     <div className="relative h-full w-full bg-bg">
       <div ref={containerRef} className="absolute inset-0" />
       <FormatterPicker onPick={onPickFormatter} />
+      {changeCount > 0 ? (
+        <div className="absolute right-5 top-3 z-10 flex items-center overflow-hidden rounded-full border border-line bg-surface-2/90 text-muted shadow-md backdrop-blur">
+          <button
+            type="button"
+            onClick={() => goToChange(editorRef.current, -1)}
+            title={`Previous change (${prevChangeHint})`}
+            aria-label="Go to previous change"
+            className="flex h-7 w-7 items-center justify-center hover:bg-surface-3 hover:text-fg"
+          >
+            <ChevronUp size={15} />
+          </button>
+          <span
+            className="px-1 font-mono text-[11px] tabular-nums text-faint"
+            title={`${changeCount} change${changeCount === 1 ? '' : 's'} from HEAD`}
+          >
+            {changeCount}
+          </span>
+          <button
+            type="button"
+            onClick={() => goToChange(editorRef.current, 1)}
+            title={`Next change (${nextChangeHint})`}
+            aria-label="Go to next change"
+            className="flex h-7 w-7 items-center justify-center hover:bg-surface-3 hover:text-fg"
+          >
+            <ChevronDown size={15} />
+          </button>
+        </div>
+      ) : null}
       {!hasTabs ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-6">
           <div className="text-5xl font-bold tracking-tight text-surface-3">Forge</div>

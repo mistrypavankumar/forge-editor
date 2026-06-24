@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshCw, GitCommitVertical, GitBranch, Cloud, CircleDot, Tag, FileDiff, Plus, Minus, Undo2, FileSymlink, ChevronRight, ChevronDown, Lock } from 'lucide-react';
+import { RefreshCw, GitCommitVertical, GitBranch, Cloud, CircleDot, Tag, FileDiff, Plus, Minus, Undo2, FileSymlink, ChevronRight, ChevronDown, Lock, Sparkles, Loader2 } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { openFilePath, openGitStagedDiff, openGitCommitDiff } from '../lib/workspace-actions';
@@ -119,6 +119,7 @@ export function SourceControlPanel(): React.JSX.Element {
   const [showHistory, setShowHistory] = useState(true);
   const [message, setMessage] = useState('');
   const [committing, setCommitting] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [commitError, setCommitError] = useState<string | null>(null);
   // Which commit is expanded to show its changed files, and those files.
   const [openCommit, setOpenCommit] = useState<string | null>(null);
@@ -276,6 +277,18 @@ export function SourceControlPanel(): React.JSX.Element {
 
   const locked = isProtectedBranch(branch);
 
+  // Ask the local `claude` CLI for a commit message describing the pending changes, and drop it
+  // into the message box. Allowed even on a protected branch (you'd then switch to a feature branch).
+  const generateMessage = async (): Promise<void> => {
+    if (generating || changes.length === 0) return;
+    setGenerating(true);
+    setCommitError(null);
+    const res = await window.forge.aiCommitMessage(root);
+    setGenerating(false);
+    if (res.ok) setMessage(res.data);
+    else setCommitError(res.error);
+  };
+
   const commit = async (): Promise<void> => {
     if (!message.trim() || changes.length === 0) return;
     // Direct commits to protected branches (main/dev/…) are blocked — work belongs on a
@@ -310,25 +323,43 @@ export function SourceControlPanel(): React.JSX.Element {
       />
       <GitBranchBar root={root} onChanged={refresh} />
       <div className="flex flex-col gap-2 px-2 pb-2 pt-2">
-        <textarea
-          rows={2}
-          value={message}
-          onChange={(e) => {
-            setMessage(e.target.value);
-            if (commitError) setCommitError(null);
-          }}
-          onKeyDown={(e) => {
-            // Cmd/Ctrl+Enter commits, mirroring the Commit button's enabled state.
-            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-              e.preventDefault();
-              if (!locked && !committing && message.trim() && changes.length > 0) void commit();
+        <div className="relative">
+          <textarea
+            rows={2}
+            value={message}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              if (commitError) setCommitError(null);
+            }}
+            onKeyDown={(e) => {
+              // Cmd/Ctrl+Enter commits, mirroring the Commit button's enabled state.
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                e.preventDefault();
+                if (!locked && !committing && message.trim() && changes.length > 0) void commit();
+              }
+            }}
+            placeholder={
+              locked
+                ? `Message (${branch} is protected)`
+                : `Message (commit on ${branch ?? 'branch'})`
             }
-          }}
-          placeholder={
-            locked ? `Message (${branch} is protected)` : `Message (commit on ${branch ?? 'branch'})`
-          }
-          className="resize-none rounded-md border border-line bg-surface-2 px-2.5 py-1.5 text-[12px] text-fg outline-none focus:border-accent/60 placeholder:text-faint"
-        />
+            className="w-full resize-none rounded-md border border-line bg-surface-2 py-1.5 pl-2.5 pr-9 text-[12px] text-fg outline-none focus:border-accent/60 placeholder:text-faint"
+          />
+          <button
+            type="button"
+            onClick={() => void generateMessage()}
+            disabled={generating || changes.length === 0}
+            aria-label="Generate commit message"
+            title="Generate commit message from changes (Claude)"
+            className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded text-faint transition-colors hover:bg-surface-3 hover:text-accent disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-faint"
+          >
+            {generating ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Sparkles size={14} />
+            )}
+          </button>
+        </div>
         <button
           type="button"
           onClick={() => void commit()}

@@ -181,6 +181,39 @@ export async function gitCommit(rootPath: string, message: string): Promise<void
   await execGit(rootPath, ['commit', '-m', message]);
 }
 
+/** Cap the diff handed to the commit-message generator, so a huge change can't blow up the prompt. */
+const MAX_COMMIT_DIFF = 24 * 1024;
+
+/**
+ * The diff a commit would record, as text for the AI commit-message generator. Mirrors
+ * {@link gitCommit}'s staging logic: the staged diff when anything is staged, otherwise the full
+ * working-tree diff (unstaged tracked changes plus every untracked file rendered against /dev/null).
+ * Truncated to {@link MAX_COMMIT_DIFF}; returns '' when there's nothing to describe.
+ */
+export async function getCommitDiff(rootPath: string): Promise<string> {
+  const cached = await execGit(rootPath, ['diff', '--cached']).catch(() => '');
+  let diff = cached;
+  if (!diff.trim()) {
+    const unstaged = await execGit(rootPath, ['diff']).catch(() => '');
+    const untracked = await execGit(rootPath, ['ls-files', '--others', '--exclude-standard']).catch(
+      () => '',
+    );
+    const parts = [unstaged];
+    for (const file of untracked.split('\n').map((s) => s.trim()).filter(Boolean)) {
+      // `git diff --no-index` renders a new file against /dev/null; it exits 1 when the files
+      // differ, so execFile rejects even on success — the diff is still on stdout, so read it there.
+      const d = await run('git', ['-C', rootPath, 'diff', '--no-index', '--', '/dev/null', file])
+        .then((r) => r.stdout)
+        .catch((e: { stdout?: string }) => e.stdout ?? '');
+      if (d) parts.push(d);
+    }
+    diff = parts.filter(Boolean).join('\n');
+  }
+  return diff.length > MAX_COMMIT_DIFF
+    ? `${diff.slice(0, MAX_COMMIT_DIFF)}\n…[diff truncated]`
+    : diff;
+}
+
 /** A single git config value, or '' when the key is unset (git exits 1, which we swallow). */
 async function gitConfig(rootPath: string, key: string): Promise<string> {
   try {

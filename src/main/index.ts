@@ -4,6 +4,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import {
   IpcChannels,
   pongOf,
+  type AssistantSendArgs,
   type ForgeSettings,
   type GitUser,
   type SearchOptions,
@@ -53,6 +54,8 @@ import {
   ghAuth,
   ghAccounts,
 } from './git/git-service';
+import { generateCommitMessage } from './ai/commit-message-service';
+import { startAssistant, cancelAssistant } from './ai/assistant-service';
 import { searchInFiles, replaceInFiles } from './search/search-service';
 import { hydratePathFromLoginShell } from './env/resolve-path';
 import { registerLanguageIpc } from './ipc/editor-language-ipc';
@@ -250,6 +253,24 @@ app.whenReady().then(async () => {
   ipcMain.handle(IpcChannels.gitGhAccounts, (_e, rootPath: string) =>
     toResult(() => ghAccounts(rootPath)),
   );
+  ipcMain.handle(IpcChannels.aiCommitMessage, (_e, rootPath: string) =>
+    toResult(() => generateCommitMessage(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.assistantSend, (e, args: AssistantSendArgs) =>
+    toResult(async () => {
+      const sender = e.sender;
+      startAssistant(
+        args,
+        (delta) => {
+          if (!sender.isDestroyed()) sender.send(IpcChannels.assistantChunk, { id: args.id, delta });
+        },
+        (error) => {
+          if (!sender.isDestroyed()) sender.send(IpcChannels.assistantDone, { id: args.id, error });
+        },
+      );
+    }),
+  );
+  ipcMain.on(IpcChannels.assistantCancel, (_e, id: string) => cancelAssistant(id));
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, options: SearchOptions) =>
     toResult(() => searchInFiles(rootPath, options)),
   );

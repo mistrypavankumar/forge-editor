@@ -9,6 +9,11 @@ function delMarkerLine(hunk: DiffHunk): number {
   return hunk.modStart >= 1 ? hunk.modStart : 1;
 }
 
+/** The 1-based editor line a hunk's gutter marker sits on — the jump target for change navigation. */
+export function hunkLine(hunk: DiffHunk): number {
+  return hunk.type === 'del' ? delMarkerLine(hunk) : hunk.modStart + 1;
+}
+
 /** Does this hunk own the given 1-based editor line (for click-to-revert routing)? */
 export function hunkAtLine(hunk: DiffHunk, line: number): boolean {
   if (hunk.type === 'del') return delMarkerLine(hunk) === line;
