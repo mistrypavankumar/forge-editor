@@ -9,6 +9,7 @@ import { useKeybindingsStore } from '../stores/keybindings-store';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { useGitUserStore } from '../stores/git-user-store';
 import { useInlineRunStore } from '../stores/inline-run-store';
+import { useAiStore } from '../stores/ai-store';
 import { clearFileCache } from '../lib/quickopen-cache';
 import type { FormatterId } from '../lib/detect-formatters';
 
@@ -35,6 +36,8 @@ export function useSettingsPersistence(): void {
   const searchExclude = useLayoutStore((s) => s.searchExclude);
   const searchExcludeSeeded = useLayoutStore((s) => s.searchExcludeSeeded);
   const scmGraphHeight = useLayoutStore((s) => s.scmGraphHeight);
+  const aiProvider = useAiStore((s) => s.provider);
+  const aiModel = useAiStore((s) => s.model);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -84,6 +87,8 @@ export function useSettingsPersistence(): void {
         if (typeof res.data.scmGraphHeight === 'number') {
           useLayoutStore.getState().setScmGraphHeight(res.data.scmGraphHeight);
         }
+        if (res.data.aiProvider) useAiStore.getState().setProvider(res.data.aiProvider);
+        if (typeof res.data.aiModel === 'string') useAiStore.getState().setModel(res.data.aiModel);
         // Seed built-in default excludes once: union them with any stored list, then never re-add.
         if (res.data.searchExcludeSeeded) {
           useLayoutStore.getState().setSearchExclude(res.data.searchExclude ?? []);
@@ -124,8 +129,10 @@ export function useSettingsPersistence(): void {
       searchExclude,
       searchExcludeSeeded,
       scmGraphHeight,
+      aiProvider,
+      aiModel,
     });
-  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, inlineRun, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight]);
+  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, inlineRun, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight, aiProvider, aiModel]);
 
   // Drop the quick-open cache when excludes change so the next search re-lists with them.
   useEffect(() => {

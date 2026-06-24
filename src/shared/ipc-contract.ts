@@ -41,6 +41,9 @@ export const IpcChannels = {
   assistantCancel: 'forge:assistant:cancel',
   assistantChunk: 'forge:assistant:chunk',
   assistantDone: 'forge:assistant:done',
+  // AI provider API-key management (keys live in a separate 0600 credentials file).
+  aiKeyStatus: 'forge:ai:keyStatus',
+  aiSetKey: 'forge:ai:setKey',
   search: 'forge:search',
   replaceInFiles: 'forge:search:replace',
   watchWorkspace: 'forge:fs:watch',
@@ -517,6 +520,15 @@ export interface AssistantDoneEvent {
   error?: string;
 }
 
+/** The AI backend used by the assistant + commit-message features. `claude-cli` needs no API key. */
+export type AiProvider = 'claude-cli' | 'anthropic' | 'openai';
+
+/** Which API providers currently have a key on file (the key itself is never sent to the renderer). */
+export interface AiKeyStatus {
+  anthropic: boolean;
+  openai: boolean;
+}
+
 export interface RecentEntry {
   type: 'folder' | 'file';
   path: string;
@@ -565,6 +577,10 @@ export interface ForgeSettings {
   searchExcludeSeeded?: boolean;
   /** Height (px) of the resizable commit-graph pane in the Source Control panel. */
   scmGraphHeight?: number;
+  /** AI provider for the assistant + commit-message features (default: the local `claude` CLI). */
+  aiProvider?: AiProvider;
+  /** Optional model override for the chosen AI provider; empty = the provider's default model. */
+  aiModel?: string;
 }
 
 /** Outcome of running a formatter CLI against a file. */
@@ -677,6 +693,10 @@ export interface ForgeApi {
   onAssistantChunk: (cb: (e: AssistantChunkEvent) => void) => () => void;
   /** Subscribe to assistant completion/error events; returns an unsubscribe fn. */
   onAssistantDone: (cb: (e: AssistantDoneEvent) => void) => () => void;
+  /** Which AI providers currently have an API key saved (the key itself is never returned). */
+  aiKeyStatus: () => Promise<Result<AiKeyStatus>>;
+  /** Save (or clear, with an empty string) an API provider's key in the credentials file. */
+  aiSetKey: (provider: 'anthropic' | 'openai', key: string) => Promise<Result<void>>;
   search: (rootPath: string, options: SearchOptions) => Promise<Result<SearchMatch[]>>;
   replaceInFiles: (
     rootPath: string,
