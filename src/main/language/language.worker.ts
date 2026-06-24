@@ -33,6 +33,15 @@ function handle(method: string, args: unknown[]): unknown {
       return languageManager.getHover(args[0] as string, args[1] as number, args[2] as number);
     case 'getCompletions':
       return languageManager.getCompletions(args[0] as string, args[1] as number, args[2] as number);
+    case 'getCompletionDetails':
+      return languageManager.getCompletionDetails(
+        args[0] as string,
+        args[1] as number,
+        args[2] as number,
+        args[3] as string,
+        args[4] as string | undefined,
+        args[5],
+      );
     case 'getSignatureHelp':
       return languageManager.getSignatureHelp(args[0] as string, args[1] as number, args[2] as number);
     case 'renameSymbol':

@@ -71,6 +71,7 @@ export const IpcChannels = {
   langReferences: 'forge:lang:references',
   langHover: 'forge:lang:hover',
   langCompletions: 'forge:lang:completions',
+  langCompletionDetails: 'forge:lang:completionDetails',
   langSignatureHelp: 'forge:lang:signatureHelp',
   langRename: 'forge:lang:rename',
   langFormat: 'forge:lang:format',
@@ -345,10 +346,28 @@ export interface LsCompletionItem {
   insertText?: string;
   sortText?: string;
   detail?: string;
+  /**
+   * Module the symbol is exported from (e.g. "@/components/cells"). Present for auto-import
+   * candidates — symbols not yet imported into the file. Shown as the item's detail and round-tripped
+   * to {@link EditorLanguageApi.getCompletionDetails} to compute the import edit.
+   */
+  source?: string;
+  /** Opaque TS `CompletionEntryData`, round-tripped to resolve the auto-import edit. */
+  data?: unknown;
+  /** True when resolving this item produces code actions (notably an auto-import insertion). */
+  hasAction?: boolean;
 }
 
 export interface LsCompletions {
   items: LsCompletionItem[];
+}
+
+/** Lazily-resolved detail for a completion item: docs plus any extra edits (e.g. the import line). */
+export interface LsCompletionDetail {
+  detail?: string;
+  documentation?: string;
+  /** Edits to apply alongside the inserted text — for auto-import, the new `import …` statement. */
+  additionalEdits: LsTextEdit[];
 }
 
 export interface LsSignatureParameter {
@@ -400,6 +419,15 @@ export interface EditorLanguageApi {
   getReferences: (filePath: string, line: number, column: number) => Promise<Result<LsLocation[]>>;
   getHover: (filePath: string, line: number, column: number) => Promise<Result<LsHover | null>>;
   getCompletions: (filePath: string, line: number, column: number) => Promise<Result<LsCompletions>>;
+  /** Resolve a completion item's docs and any extra edits (auto-import) when it's focused. */
+  getCompletionDetails: (
+    filePath: string,
+    line: number,
+    column: number,
+    label: string,
+    source?: string,
+    data?: unknown,
+  ) => Promise<Result<LsCompletionDetail | null>>;
   getSignatureHelp: (
     filePath: string,
     line: number,

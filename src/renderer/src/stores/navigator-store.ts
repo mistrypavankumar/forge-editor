@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type NavigatorTab = 'changes' | 'map' | 'recent' | 'structure';
+export type NavigatorTab = 'changes' | 'map' | 'structure';
 export type FilterChip = 'all' | 'changed' | 'errors' | 'recent' | 'config' | 'tests';
 
 export const filterChips: { id: FilterChip; label: string }[] = [

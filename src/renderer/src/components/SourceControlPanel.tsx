@@ -45,13 +45,23 @@ function ChangeRow({
   onOpen: () => void;
   actions: { icon: typeof Plus; label: string; onClick: () => void }[];
 }): React.JSX.Element {
+  const deleted = change.status === 'D';
   return (
     <div
       onClick={onOpen}
       className="group flex h-7 cursor-pointer items-center gap-2 px-3 hover:bg-surface-2"
     >
-      <ModernFileIcon name={change.name} />
-      <span className="truncate text-[13px] text-muted">{change.name}</span>
+      <span className={cn('flex shrink-0 items-center', deleted && 'opacity-40 grayscale')}>
+        <ModernFileIcon name={change.name} />
+      </span>
+      <span
+        className={cn(
+          'truncate text-[13px]',
+          deleted ? 'text-faint line-through' : 'text-muted',
+        )}
+      >
+        {change.name}
+      </span>
       <span className="ml-auto flex shrink-0 items-center gap-0.5">
         <span className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           {actions.map((a) => (

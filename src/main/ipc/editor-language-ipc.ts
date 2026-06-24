@@ -64,6 +64,16 @@ export function registerLanguageIpc(ipcMain: IpcMain): void {
         : languageClient.getCompletions(file, line, col),
     ),
   );
+  ipcMain.handle(
+    IpcChannels.langCompletionDetails,
+    (_e, file: string, line: number, col: number, label: string, source?: string, data?: unknown) =>
+      toResult(async () =>
+        // jdtls has no completion-resolve wired up; only TS/JS get auto-import details.
+        isJava(file)
+          ? null
+          : languageClient.getCompletionDetails(file, line, col, label, source, data),
+      ),
+  );
   ipcMain.handle(IpcChannels.langSignatureHelp, (_e, file: string, line: number, col: number) =>
     toResult(async () => (isJava(file) ? null : languageClient.getSignatureHelp(file, line, col))),
   );

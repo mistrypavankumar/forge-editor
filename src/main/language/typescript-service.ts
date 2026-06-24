@@ -1,6 +1,7 @@
 import ts from 'typescript';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import type {
+  LsCompletionDetail,
   LsCompletionItem,
   LsCompletions,
   LsDiagnostic,
@@ -32,6 +33,20 @@ const FORMAT_SETTINGS: ts.FormatCodeSettings = {
 };
 
 /**
+ * Completion preferences shared by the suggestion list and its lazy detail resolve. Both calls MUST
+ * pass the same options or TS won't reproduce the auto-import entry on resolve. `includeCompletions
+ * ForModuleExports` is what surfaces not-yet-imported symbols; the module-specifier prefs make the
+ * generated `import` use the project's `@/…` aliases and omit file extensions.
+ */
+const COMPLETION_PREFERENCES: ts.UserPreferences = {
+  includeCompletionsForModuleExports: true,
+  includeCompletionsWithInsertText: true,
+  includeCompletionsForImportStatements: true,
+  importModuleSpecifierPreference: 'shortest',
+  importModuleSpecifierEnding: 'minimal',
+};
+
+/**
  * Owns one {@link Project} per initialized workspace root and routes feature requests to the
  * right one. Positions crossing IPC are 1-based line / 1-based column (Monaco-native) so the
  * renderer needs no conversion; we translate to/from TS character offsets here.
@@ -39,18 +54,57 @@ const FORMAT_SETTINGS: ts.FormatCodeSettings = {
 class LanguageServiceManager {
   private projects = new Map<string, Project>();
   private lastRoot: string | null = null;
+  /** dir-of-file → nearest tsconfig dir (or null). Avoids re-walking the tree on every request. */
+  private configDirCache = new Map<string, string | null>();
 
-  initializeProject(rootPath: string): void {
+  /** Create a project rooted at `rootPath` if one doesn't exist yet. */
+  private ensureProject(rootPath: string): string {
     const key = toTsPath(rootPath);
     if (!this.projects.has(key)) {
       this.projects.set(key, new Project(rootPath, registry));
     }
-    this.lastRoot = key;
+    return key;
+  }
+
+  initializeProject(rootPath: string): void {
+    this.lastRoot = this.ensureProject(rootPath);
+  }
+
+  /**
+   * Nearest directory containing a tsconfig.json, walking up from `file` toward the workspace root.
+   * In a monorepo the alias-defining config lives in the app/package folder (e.g.
+   * `apps/scm/tsconfig.json` with `@/* → ./src/*`), not at the opened root, so a single
+   * root-level project resolves none of those `@/…` imports. Bounded by the workspace root when the
+   * file lives under it.
+   */
+  private nearestConfigDir(file: string): string | null {
+    const startDir = toTsPath(dirname(file));
+    const cached = this.configDirCache.get(startDir);
+    if (cached !== undefined) return cached;
+    const bound = this.lastRoot && fileUnderRoot(file, this.lastRoot) ? this.lastRoot : null;
+    let dir = startDir;
+    let result: string | null = null;
+    for (;;) {
+      if (ts.sys.fileExists(join(dir, 'tsconfig.json'))) {
+        result = dir;
+        break;
+      }
+      if (bound && dir === bound) break;
+      const parent = toTsPath(dirname(dir));
+      if (parent === dir) break; // filesystem root
+      dir = parent;
+    }
+    this.configDirCache.set(startDir, result);
+    return result;
   }
 
   /** Pick the project that owns `file` (longest matching root), else the most recent, else create. */
   private projectFor(file: string): Project {
     const f = toTsPath(file);
+    // Make sure a project rooted at the file's nearest tsconfig exists, so monorepo apps/packages
+    // get their own alias-aware program rather than falling back to the workspace-root config.
+    const configDir = this.nearestConfigDir(f);
+    if (configDir) this.ensureProject(configDir);
     let best: Project | null = null;
     for (const project of this.projects.values()) {
       if (fileUnderRoot(f, project.rootPath)) {
@@ -188,21 +242,78 @@ class LanguageServiceManager {
     const completions = project.getService().getCompletionsAtPosition(
       toTsPath(file),
       this.offsetAt(sf, line, column),
-      {
-        includeCompletionsForModuleExports: true,
-        includeCompletionsWithInsertText: true,
-        includeCompletionsForImportStatements: true,
-      },
+      COMPLETION_PREFERENCES,
     );
     if (!completions) return { items: [] };
-    const items: LsCompletionItem[] = completions.entries.map((e) => ({
-      label: e.name,
-      kind: e.kind,
-      insertText: e.insertText ?? e.name,
-      sortText: e.sortText,
-      detail: e.kindModifiers || undefined,
-    }));
+    const items: LsCompletionItem[] = completions.entries.map((e) => {
+      // `source` (a module path) marks an auto-import candidate; carry it plus the opaque `data`
+      // so the lazy resolve can ask TS for the import edit. `sourceDisplay` is the human-readable form.
+      const source = e.source ?? (e.sourceDisplay ? ts.displayPartsToString(e.sourceDisplay) : undefined);
+      return {
+        label: e.name,
+        kind: e.kind,
+        insertText: e.insertText ?? e.name,
+        sortText: e.sortText,
+        detail: source ?? (e.kindModifiers || undefined),
+        source,
+        data: e.data,
+        hasAction: e.hasAction,
+      };
+    });
     return { items };
+  }
+
+  /**
+   * Resolve one completion entry: its signature/JSDoc plus any code-action edits. For an
+   * auto-import candidate the code action's text changes include the new `import …` statement, which
+   * we hand back as `additionalEdits` for the renderer to apply alongside the inserted symbol.
+   */
+  getCompletionDetails(
+    file: string,
+    line: number,
+    column: number,
+    label: string,
+    source?: string,
+    data?: unknown,
+  ): LsCompletionDetail | null {
+    const project = this.projectFor(file);
+    const sf = project.getSourceFile(file);
+    if (!sf) return null;
+    const details = project.getService().getCompletionEntryDetails(
+      toTsPath(file),
+      this.offsetAt(sf, line, column),
+      label,
+      FORMAT_SETTINGS,
+      source,
+      COMPLETION_PREFERENCES,
+      data as ts.CompletionEntryData | undefined,
+    );
+    if (!details) return null;
+    const additionalEdits: LsTextEdit[] = [];
+    for (const action of details.codeActions ?? []) {
+      for (const change of action.changes) {
+        const targetSf = project.getSourceFile(change.fileName) ?? sf;
+        for (const tc of change.textChanges) {
+          const start = targetSf.getLineAndCharacterOfPosition(tc.span.start);
+          const end = targetSf.getLineAndCharacterOfPosition(tc.span.start + tc.span.length);
+          additionalEdits.push({
+            file: change.fileName,
+            line: start.line + 1,
+            column: start.character + 1,
+            endLine: end.line + 1,
+            endColumn: end.character + 1,
+            newText: tc.newText,
+          });
+        }
+      }
+    }
+    const detail = ts.displayPartsToString(details.displayParts);
+    const documentation = ts.displayPartsToString(details.documentation);
+    return {
+      detail: detail || undefined,
+      documentation: documentation || undefined,
+      additionalEdits,
+    };
   }
 
   getSignatureHelp(file: string, line: number, column: number): LsSignatureHelp | null {

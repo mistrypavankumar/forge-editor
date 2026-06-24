@@ -23,6 +23,22 @@ function fileOf(model: editor.ITextModel): string {
   return model.uri.path;
 }
 
+/** Context stashed on a completion item so resolveCompletionItem can fetch its auto-import edit. */
+interface ResolveContext {
+  file: string;
+  line: number;
+  column: number;
+  label: string;
+  source?: string;
+  data?: unknown;
+}
+type ForgeCompletion = languages.CompletionItem & { __forge?: ResolveContext };
+
+/** Compare two absolute paths ignoring slash direction (Monaco URIs vs TS forward-slash paths). */
+function samePath(a: string, b: string): boolean {
+  return a.replace(/\\/g, '/') === b.replace(/\\/g, '/');
+}
+
 function toRange(monaco: typeof monacoNs, loc: LsLocation): monacoNs.IRange {
   return new monaco.Range(loc.line, loc.column, loc.endLine, loc.endColumn);
 }
@@ -183,15 +199,58 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
         word.endColumn,
       );
       return {
-        suggestions: res.data.items.map((item) => ({
-          label: item.label,
-          kind: completionKind(monaco, item.kind),
-          insertText: item.insertText ?? item.label,
-          sortText: item.sortText,
-          detail: item.detail,
-          range,
-        })),
+        suggestions: res.data.items.map((item) => {
+          const suggestion: ForgeCompletion = {
+            // Show the source module beside the name so an auto-import candidate is obvious.
+            label: item.source ? { label: item.label, description: item.source } : item.label,
+            kind: completionKind(monaco, item.kind),
+            insertText: item.insertText ?? item.label,
+            sortText: item.sortText,
+            detail: item.detail,
+            range,
+          };
+          // Auto-import candidates carry a `source`/`hasAction`; defer the (costly) import-edit
+          // computation to resolveCompletionItem, which fires only when the item is focused.
+          if (item.hasAction || item.source) {
+            suggestion.__forge = {
+              file: fileOf(model),
+              line: position.lineNumber,
+              column: position.column,
+              label: item.label,
+              source: item.source,
+              data: item.data,
+            };
+          }
+          return suggestion;
+        }),
       };
+    },
+    async resolveCompletionItem(item) {
+      const ctx = (item as ForgeCompletion).__forge;
+      if (!ctx) return item;
+      const res = await lang.getCompletionDetails(
+        ctx.file,
+        ctx.line,
+        ctx.column,
+        ctx.label,
+        ctx.source,
+        ctx.data,
+      );
+      if (!res.ok || !res.data) return item;
+      const docParts: string[] = [];
+      if (res.data.detail) docParts.push('```typescript\n' + res.data.detail + '\n```');
+      if (res.data.documentation) docParts.push(res.data.documentation);
+      if (docParts.length) item.documentation = { value: docParts.join('\n\n') };
+      // The import-insertion edit (and any other code-action edits) for the current file. Monaco
+      // applies these atomically with the inserted symbol — that's the auto-import.
+      const edits = res.data.additionalEdits
+        .filter((e) => samePath(e.file, ctx.file))
+        .map((e) => ({
+          range: new monaco.Range(e.line, e.column, e.endLine, e.endColumn),
+          text: e.newText,
+        }));
+      if (edits.length) item.additionalTextEdits = edits;
+      return item;
     },
   });
 
