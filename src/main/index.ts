@@ -56,6 +56,8 @@ import {
 } from './git/git-service';
 import { generateCommitMessage } from './ai/commit-message-service';
 import { startAssistant, cancelAssistant } from './ai/assistant-service';
+import { resolveAi } from './ai/ai-config';
+import { aiKeyStatus, setAiKey } from './ai/ai-credentials';
 import { searchInFiles, replaceInFiles } from './search/search-service';
 import { hydratePathFromLoginShell } from './env/resolve-path';
 import { registerLanguageIpc } from './ipc/editor-language-ipc';
@@ -73,6 +75,8 @@ import {
 const SETTINGS_PATH = join(homedir(), '.forge', 'settings.json');
 /** Backing file for the per-repo git credential store the user-switcher writes to. */
 const CREDENTIALS_PATH = join(homedir(), '.forge', 'git-credentials');
+/** Backing file (0600) for AI provider API keys — kept out of settings.json. */
+const AI_CREDENTIALS_PATH = join(homedir(), '.forge', 'ai-credentials');
 const isMac = process.platform === 'darwin';
 let autoSaveState = false;
 
@@ -254,12 +258,17 @@ app.whenReady().then(async () => {
     toResult(() => ghAccounts(rootPath)),
   );
   ipcMain.handle(IpcChannels.aiCommitMessage, (_e, rootPath: string) =>
-    toResult(() => generateCommitMessage(rootPath)),
+    toResult(async () => {
+      const cfg = await resolveAi(SETTINGS_PATH, AI_CREDENTIALS_PATH);
+      return generateCommitMessage(cfg, rootPath);
+    }),
   );
   ipcMain.handle(IpcChannels.assistantSend, (e, args: AssistantSendArgs) =>
     toResult(async () => {
       const sender = e.sender;
+      const cfg = await resolveAi(SETTINGS_PATH, AI_CREDENTIALS_PATH);
       startAssistant(
+        cfg,
         args,
         (delta) => {
           if (!sender.isDestroyed()) sender.send(IpcChannels.assistantChunk, { id: args.id, delta });
@@ -271,6 +280,10 @@ app.whenReady().then(async () => {
     }),
   );
   ipcMain.on(IpcChannels.assistantCancel, (_e, id: string) => cancelAssistant(id));
+  ipcMain.handle(IpcChannels.aiKeyStatus, () => toResult(() => aiKeyStatus(AI_CREDENTIALS_PATH)));
+  ipcMain.handle(IpcChannels.aiSetKey, (_e, provider: 'anthropic' | 'openai', key: string) =>
+    toResult(() => setAiKey(AI_CREDENTIALS_PATH, provider, key)),
+  );
   ipcMain.handle(IpcChannels.search, (_e, rootPath: string, options: SearchOptions) =>
     toResult(() => searchInFiles(rootPath, options)),
   );

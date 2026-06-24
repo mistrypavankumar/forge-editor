@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, RotateCcw, SlidersHorizontal, Wand2, Keyboard, Search, FolderSearch } from 'lucide-react';
+import { X, RotateCcw, SlidersHorizontal, Wand2, Keyboard, Search, FolderSearch, Sparkles } from 'lucide-react';
+import { useAiStore } from '../stores/ai-store';
+import type { AiKeyStatus, AiProvider } from '@shared/ipc-contract';
 import { useThemeStore } from '../stores/theme-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useFormatterStore } from '../stores/formatter-store';
@@ -18,6 +20,7 @@ const SECTIONS = [
   { id: 'general', label: 'General', icon: SlidersHorizontal },
   { id: 'formatting', label: 'Formatting', icon: Wand2 },
   { id: 'search', label: 'Search', icon: FolderSearch },
+  { id: 'ai', label: 'AI', icon: Sparkles },
   { id: 'keyboard', label: 'Keyboard Shortcuts', icon: Keyboard },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]['id'];
@@ -179,6 +182,11 @@ export function SettingsView(): React.JSX.Element | null {
   const autoFormat = useFormatterStore((s) => s.autoFormat);
   const overrides = useKeybindingsStore((s) => s.overrides);
   const searchExclude = useLayoutStore((s) => s.searchExclude);
+  const aiProvider = useAiStore((s) => s.provider);
+  const aiModel = useAiStore((s) => s.model);
+  const [keyStatus, setKeyStatus] = useState<AiKeyStatus | null>(null);
+  const [keyDraft, setKeyDraft] = useState('');
+  const [keySaving, setKeySaving] = useState(false);
   const [recording, setRecording] = useState<string | null>(null);
   const [active, setActive] = useState<SectionId>('general');
   const [kbFilter, setKbFilter] = useState('');
@@ -193,6 +201,14 @@ export function SettingsView(): React.JSX.Element | null {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, recording]);
+
+  // Load which API providers have a saved key whenever Settings opens (keys themselves stay in main).
+  useEffect(() => {
+    if (!open) return;
+    void window.forge.aiKeyStatus().then((r) => {
+      if (r.ok) setKeyStatus(r.data);
+    });
+  }, [open]);
 
   // While recording, capture the next chord and bind it to the target command.
   useEffect(() => {
@@ -378,6 +394,117 @@ export function SettingsView(): React.JSX.Element | null {
     </Card>
   );
 
+  const apiProvider: 'anthropic' | 'openai' | null =
+    aiProvider === 'anthropic' || aiProvider === 'openai' ? aiProvider : null;
+  const modelPlaceholder =
+    aiProvider === 'anthropic'
+      ? 'claude-sonnet-4-6 (default)'
+      : aiProvider === 'openai'
+        ? 'gpt-4o (default)'
+        : 'uses your claude CLI default';
+  const refreshKeyStatus = async (): Promise<void> => {
+    const r = await window.forge.aiKeyStatus();
+    if (r.ok) setKeyStatus(r.data);
+  };
+  const saveKey = async (): Promise<void> => {
+    if (!apiProvider || !keyDraft.trim()) return;
+    setKeySaving(true);
+    const r = await window.forge.aiSetKey(apiProvider, keyDraft.trim());
+    setKeySaving(false);
+    if (r.ok) {
+      setKeyDraft('');
+      await refreshKeyStatus();
+    }
+  };
+  const clearKey = async (): Promise<void> => {
+    if (!apiProvider) return;
+    await window.forge.aiSetKey(apiProvider, '');
+    setKeyDraft('');
+    await refreshKeyStatus();
+  };
+  const fieldCls =
+    'w-60 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[12px] text-fg outline-none transition-colors placeholder:text-faint focus:border-accent/70';
+
+  const ai = (
+    <Card>
+      <SettingRow label="AI provider" hint="Powers the Assistant panel and AI commit messages">
+        <select
+          value={aiProvider}
+          onChange={(e) => {
+            useAiStore.getState().setProvider(e.target.value as AiProvider);
+            setKeyDraft('');
+          }}
+          className={selectCls}
+        >
+          <option value="claude-cli">Claude Code (CLI)</option>
+          <option value="anthropic">Anthropic API</option>
+          <option value="openai">OpenAI API</option>
+        </select>
+      </SettingRow>
+      <SettingRow
+        label="Model"
+        hint={
+          apiProvider
+            ? "Leave blank to use the provider's default model"
+            : 'Leave blank to use your `claude` CLI default model'
+        }
+        last={!apiProvider}
+      >
+        <input
+          value={aiModel}
+          onChange={(e) => useAiStore.getState().setModel(e.target.value)}
+          placeholder={modelPlaceholder}
+          className={fieldCls}
+        />
+      </SettingRow>
+      {apiProvider ? (
+        <SettingRow
+          label="API key"
+          hint={
+            keyStatus?.[apiProvider]
+              ? 'A key is saved (hidden). Enter a new one to replace it. Stored in ~/.forge/ai-credentials.'
+              : 'Stored in ~/.forge/ai-credentials (0600), not in settings.json.'
+          }
+          last
+        >
+          <div className="flex items-center gap-2">
+            <input
+              type="password"
+              value={keyDraft}
+              onChange={(e) => setKeyDraft(e.target.value)}
+              placeholder={
+                keyStatus?.[apiProvider]
+                  ? '•••••••• saved'
+                  : apiProvider === 'anthropic'
+                    ? 'sk-ant-…'
+                    : 'sk-…'
+              }
+              className={fieldCls}
+            />
+            <button
+              type="button"
+              onClick={() => void saveKey()}
+              disabled={keySaving || !keyDraft.trim()}
+              className="rounded-lg border border-line bg-surface px-3 py-1.5 text-[12px] text-fg transition-colors hover:border-line-strong disabled:opacity-40"
+            >
+              Save
+            </button>
+            {keyStatus?.[apiProvider] ? (
+              <button
+                type="button"
+                onClick={() => void clearKey()}
+                aria-label="Clear API key"
+                className="rounded-lg p-1.5 text-faint transition-colors hover:bg-surface-2 hover:text-danger"
+              >
+                <X size={14} />
+              </button>
+            ) : null}
+          </div>
+        </SettingRow>
+      ) : null}
+    </Card>
+  );
+
   const keyboard = (
     <>
       <div className="mb-3 flex items-center justify-end">
@@ -486,6 +613,7 @@ export function SettingsView(): React.JSX.Element | null {
             {active === 'general' ? general : null}
             {active === 'formatting' ? formatting : null}
             {active === 'search' ? search : null}
+            {active === 'ai' ? ai : null}
             {active === 'keyboard' ? keyboard : null}
           </div>
         </div>

@@ -60,6 +60,8 @@ export const api: ForgeApi = {
     ipcRenderer.on(IpcChannels.assistantDone, listener);
     return () => ipcRenderer.removeListener(IpcChannels.assistantDone, listener);
   },
+  aiKeyStatus: () => ipcRenderer.invoke(IpcChannels.aiKeyStatus),
+  aiSetKey: (provider, key) => ipcRenderer.invoke(IpcChannels.aiSetKey, provider, key),
   search: (rootPath, options) => ipcRenderer.invoke(IpcChannels.search, rootPath, options),
   replaceInFiles: (rootPath, options, replacement, files) =>
     ipcRenderer.invoke(IpcChannels.replaceInFiles, rootPath, options, replacement, files),
