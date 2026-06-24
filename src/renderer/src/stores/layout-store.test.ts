@@ -8,7 +8,6 @@ describe('layout-store', () => {
       rightVisible: false,
       bottomVisible: false,
       activity: 'explorer',
-      rightTab: 'assistant',
       bottomTab: 'problems',
     });
   });
@@ -35,11 +34,9 @@ describe('layout-store', () => {
 
   it('setActivity and tab setters update selection', () => {
     useLayoutStore.getState().setActivity('git');
-    useLayoutStore.getState().setRightTab('changes');
     useLayoutStore.getState().setBottomTab('terminal');
     const s = useLayoutStore.getState();
     expect(s.activity).toBe('git');
-    expect(s.rightTab).toBe('changes');
     expect(s.bottomTab).toBe('terminal');
   });
 });

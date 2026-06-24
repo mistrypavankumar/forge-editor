@@ -228,6 +228,46 @@ body {
   max-width: 100%;
 }
 
+/* Compact markdown for the Assistant chat — tighter type/margins, no outer gap, so a reply
+   reads as one snug block instead of the roomy document layout used by the file preview. */
+.md-chat {
+  font-size: 13px;
+  line-height: 1.6;
+  /* Dim the body copy to muted so it isn't glaring in dark mode; headings + bold stay bright
+     (below) so the hierarchy still reads. */
+  color: var(--muted);
+}
+.md-chat strong,
+.md-chat b {
+  color: var(--fg);
+}
+.md-chat > :first-child {
+  margin-top: 0;
+}
+.md-chat > :last-child {
+  margin-bottom: 0;
+}
+.md-chat h1,
+.md-chat h2,
+.md-chat h3,
+.md-chat h4 {
+  margin: 1em 0 0.4em;
+}
+.md-chat h1 {
+  font-size: 1.25em;
+}
+.md-chat h2 {
+  font-size: 1.12em;
+}
+.md-chat h3,
+.md-chat h4 {
+  font-size: 1.02em;
+}
+.md-chat pre {
+  font-size: 0.9em;
+  padding: 10px 12px;
+}
+
 /* Git change gutter — colored bars (add/modify) and a deletion marker.
    Bars sit in Monaco's lines-decorations strip; clicking one reverts the hunk. */
 .forge-git-gutter {

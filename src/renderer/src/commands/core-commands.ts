@@ -7,6 +7,7 @@ import { newFile } from '../lib/fs-actions';
 import { formatActiveFile, maybeFormatOnSave } from '../lib/format-actions';
 import { saveAllFiles } from '../lib/save-actions';
 import { getActiveEditor } from '../editor/active-editor';
+import { goToChange } from '../editor/change-nav';
 import { getMonaco } from '../editor/monaco-setup';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { useInlineRunStore } from '../stores/inline-run-store';
@@ -192,6 +193,20 @@ export function registerCoreCommands(): void {
     title: 'Go to Line/Column…',
     category: 'Go',
     run: gotoLine,
+    isEnabled: () => useEditorStore.getState().activePath !== null,
+  });
+  commandRegistry.register({
+    id: 'editor.nextChange',
+    title: 'Go to Next Change',
+    category: 'Go',
+    run: () => goToChange(getActiveEditor(), 1),
+    isEnabled: () => useEditorStore.getState().activePath !== null,
+  });
+  commandRegistry.register({
+    id: 'editor.prevChange',
+    title: 'Go to Previous Change',
+    category: 'Go',
+    run: () => goToChange(getActiveEditor(), -1),
     isEnabled: () => useEditorStore.getState().activePath !== null,
   });
   commandRegistry.register({

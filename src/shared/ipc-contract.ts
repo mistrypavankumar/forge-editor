@@ -34,6 +34,13 @@ export const IpcChannels = {
   gitTestCredential: 'forge:git:testCredential',
   gitGhAuth: 'forge:git:ghAuth',
   gitGhAccounts: 'forge:git:ghAccounts',
+  // AI-generated commit message (via the local `claude` CLI).
+  aiCommitMessage: 'forge:ai:commitMessage',
+  // Assistant chat (streaming, via the local `claude` CLI).
+  assistantSend: 'forge:assistant:send',
+  assistantCancel: 'forge:assistant:cancel',
+  assistantChunk: 'forge:assistant:chunk',
+  assistantDone: 'forge:assistant:done',
   search: 'forge:search',
   replaceInFiles: 'forge:search:replace',
   watchWorkspace: 'forge:fs:watch',
@@ -478,6 +485,38 @@ export interface AwsConfigPaths {
   credentials: string;
 }
 
+// ---- Assistant chat (streaming, backed by the local `claude` CLI) ----------
+
+/** One prior chat turn, sent back as context so the assistant can hold a conversation. */
+export interface AssistantTurn {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
+/** A request to start an assistant completion; chunks/done stream back keyed by `id`. */
+export interface AssistantSendArgs {
+  /** Correlates this request with its streamed `assistantChunk`/`assistantDone` events. */
+  id: string;
+  /** The user's question (already expanded from a quick action when one was clicked). */
+  question: string;
+  /** The open file to ground the answer in, or null when no file is open. */
+  file?: { name: string; language: string; content: string } | null;
+  /** Earlier turns in this conversation (oldest first), for multi-turn context. */
+  history?: AssistantTurn[];
+}
+
+/** A streamed slice of the assistant's reply. */
+export interface AssistantChunkEvent {
+  id: string;
+  delta: string;
+}
+
+/** Terminal event for a request: present `error` means it failed (absent = success/cancelled). */
+export interface AssistantDoneEvent {
+  id: string;
+  error?: string;
+}
+
 export interface RecentEntry {
   type: 'folder' | 'file';
   path: string;
@@ -621,6 +660,23 @@ export interface ForgeApi {
   gitGhAuth: (rootPath: string) => Promise<Result<GhAuth>>;
   /** List every `gh` account signed in for the repo's host, each importable in one click. */
   gitGhAccounts: (rootPath: string) => Promise<Result<GhAccounts>>;
+  /**
+   * Generate a commit message describing the repo's pending changes, using the local `claude`
+   * CLI in headless mode. Errors when there are no changes or the CLI is unavailable/fails.
+   */
+  aiCommitMessage: (rootPath: string) => Promise<Result<string>>;
+  /**
+   * Start an assistant completion. Resolves once the `claude` CLI has been spawned; the reply
+   * streams back as `onAssistantChunk` events and finishes with `onAssistantDone` (carrying an
+   * error string on failure). Cancel an in-flight request with {@link ForgeApi.assistantCancel}.
+   */
+  assistantSend: (args: AssistantSendArgs) => Promise<Result<void>>;
+  /** Cancel an in-flight assistant request by id (kills the underlying `claude` process). */
+  assistantCancel: (id: string) => void;
+  /** Subscribe to streamed assistant reply chunks; returns an unsubscribe fn. */
+  onAssistantChunk: (cb: (e: AssistantChunkEvent) => void) => () => void;
+  /** Subscribe to assistant completion/error events; returns an unsubscribe fn. */
+  onAssistantDone: (cb: (e: AssistantDoneEvent) => void) => () => void;
   search: (rootPath: string, options: SearchOptions) => Promise<Result<SearchMatch[]>>;
   replaceInFiles: (
     rootPath: string,
