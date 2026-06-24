@@ -13,6 +13,7 @@ const TONE: Record<BadgeTone, string> = {
 interface ProjectRowProps {
   icon: React.ReactNode;
   name: string;
+  nameClassName?: string;
   meta?: string;
   badge?: { label: string; tone: BadgeTone };
   trailing?: React.ReactNode;
@@ -22,6 +23,7 @@ interface ProjectRowProps {
 export function ProjectRow({
   icon,
   name,
+  nameClassName,
   meta,
   badge,
   trailing,
@@ -35,7 +37,7 @@ export function ProjectRow({
     >
       <span className="flex shrink-0 items-center">{icon}</span>
       <span className="flex min-w-0 flex-col leading-tight">
-        <span className="truncate text-[13px] text-fg">{name}</span>
+        <span className={cn('truncate text-[13px]', nameClassName ?? 'text-fg')}>{name}</span>
         {meta ? <span className="truncate text-[11px] text-faint">{meta}</span> : null}
       </span>
       <span className="ml-auto flex shrink-0 items-center gap-2">

@@ -42,8 +42,25 @@ interface TsPaths {
   paths: Record<string, string[]>;
 }
 
-async function readTsPaths(rootPath: string): Promise<TsPaths> {
-  const tsconfigPath = join(rootPath, 'tsconfig.json');
+/**
+ * Walk up from `startDir` (inclusive) to `rootPath` (inclusive) for the nearest tsconfig.json,
+ * returning its directory. In a monorepo the alias-defining config lives in the app/package folder
+ * (e.g. `apps/scm/tsconfig.json` with `@/* → ./src/*`), not at the opened workspace root, so reading
+ * only the root config misses every `@/…` alias. Mirrors how `tsc`/editors locate the config.
+ */
+async function findConfigDir(startDir: string, rootPath: string): Promise<string> {
+  let dir = startDir;
+  for (;;) {
+    if (await isFile(join(dir, 'tsconfig.json'))) return dir;
+    if (dir === rootPath) return rootPath;
+    const parent = dirname(dir);
+    if (parent === dir) return rootPath; // reached the filesystem root without a match
+    dir = parent;
+  }
+}
+
+async function readTsPaths(configDir: string): Promise<TsPaths> {
+  const tsconfigPath = join(configDir, 'tsconfig.json');
   const raw = await fs.readFile(tsconfigPath, 'utf8').catch(() => null);
   const config = raw ? parseJsonish(raw) : null;
   const compiler = (config?.compilerOptions ?? {}) as { baseUrl?: string; paths?: Record<string, string[]> };
@@ -59,7 +76,7 @@ async function readTsPaths(rootPath: string): Promise<TsPaths> {
     const baseCompiler = (base?.compilerOptions ?? {}) as { paths?: Record<string, string[]> };
     paths = { ...(baseCompiler.paths ?? {}), ...paths };
   }
-  return { baseDir: resolve(rootPath, baseUrl), paths };
+  return { baseDir: resolve(configDir, baseUrl), paths };
 }
 
 /** Candidate target paths for `spec` from tsconfig `paths` (exact key, then wildcard). Pure. */
@@ -79,8 +96,8 @@ export function tsPathCandidates(spec: string, paths: Record<string, string[]>):
   return out;
 }
 
-async function resolveNodeModule(rootPath: string, spec: string): Promise<string | null> {
-  const pkgDir = join(rootPath, 'node_modules', spec);
+async function resolveInNodeModulesDir(modulesRoot: string, spec: string): Promise<string | null> {
+  const pkgDir = join(modulesRoot, 'node_modules', spec);
   const pkgJson = parseJsonish((await fs.readFile(join(pkgDir, 'package.json'), 'utf8').catch(() => '')) || '{}');
   const entry = (pkgJson?.types ?? pkgJson?.typings ?? pkgJson?.main) as string | undefined;
   if (entry) {
@@ -88,6 +105,24 @@ async function resolveNodeModule(rootPath: string, spec: string): Promise<string
     if (resolved) return resolved;
   }
   return probe(pkgDir);
+}
+
+/**
+ * Resolve a bare package specifier by walking `node_modules` up from the importing file to the
+ * workspace root — monorepos hoist most deps to the root but keep some in the package folder.
+ */
+async function resolveNodeModule(rootPath: string, fromFile: string, spec: string): Promise<string | null> {
+  let dir = dirname(fromFile);
+  for (;;) {
+    const resolved = await resolveInNodeModulesDir(dir, spec);
+    if (resolved) return resolved;
+    if (dir === rootPath) break;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  // `fromFile` may sit outside the workspace root; make sure the root is tried regardless.
+  return resolveInNodeModulesDir(rootPath, spec);
 }
 
 /**
@@ -105,10 +140,11 @@ export async function resolveImport(
   if (isAbsolute(spec)) {
     return probe(spec);
   }
-  const { baseDir, paths } = await readTsPaths(rootPath);
+  const configDir = await findConfigDir(dirname(fromFile), rootPath);
+  const { baseDir, paths } = await readTsPaths(configDir);
   for (const candidate of tsPathCandidates(spec, paths)) {
     const resolved = await probe(resolve(baseDir, candidate));
     if (resolved) return resolved;
   }
-  return resolveNodeModule(rootPath, spec);
+  return resolveNodeModule(rootPath, fromFile, spec);
 }

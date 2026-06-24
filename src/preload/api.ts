@@ -94,6 +94,8 @@ export const api: ForgeApi = {
     getHover: (file, line, col) => ipcRenderer.invoke(IpcChannels.langHover, file, line, col),
     getCompletions: (file, line, col) =>
       ipcRenderer.invoke(IpcChannels.langCompletions, file, line, col),
+    getCompletionDetails: (file, line, col, label, source, data) =>
+      ipcRenderer.invoke(IpcChannels.langCompletionDetails, file, line, col, label, source, data),
     getSignatureHelp: (file, line, col) =>
       ipcRenderer.invoke(IpcChannels.langSignatureHelp, file, line, col),
     renameSymbol: (file, line, col, newName) =>

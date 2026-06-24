@@ -1,6 +1,7 @@
 import { Worker } from 'node:worker_threads';
 import { join } from 'node:path';
 import type {
+  LsCompletionDetail,
   LsCompletions,
   LsDiagnostic,
   LsHover,
@@ -81,6 +82,14 @@ export const languageClient = {
     call<LsHover | null>('getHover', [file, line, col]),
   getCompletions: (file: string, line: number, col: number) =>
     call<LsCompletions>('getCompletions', [file, line, col]),
+  getCompletionDetails: (
+    file: string,
+    line: number,
+    col: number,
+    label: string,
+    source?: string,
+    data?: unknown,
+  ) => call<LsCompletionDetail | null>('getCompletionDetails', [file, line, col, label, source, data]),
   getSignatureHelp: (file: string, line: number, col: number) =>
     call<LsSignatureHelp | null>('getSignatureHelp', [file, line, col]),
   renameSymbol: (file: string, line: number, col: number, newName: string) =>

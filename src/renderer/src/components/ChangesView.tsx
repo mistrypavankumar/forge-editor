@@ -58,11 +58,17 @@ export function ChangesView(): React.JSX.Element {
         ) : (
           changes.map((c) => {
             const s = STATUS_STYLE[c.status];
+            const deleted = c.status === 'D';
             return (
               <ProjectRow
                 key={c.path}
-                icon={<ModernFileIcon name={c.name} />}
+                icon={
+                  <span className={cn('flex items-center', deleted && 'opacity-40 grayscale')}>
+                    <ModernFileIcon name={c.name} />
+                  </span>
+                }
                 name={c.name}
+                nameClassName={deleted ? 'text-faint line-through' : undefined}
                 meta={relDir(c.path, rootPath)}
                 trailing={<span className={cn('font-mono text-[11px]', s.cls)}>{s.letter}</span>}
                 onClick={() => rootPath && void openFilePath(`${rootPath}/${c.path}`, c.name)}
