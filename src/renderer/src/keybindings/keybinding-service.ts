@@ -29,6 +29,7 @@ export const defaultKeybindings: Record<string, string> = {
   'mod+j': 'view.toggleBottomPanel',
   'ctrl+`': 'view.toggleTerminal',
   'mod+`': 'view.toggleTerminal',
+  'mod+f': 'editor.find',
   'mod+g': 'editor.gotoLine',
   'alt+f5': 'editor.nextChange',
   'alt+shift+f5': 'editor.prevChange',

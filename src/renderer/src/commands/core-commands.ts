@@ -78,6 +78,16 @@ function gotoLine(): void {
   void editor.getAction('editor.action.gotoLine')?.run();
 }
 
+// Open the find widget in the focused editor. Routed through the active-editor tracker
+// (rather than Monaco's native Cmd/Ctrl+F) so it targets the correct pane in split mode —
+// Monaco's standalone keybinding dispatch only reliably reaches one of several editors.
+function findInEditor(): void {
+  const editor = getActiveEditor();
+  if (!editor) return;
+  editor.focus();
+  void editor.getAction('actions.find')?.run();
+}
+
 function toggleWordWrap(): void {
   const editor = getActiveEditor();
   if (!editor) return;
@@ -207,6 +217,13 @@ export function registerCoreCommands(): void {
     title: 'Go to Previous Change',
     category: 'Go',
     run: () => goToChange(getActiveEditor(), -1),
+    isEnabled: () => useEditorStore.getState().activePath !== null,
+  });
+  commandRegistry.register({
+    id: 'editor.find',
+    title: 'Find',
+    category: 'Editor',
+    run: findInEditor,
     isEnabled: () => useEditorStore.getState().activePath !== null,
   });
   commandRegistry.register({
