@@ -141,6 +141,9 @@ export const api: ForgeApi = {
     ipcRenderer.invoke(IpcChannels.awsSetActiveProfile, name, region ?? null),
   awsGetActiveProfile: () => ipcRenderer.invoke(IpcChannels.awsGetActiveProfile),
   awsConfigPaths: () => ipcRenderer.invoke(IpcChannels.awsConfigPaths),
+  editorIntegrationStatus: () => ipcRenderer.invoke(IpcChannels.editorIntegrationStatus),
+  installEditorIntegration: () => ipcRenderer.invoke(IpcChannels.editorIntegrationInstall),
+  uninstallEditorIntegration: () => ipcRenderer.invoke(IpcChannels.editorIntegrationUninstall),
   onTerminalData: (cb) => {
     const listener = (_e: unknown, payload: TerminalDataEvent): void => cb(payload);
     ipcRenderer.on(IpcChannels.terminalData, listener);

@@ -103,6 +103,10 @@ export const IpcChannels = {
   awsSetActiveProfile: 'forge:aws:setActiveProfile',
   awsGetActiveProfile: 'forge:aws:getActiveProfile',
   awsConfigPaths: 'forge:aws:configPaths',
+  // Editor integration: install/remove the `forge` PATH command + shell-profile env vars.
+  editorIntegrationStatus: 'forge:editor-integration:status',
+  editorIntegrationInstall: 'forge:editor-integration:install',
+  editorIntegrationUninstall: 'forge:editor-integration:uninstall',
 } as const;
 
 export interface DirEntry {
@@ -484,6 +488,15 @@ export interface AwsValidation {
   error?: string;
 }
 
+/** State of the system editor integration: the `forge` shim + shell-profile env block. */
+export interface EditorIntegrationStatus {
+  installed: boolean;
+  /** Absolute path of the installed `forge` shim (whether or not it exists yet). */
+  shimPath: string;
+  /** Shell profile the env block is written to (e.g. ~/.zshrc). */
+  profilePath: string;
+}
+
 /** The currently-active connection, injected into new terminals/run-tasks. */
 export interface AwsActive {
   profile: string | null;
@@ -605,6 +618,8 @@ export interface ForgeSettings {
   aiInlineSuggest?: boolean;
   /** Optional model override for inline completions; empty = a fast per-provider default. */
   aiCompletionModel?: string;
+  /** Set once the first-run "set Forge as default editor" prompt has been shown. */
+  editorIntegrationPrompted?: boolean;
 }
 
 /** Outcome of running a formatter CLI against a file. */
@@ -796,6 +811,12 @@ export interface ForgeApi {
   awsSetActiveProfile: (name: string | null, region?: string | null) => Promise<Result<void>>;
   awsGetActiveProfile: () => Promise<Result<AwsActive>>;
   awsConfigPaths: () => Promise<Result<AwsConfigPaths>>;
+  /** Current state of the `forge` PATH command + shell-profile env integration. */
+  editorIntegrationStatus: () => Promise<Result<EditorIntegrationStatus>>;
+  /** Install the `forge` shim and write the editor env vars to the shell profile. */
+  installEditorIntegration: () => Promise<Result<EditorIntegrationStatus>>;
+  /** Remove the `forge` shim and the editor env-var block from the shell profile. */
+  uninstallEditorIntegration: () => Promise<Result<EditorIntegrationStatus>>;
 }
 
 export function pongOf(msg: string): string {
