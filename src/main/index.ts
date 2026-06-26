@@ -72,6 +72,7 @@ import { watchWorkspace } from './fs/watcher';
 import {
   createTerminal,
   writeTerminal,
+  ackTerminal,
   resizeTerminal,
   killTerminal,
 } from './terminal/command-runner';
@@ -426,6 +427,9 @@ app.whenReady().then(async () => {
     toResult(async () => createTerminal(e.sender, args)),
   );
   ipcMain.on(IpcChannels.terminalInput, (_e, id: string, data: string) => writeTerminal(id, data));
+  ipcMain.on(IpcChannels.terminalAck, (_e, id: string, charCount: number) =>
+    ackTerminal(id, charCount),
+  );
   ipcMain.on(IpcChannels.terminalResize, (_e, id: string, cols: number, rows: number) =>
     resizeTerminal(id, cols, rows),
   );
