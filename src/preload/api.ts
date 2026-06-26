@@ -109,7 +109,7 @@ export const api: ForgeApi = {
   resizeTerminal: (id, cols, rows) => ipcRenderer.send(IpcChannels.terminalResize, id, cols, rows),
   killCommand: (id) => ipcRenderer.invoke(IpcChannels.terminalKill, id),
   openExternal: (url) => ipcRenderer.invoke(IpcChannels.openExternal, url),
-  graphqlRequest: (req) => ipcRenderer.invoke(IpcChannels.graphqlRequest, req),
+  apiRequest: (req) => ipcRenderer.invoke(IpcChannels.apiRequest, req),
   editorLanguage: {
     initializeProject: (root) => ipcRenderer.invoke(IpcChannels.langInit, root),
     openDocument: (file, content) => ipcRenderer.send(IpcChannels.langOpenDoc, file, content),

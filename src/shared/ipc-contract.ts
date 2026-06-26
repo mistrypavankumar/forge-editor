@@ -79,8 +79,8 @@ export const IpcChannels = {
   terminalExit: 'forge:terminal:exit',
   terminalBusy: 'forge:terminal:busy',
   openExternal: 'forge:shell:openExternal',
-  // GraphQL HTTP request (API Explorer) — performed in main to bypass renderer CORS.
-  graphqlRequest: 'forge:graphql:request',
+  // Generic HTTP request (API Explorer) — performed in main to bypass renderer CORS.
+  apiRequest: 'forge:api:request',
   // TypeScript Language Service (real IDE intelligence).
   langInit: 'forge:lang:init',
   langOpenDoc: 'forge:lang:openDoc',
@@ -663,19 +663,22 @@ export interface TerminalBusyEvent {
   proc: string;
 }
 
-// ---- GraphQL HTTP (API Explorer) -------------------------------------------
+// ---- Generic HTTP (API Explorer) -------------------------------------------
 
-/** A GraphQL HTTP request executed in the main process (no renderer CORS). */
-export interface GraphqlHttpRequest {
+export type ApiHttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
+
+/** An arbitrary HTTP request executed in the main process (no renderer CORS). */
+export interface ApiHttpRequest {
   url: string;
-  /** Extra request headers (e.g. Authorization), merged onto content-type/accept. */
+  method: ApiHttpMethod;
+  /** Request headers (e.g. Authorization, content-type), merged onto a default `accept`. */
   headers?: Record<string, string>;
-  /** Pre-serialized JSON body: `{ query, variables?, operationName? }`. */
-  body: string;
+  /** Pre-serialized request body, if any (omit for GET/HEAD or empty bodies). */
+  body?: string;
 }
 
-/** The raw HTTP outcome of a {@link GraphqlHttpRequest}. */
-export interface GraphqlHttpResponse {
+/** The raw HTTP outcome of an {@link ApiHttpRequest}. */
+export interface ApiHttpResponse {
   status: number;
   statusText: string;
   /** Raw response body text, exactly as received. */
@@ -819,8 +822,8 @@ export interface ForgeApi {
   resizeTerminal: (id: string, cols: number, rows: number) => void;
   killCommand: (id: string) => Promise<Result<void>>;
   openExternal: (url: string) => Promise<Result<void>>;
-  /** Run a GraphQL HTTP request from the main process (no renderer CORS). Used by the API Explorer. */
-  graphqlRequest: (req: GraphqlHttpRequest) => Promise<Result<GraphqlHttpResponse>>;
+  /** Run an HTTP request from the main process (no renderer CORS). Used by the API Explorer. */
+  apiRequest: (req: ApiHttpRequest) => Promise<Result<ApiHttpResponse>>;
   onTerminalData: (cb: (e: TerminalDataEvent) => void) => () => void;
   onTerminalExit: (cb: (e: TerminalExitEvent) => void) => () => void;
   onTerminalBusy: (cb: (e: TerminalBusyEvent) => void) => () => void;
