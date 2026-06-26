@@ -21,7 +21,6 @@ export interface LayoutState {
   bottomTab: BottomTab;
   settingsOpen: boolean;
   featuresOpen: boolean;
-  apiExplorerOpen: boolean;
   /** Folder names excluded from global file search (quick open), on top of .gitignore. */
   searchExclude: string[];
   /** Whether the built-in default excludes have been seeded into the user's list. */
@@ -35,7 +34,6 @@ export interface LayoutState {
   setBottomTab: (tab: BottomTab) => void;
   setSettingsOpen: (open: boolean) => void;
   setFeaturesOpen: (open: boolean) => void;
-  setApiExplorerOpen: (open: boolean) => void;
   setSearchExclude: (folders: string[]) => void;
   setSearchExcludeSeeded: (seeded: boolean) => void;
   setScmGraphHeight: (height: number) => void;
@@ -72,7 +70,6 @@ export const useLayoutStore = create<LayoutState>((set) => ({
   bottomTab: 'terminal',
   settingsOpen: false,
   featuresOpen: false,
-  apiExplorerOpen: false,
   searchExclude: DEFAULT_SEARCH_EXCLUDE,
   searchExcludeSeeded: false,
   scmGraphHeight: DEFAULT_SCM_GRAPH_HEIGHT,

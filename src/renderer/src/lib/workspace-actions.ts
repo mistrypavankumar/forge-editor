@@ -47,6 +47,19 @@ export async function openFilePath(path: string, name?: string, record = false):
   if (res.ok) applyFile(path, fileName, res.data, record);
 }
 
+/** Synthetic path backing the single API Explorer tab. */
+export const API_EXPLORER_PATH = 'api-explorer://request';
+
+/** Open (or focus) the API Explorer as an editor tab. */
+export function openApiExplorer(): void {
+  useEditorStore.getState().openFile({
+    path: API_EXPLORER_PATH,
+    name: 'API Explorer',
+    content: '',
+    kind: 'api-explorer',
+  });
+}
+
 /** Open a read-only side-by-side diff of the staged (index) version against HEAD. */
 export async function openGitStagedDiff(rootPath: string, relPath: string): Promise<void> {
   const filePath = `${rootPath}/${relPath}`;

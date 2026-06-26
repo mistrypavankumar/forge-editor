@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Lock, SplitSquareHorizontal, Copy, Check } from 'lucide-react';
+import { X, Lock, SplitSquareHorizontal, Copy, Check, SquareTerminal } from 'lucide-react';
 import { useEditorStore } from '../stores/editor-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { FileTypeIcon } from './file-icon';
@@ -71,7 +71,11 @@ export function EditorTabs({ groupId = 'main' }: { groupId?: string }): React.JS
               {isActive ? <span className="absolute inset-x-0 top-0 h-0.5 bg-accent" /> : null}
               <span className="relative flex h-4 w-4 shrink-0 items-center justify-center">
                 <span className="group-hover:opacity-0">
-                  <FileTypeIcon name={tab.name} />
+                  {tab.kind === 'api-explorer' ? (
+                    <SquareTerminal size={14} className="text-accent" />
+                  ) : (
+                    <FileTypeIcon name={tab.name} />
+                  )}
                 </span>
                 <button
                   type="button"
