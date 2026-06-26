@@ -68,7 +68,7 @@ import { registerLanguageIpc } from './ipc/editor-language-ipc';
 import { jdtlsService } from './java/jdtls-service';
 import { registerAwsIpc } from './ipc/aws-ipc';
 import { registerEditorIntegrationIpc } from './ipc/editor-integration-ipc';
-import { registerGraphqlIpc } from './ipc/graphql-ipc';
+import { registerApiRequestIpc } from './ipc/api-request-ipc';
 import { setActiveProfile } from './aws/aws-service';
 import { watchWorkspace } from './fs/watcher';
 import {
@@ -451,7 +451,7 @@ app.whenReady().then(async () => {
   });
   registerAwsIpc(ipcMain, SETTINGS_PATH);
   registerEditorIntegrationIpc(ipcMain);
-  registerGraphqlIpc(ipcMain);
+  registerApiRequestIpc(ipcMain);
   // Restore the active AWS connection so new terminals get AWS_PROFILE from the first launch.
   void readSettings(SETTINGS_PATH).then((s) => setActiveProfile(s.awsProfile ?? null, s.awsRegion ?? null));
   createWindow();
