@@ -6,6 +6,109 @@ directories:
   buildResources: build
   output: dist
 
+# Register Forge as a handler for common code/text files so it appears in the OS "Open With"
+# menu (and can be set as the default editor). role: Editor + rank: Alternate means we offer to
+# open these files without seizing ownership from a user's existing default app. Files arriving
+# this way are delivered to the running app via the main-process `open-file` handler.
+fileAssociations:
+  - name: Source Code
+    role: Editor
+    rank: Alternate
+    ext:
+      - txt
+      - text
+      - log
+      - md
+      - markdown
+      - mdx
+      - rst
+      - adoc
+      - js
+      - jsx
+      - mjs
+      - cjs
+      - ts
+      - tsx
+      - mts
+      - cts
+      - json
+      - jsonc
+      - json5
+      - html
+      - htm
+      - xml
+      - svg
+      - vue
+      - svelte
+      - astro
+      - css
+      - scss
+      - sass
+      - less
+      - styl
+      - py
+      - pyw
+      - rb
+      - php
+      - go
+      - rs
+      - java
+      - kt
+      - kts
+      - scala
+      - groovy
+      - c
+      - h
+      - cc
+      - cpp
+      - cxx
+      - hpp
+      - hh
+      - hxx
+      - m
+      - mm
+      - cs
+      - swift
+      - dart
+      - lua
+      - pl
+      - pm
+      - r
+      - jl
+      - ex
+      - exs
+      - erl
+      - hs
+      - clj
+      - cljs
+      - sh
+      - bash
+      - zsh
+      - fish
+      - ps1
+      - bat
+      - cmd
+      - sql
+      - graphql
+      - gql
+      - proto
+      - yaml
+      - yml
+      - toml
+      - ini
+      - cfg
+      - conf
+      - env
+      - properties
+      - gradle
+      - dockerfile
+      - makefile
+      - cmake
+      - tf
+      - tfvars
+      - csv
+      - tsv
+
 # electron-vite emits the runnable app into out/; production dependencies
 # (node-pty, typescript) are collected automatically from package.json.
 files:
@@ -37,6 +140,21 @@ mac:
       arch: arm64
   # Personal/unsigned build — skip code signing so packaging never needs a cert.
   identity: null
+  # Catch-all so Forge appears in "Open With" for ANY file, not just the extensions declared in
+  # fileAssociations above. public.data matches every file (raw byte stream); public.content +
+  # public.text broaden the match for documents. role: Editor + LSHandlerRank: Alternate offers
+  # Forge as an option without making it the default handler for these broad types. Without code
+  # signing macOS only honors this after the app is registered (run it once / it's in /Applications).
+  # electron-builder concatenates this with the fileAssociations-derived CFBundleDocumentTypes.
+  extendInfo:
+    CFBundleDocumentTypes:
+      - CFBundleTypeName: All Files
+        CFBundleTypeRole: Editor
+        LSHandlerRank: Alternate
+        LSItemContentTypes:
+          - public.data
+          - public.content
+          - public.text
 
 dmg:
   title: Forge

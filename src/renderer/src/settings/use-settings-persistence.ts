@@ -38,6 +38,7 @@ export function useSettingsPersistence(): void {
   const scmGraphHeight = useLayoutStore((s) => s.scmGraphHeight);
   const aiProvider = useAiStore((s) => s.provider);
   const aiModel = useAiStore((s) => s.model);
+  const aiInlineSuggest = useAiStore((s) => s.inlineSuggest);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -89,6 +90,9 @@ export function useSettingsPersistence(): void {
         }
         if (res.data.aiProvider) useAiStore.getState().setProvider(res.data.aiProvider);
         if (typeof res.data.aiModel === 'string') useAiStore.getState().setModel(res.data.aiModel);
+        if (typeof res.data.aiInlineSuggest === 'boolean') {
+          useAiStore.getState().setInlineSuggest(res.data.aiInlineSuggest);
+        }
         // Seed built-in default excludes once: union them with any stored list, then never re-add.
         if (res.data.searchExcludeSeeded) {
           useLayoutStore.getState().setSearchExclude(res.data.searchExclude ?? []);
@@ -131,8 +135,9 @@ export function useSettingsPersistence(): void {
       scmGraphHeight,
       aiProvider,
       aiModel,
+      aiInlineSuggest,
     });
-  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, inlineRun, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight, aiProvider, aiModel]);
+  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, inlineRun, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight, aiProvider, aiModel, aiInlineSuggest]);
 
   // Drop the quick-open cache when excludes change so the next search re-lists with them.
   useEffect(() => {

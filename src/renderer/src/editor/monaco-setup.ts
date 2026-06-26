@@ -265,11 +265,83 @@ function registerDotenv(): void {
   });
 }
 
+/**
+ * Monaco ships no Makefile grammar, so `Makefile`s render as undifferentiated plaintext. Register a
+ * Monarch tokenizer covering the constructs that matter for readability: `#` comments, targets
+ * (`name:` at the start of a line), variable assignments (`=`, `:=`, `?=`, `+=`), variable
+ * references (`$(VAR)` / `${VAR}` / `$@`), `.PHONY`-style special targets, and recipe builtins.
+ * Token names reuse the theme palette scopes (`comment`, `keyword`, `variable`, `string`, …).
+ */
+function registerMakefile(): void {
+  monaco.languages.register({
+    id: 'makefile',
+    extensions: ['.mk', '.mak', '.make'],
+    filenames: ['Makefile', 'makefile', 'GNUmakefile'],
+    aliases: ['Makefile', 'makefile'],
+  });
+  monaco.languages.setLanguageConfiguration('makefile', {
+    comments: { lineComment: '#' },
+    brackets: [
+      ['(', ')'],
+      ['{', '}'],
+    ],
+    autoClosingPairs: [
+      { open: '(', close: ')' },
+      { open: '{', close: '}' },
+      { open: '"', close: '"' },
+      { open: "'", close: "'" },
+    ],
+  });
+  monaco.languages.setMonarchTokensProvider('makefile', {
+    defaultToken: '',
+    keywords: [
+      'ifeq', 'ifneq', 'ifdef', 'ifndef', 'else', 'endif', 'define', 'endef',
+      'include', '-include', 'sinclude', 'override', 'export', 'unexport', 'vpath',
+    ],
+    tokenizer: {
+      root: [
+        [/#.*$/, 'comment'],
+        // Special / `.PHONY`-style targets.
+        [/^\.[A-Z_]+\b/, 'keyword'],
+        // Directives (ifeq, include, define, …) at the start of a logical line.
+        [/^\s*([\w-]+)/, { cases: { '$1@keywords': 'keyword', '@default': '@rematch' } }],
+        // Target definitions: `name:` (but not `:=` assignment).
+        [/^[\w%.\-/$(){} ]+(?=:(?![=]))/, 'type'],
+        // Variable assignments.
+        [/^\s*([A-Za-z_][\w.]*)(\s*)([:?+]?=)/, ['variable', '', 'operator']],
+        { include: '@refs' },
+        [/[=:]/, 'operator'],
+        [/"/, 'string', '@dquote'],
+        [/'/, 'string', '@squote'],
+      ],
+      refs: [
+        // Variable / function references: $(VAR), ${VAR}, $@, $<, $^, …
+        [/\$[@<^?*+|%]/, 'variable'],
+        [/\$[({][\w.\-]+/, 'variable'],
+        [/[(){}]/, 'delimiter'],
+      ],
+      dquote: [
+        [/[^"\\$]+/, 'string'],
+        { include: '@refs' },
+        [/\\./, 'string.escape'],
+        [/"/, 'string', '@pop'],
+      ],
+      squote: [
+        [/[^'\\$]+/, 'string'],
+        { include: '@refs' },
+        [/\\./, 'string.escape'],
+        [/'/, 'string', '@pop'],
+      ],
+    },
+  });
+}
+
 let configured = false;
 
 export function getMonaco(): typeof monaco {
   if (!configured) {
     registerDotenv();
+    registerMakefile();
     // Diagnostics now come from the main-process TypeScript Language Service (project-aware,
     // resolves tsconfig aliases + node_modules). Silence the browser worker entirely so we don't
     // get duplicate or misleading single-file squiggles.

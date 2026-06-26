@@ -6,6 +6,7 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 import { applyCssVariables } from '../theme/theme-service';
 import { builtInThemes } from '../theme/themes';
 import { loadFiles } from '../lib/quickopen-cache';
+import { openFilePath } from '../lib/workspace-actions';
 import { refreshTree } from '../lib/fs-actions';
 import { detectPackageManager } from '../lib/detect-pm';
 import { detectFormatters } from '../lib/detect-formatters';
@@ -135,6 +136,13 @@ export function AppShell(): React.JSX.Element {
   useEffect(() => {
     window.forge.syncMenuState(autoSave);
   }, [autoSave]);
+
+  // Files handed to us by the OS (Finder "Open With", dock drop, or a CLI path) open as tabs.
+  useEffect(() => {
+    return window.forge.onOpenFile((path) => {
+      void openFilePath(path, undefined, true);
+    });
+  }, []);
 
   useEffect(() => {
     const theme = builtInThemes[themeId];

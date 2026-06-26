@@ -23,6 +23,7 @@ beforeAll(() => {
     watchWorkspace: () => {},
     onFsChanged: () => () => {},
     onMenuAction: () => () => {},
+    onOpenFile: () => () => {},
     onTerminalBusy: () => () => {},
     getJavaStatus: async () => 'idle',
     onJavaStatus: () => () => {},

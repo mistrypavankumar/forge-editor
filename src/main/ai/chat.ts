@@ -28,6 +28,8 @@ export interface AiChatRequest {
   question: string;
   context?: string;
   maxTokens?: number;
+  /** Sequences that end generation early. Used by inline completion to keep snippets tight. */
+  stopSequences?: string[];
 }
 
 /** Handle to an in-flight stream; `cancel()` aborts it (the caller suppresses the resulting error). */
@@ -233,6 +235,7 @@ function streamAnthropic(
           system: req.system,
           messages,
           stream: true,
+          ...(req.stopSequences?.length ? { stop_sequences: req.stopSequences } : {}),
         }),
         signal: ctrl.signal,
       });
@@ -300,6 +303,7 @@ function streamOpenAI(
           messages,
           max_tokens: req.maxTokens ?? DEFAULT_MAX_TOKENS,
           stream: true,
+          ...(req.stopSequences?.length ? { stop: req.stopSequences } : {}),
         }),
         signal: ctrl.signal,
       });

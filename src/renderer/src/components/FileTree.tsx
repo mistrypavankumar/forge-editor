@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { renameEntry, commitCreate } from '../lib/fs-actions';
+import { isImagePath } from '../lib/is-image';
 import { FileTypeIcon, FolderIcon } from './file-icon';
 import { cn } from '../lib/cn';
 import type { DirEntry } from '@shared/ipc-contract';
@@ -66,6 +67,11 @@ function TreeNode({
       return;
     }
     setSelectedDir(entry.path.slice(0, entry.path.lastIndexOf('/')) || '/');
+    // Images render from raw bytes in the image viewer — don't read (and mangle) them as text.
+    if (isImagePath(entry.name)) {
+      openFile({ path: entry.path, name: entry.name, content: '' });
+      return;
+    }
     const res = await window.forge.readFile(entry.path);
     if (res.ok) openFile({ path: entry.path, name: entry.name, content: res.data });
   };

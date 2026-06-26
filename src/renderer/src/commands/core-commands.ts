@@ -11,6 +11,7 @@ import { goToChange } from '../editor/change-nav';
 import { getMonaco } from '../editor/monaco-setup';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { useInlineRunStore } from '../stores/inline-run-store';
+import { useAiStore } from '../stores/ai-store';
 import { runInlineExport } from '../editor/inline-run';
 
 let untitledSeq = 0;
@@ -145,6 +146,12 @@ export function registerCoreCommands(): void {
     title: 'Toggle Live Inline Output (console.log)',
     category: 'Editor',
     run: () => useInlineRunStore.getState().toggle(),
+  });
+  commandRegistry.register({
+    id: 'editor.toggleInlineSuggest',
+    title: 'Toggle AI Inline Suggestions (ghost text)',
+    category: 'Editor',
+    run: () => useAiStore.getState().toggleInlineSuggest(),
   });
   commandRegistry.register({
     id: 'editor.runExportedFunction',

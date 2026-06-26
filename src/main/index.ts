@@ -1,10 +1,12 @@
 import { homedir } from 'node:os';
+import { existsSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import {
   IpcChannels,
   pongOf,
   type AssistantSendArgs,
+  type CompletionArgs,
   type ForgeSettings,
   type GitUser,
   type SearchOptions,
@@ -18,6 +20,7 @@ import {
   makeDir,
   moveEntry,
   readDirectoryEntries,
+  readFileBase64,
   readFileText,
   readGitBranch,
   renameEntry,
@@ -56,7 +59,8 @@ import {
 } from './git/git-service';
 import { generateCommitMessage } from './ai/commit-message-service';
 import { startAssistant, cancelAssistant } from './ai/assistant-service';
-import { resolveAi } from './ai/ai-config';
+import { startCompletion, cancelCompletion } from './ai/completion-service';
+import { resolveAi, resolveCompletionAi } from './ai/ai-config';
 import { aiKeyStatus, setAiKey } from './ai/ai-credentials';
 import { searchInFiles, replaceInFiles } from './search/search-service';
 import { hydratePathFromLoginShell } from './env/resolve-path';
@@ -79,6 +83,48 @@ const CREDENTIALS_PATH = join(homedir(), '.forge', 'git-credentials');
 const AI_CREDENTIALS_PATH = join(homedir(), '.forge', 'ai-credentials');
 const isMac = process.platform === 'darwin';
 let autoSaveState = false;
+
+/**
+ * Files the OS asked us to open before a window was ready to receive them — from Finder's
+ * "Open With", a drop on the dock/taskbar icon, or paths on the command line. They're held
+ * here and flushed to the renderer once a window has finished loading.
+ */
+const pendingOpenFiles: string[] = [];
+
+/** Queue a file to open and deliver it (or hold it until a window is ready). */
+function requestOpenFile(filePath: string): void {
+  pendingOpenFiles.push(filePath);
+  if (app.isReady()) {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    else flushPendingFiles();
+  }
+}
+
+/** Hand any queued files to a loaded window; if the window is still loading, wait for it. */
+function flushPendingFiles(target?: BrowserWindow): void {
+  if (pendingOpenFiles.length === 0) return;
+  const win = target ?? BrowserWindow.getAllWindows().find((w) => !w.isDestroyed());
+  if (!win || win.isDestroyed()) return;
+  const send = (): void => {
+    if (win.isDestroyed()) return;
+    for (const path of pendingOpenFiles.splice(0)) win.webContents.send(IpcChannels.openPath, path);
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  };
+  if (win.webContents.isLoading()) win.webContents.once('did-finish-load', send);
+  else send();
+}
+
+/**
+ * Pull openable file paths out of a process argv. On Windows/Linux the OS launches us with the
+ * file path appended; argv[0] is the executable (plus the app entry in dev), and switches start
+ * with `-`. We only accept args that resolve to an existing file.
+ */
+function filePathsFromArgv(argv: string[]): string[] {
+  return argv
+    .slice(app.isPackaged ? 1 : 2)
+    .filter((arg) => !arg.startsWith('-') && existsSync(arg) && statSync(arg).isFile());
+}
 
 function menuAction(id: string): void {
   BrowserWindow.getFocusedWindow()?.webContents.send(IpcChannels.menuAction, id);
@@ -140,6 +186,9 @@ function createWindow(): void {
     win.show();
   });
 
+  // Deliver any files the OS queued for us (Open With / CLI args) once the UI can receive them.
+  win.webContents.on('did-finish-load', () => flushPendingFiles(win));
+
   if (process.env.ELECTRON_RENDERER_URL) {
     void win.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
@@ -147,7 +196,33 @@ function createWindow(): void {
   }
 }
 
+// Hold a single-instance lock so a relaunch (e.g. "Open With" on Windows/Linux) forwards its
+// files to the running app instead of spawning a duplicate. macOS already enforces this for
+// .app bundles and routes files through `open-file`, but the lock is harmless there.
+const hasInstanceLock = app.requestSingleInstanceLock();
+if (!hasInstanceLock) app.quit();
+
+app.on('second-instance', (_event, argv) => {
+  for (const filePath of filePathsFromArgv(argv)) requestOpenFile(filePath);
+  const win = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed());
+  if (win) {
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  }
+});
+
+// macOS hands us files to open via `open-file` — Finder's "Open With", or a file dropped on the
+// dock icon. It can fire before the app is ready, so registered here at module load.
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  requestOpenFile(filePath);
+});
+
 app.whenReady().then(async () => {
+  if (!hasInstanceLock) return;
+  // First-launch files arrive on the command line (Windows/Linux). Queue them so the first
+  // window flushes them once it has finished loading.
+  for (const filePath of filePathsFromArgv(process.argv)) pendingOpenFiles.push(filePath);
   // GUI-launched (packaged) builds inherit only the bare system PATH, so Homebrew tools
   // like `gh` aren't found when we shell out from the main process. Hydrate PATH from a
   // login shell before registering IPC so the git-user switcher can see the gh account.
@@ -179,6 +254,9 @@ app.whenReady().then(async () => {
     toResult(() => readDirectoryEntries(path)),
   );
   ipcMain.handle(IpcChannels.readFile, (_e, path: string) => toResult(() => readFileText(path)));
+  ipcMain.handle(IpcChannels.readFileBase64, (_e, path: string) =>
+    toResult(() => readFileBase64(path)),
+  );
   ipcMain.handle(IpcChannels.writeFile, (_e, path: string, content: string) =>
     toResult(() => writeFileText(path, content)),
   );
@@ -280,6 +358,13 @@ app.whenReady().then(async () => {
     }),
   );
   ipcMain.on(IpcChannels.assistantCancel, (_e, id: string) => cancelAssistant(id));
+  ipcMain.handle(IpcChannels.aiCompletion, (_e, args: CompletionArgs) =>
+    toResult(async () => {
+      const cfg = await resolveCompletionAi(SETTINGS_PATH, AI_CREDENTIALS_PATH);
+      return new Promise<string>((resolve) => startCompletion(cfg, args, resolve));
+    }),
+  );
+  ipcMain.on(IpcChannels.aiCompletionCancel, (_e, id: string) => cancelCompletion(id));
   ipcMain.handle(IpcChannels.aiKeyStatus, () => toResult(() => aiKeyStatus(AI_CREDENTIALS_PATH)));
   ipcMain.handle(IpcChannels.aiSetKey, (_e, provider: 'anthropic' | 'openai', key: string) =>
     toResult(() => setAiKey(AI_CREDENTIALS_PATH, provider, key)),

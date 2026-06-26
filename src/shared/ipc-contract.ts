@@ -7,6 +7,7 @@ export const IpcChannels = {
   saveDialog: 'forge:fs:saveDialog',
   readDirectory: 'forge:fs:readDirectory',
   readFile: 'forge:fs:readFile',
+  readFileBase64: 'forge:fs:readFileBase64',
   writeFile: 'forge:fs:writeFile',
   listFiles: 'forge:fs:listFiles',
   gitBranch: 'forge:fs:gitBranch',
@@ -41,6 +42,10 @@ export const IpcChannels = {
   assistantCancel: 'forge:assistant:cancel',
   assistantChunk: 'forge:assistant:chunk',
   assistantDone: 'forge:assistant:done',
+  // Inline AI code completion (ghost text). Request/response is keyed by id so an in-flight
+  // request can be cancelled when the user keeps typing.
+  aiCompletion: 'forge:ai:completion',
+  aiCompletionCancel: 'forge:ai:completionCancel',
   // AI provider API-key management (keys live in a separate 0600 credentials file).
   aiKeyStatus: 'forge:ai:keyStatus',
   aiSetKey: 'forge:ai:setKey',
@@ -50,6 +55,8 @@ export const IpcChannels = {
   fsChanged: 'forge:fs:changed',
   menuAction: 'forge:menu:action',
   menuSyncState: 'forge:menu:syncState',
+  // A file the OS asked us to open (Finder "Open With", dock/taskbar drop, or a CLI arg).
+  openPath: 'forge:file:openPath',
   newWindow: 'forge:window:new',
   rename: 'forge:fs:rename',
   remove: 'forge:fs:remove',
@@ -520,6 +527,18 @@ export interface AssistantDoneEvent {
   error?: string;
 }
 
+/** A request for an inline ghost-text completion at the cursor (fill-in-the-middle). */
+export interface CompletionArgs {
+  /** Correlates the request with a {@link ForgeApi.cancelCompletion} call. */
+  id: string;
+  /** Monaco language id of the file, used to fence the model's output language. */
+  language: string;
+  /** Document text before the cursor. */
+  prefix: string;
+  /** Document text after the cursor. */
+  suffix: string;
+}
+
 /** The AI backend used by the assistant + commit-message features. `claude-cli` needs no API key. */
 export type AiProvider = 'claude-cli' | 'anthropic' | 'openai';
 
@@ -581,6 +600,10 @@ export interface ForgeSettings {
   aiProvider?: AiProvider;
   /** Optional model override for the chosen AI provider; empty = the provider's default model. */
   aiModel?: string;
+  /** Inline ghost-text AI completions in the editor are enabled. */
+  aiInlineSuggest?: boolean;
+  /** Optional model override for inline completions; empty = a fast per-provider default. */
+  aiCompletionModel?: string;
 }
 
 /** Outcome of running a formatter CLI against a file. */
@@ -629,6 +652,8 @@ export interface ForgeApi {
   saveDialog: (defaultName: string) => Promise<Result<string | null>>;
   readDirectory: (path: string) => Promise<Result<DirEntry[]>>;
   readFile: (path: string) => Promise<Result<string>>;
+  /** Read a file's raw bytes as a base64 string (for rendering images and other binaries). */
+  readFileBase64: (path: string) => Promise<Result<string>>;
   writeFile: (path: string, content: string) => Promise<Result<void>>;
   listFiles: (rootPath: string) => Promise<Result<FileItem[]>>;
   gitBranch: (rootPath: string) => Promise<Result<string | null>>;
@@ -693,6 +718,14 @@ export interface ForgeApi {
   onAssistantChunk: (cb: (e: AssistantChunkEvent) => void) => () => void;
   /** Subscribe to assistant completion/error events; returns an unsubscribe fn. */
   onAssistantDone: (cb: (e: AssistantDoneEvent) => void) => () => void;
+  /**
+   * Request an inline completion at the cursor. Resolves with the suggestion text (empty string
+   * when there's nothing to suggest, the request was cancelled, or it errored — inline completions
+   * fail silently rather than surfacing errors). Cancel with {@link ForgeApi.cancelCompletion}.
+   */
+  requestCompletion: (args: CompletionArgs) => Promise<Result<string>>;
+  /** Abort the in-flight completion with this id (e.g. when the user keeps typing). */
+  cancelCompletion: (id: string) => void;
   /** Which AI providers currently have an API key saved (the key itself is never returned). */
   aiKeyStatus: () => Promise<Result<AiKeyStatus>>;
   /** Save (or clear, with an empty string) an API provider's key in the credentials file. */
@@ -707,6 +740,12 @@ export interface ForgeApi {
   watchWorkspace: (rootPath: string) => void;
   onFsChanged: (cb: () => void) => () => void;
   onMenuAction: (cb: (id: string) => void) => () => void;
+  /**
+   * Subscribe to "open this file" requests from the OS — Finder's "Open With", a file dropped on
+   * the dock/taskbar icon, or a path passed on the command line. Fires once per file. Returns an
+   * unsubscribe fn.
+   */
+  onOpenFile: (cb: (path: string) => void) => () => void;
   syncMenuState: (autoSave: boolean) => void;
   /** Open a fresh, empty editor window where the user can open a folder. */
   newWindow: () => void;

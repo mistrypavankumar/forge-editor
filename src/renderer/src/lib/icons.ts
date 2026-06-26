@@ -21,6 +21,7 @@ const EXACT: Record<string, string> = {
   '.prettierignore': 'file-type-prettier',
   '.prettierrc.json': 'file-type-prettier',
   makefile: 'file-type-text',
+  gnumakefile: 'file-type-text',
   license: 'file-type-license',
   'readme.md': 'file-type-markdown',
 };
@@ -47,12 +48,27 @@ const EXT: Record<string, string> = {
   html: 'file-type-html',
   java: 'file-type-java',
   txt: 'file-type-text',
+  mk: 'file-type-text',
+  mak: 'file-type-text',
+  make: 'file-type-text',
+  // Images.
+  png: 'file-type-image',
+  jpg: 'file-type-image',
+  jpeg: 'file-type-image',
+  gif: 'file-type-image',
+  bmp: 'file-type-image',
+  avif: 'file-type-image',
+  icns: 'file-type-image',
+  webp: 'file-type-webp',
+  svg: 'file-type-svg',
+  ico: 'file-type-favicon',
 };
 
 export function fileIconId(name: string): string {
   const lower = name.toLowerCase();
   if (lower.startsWith('.env')) return `${PREFIX}file-type-dotenv`;
   if (lower in EXACT) return `${PREFIX}${EXACT[lower]}`;
+  if (lower.startsWith('makefile.')) return `${PREFIX}file-type-text`;
   if (lower.startsWith('.eslintrc') || lower.includes('eslint.config'))
     return `${PREFIX}file-type-eslint`;
   if (lower.includes('.prettierrc')) return `${PREFIX}file-type-prettier`;

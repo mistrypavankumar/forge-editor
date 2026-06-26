@@ -5,6 +5,7 @@ import { SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS } from '@shared/ipc-cont
 import { LARGE_FILE_CHARS } from './language-bridge';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
+import { useAiStore } from '../stores/ai-store';
 import { openFilePath } from '../lib/workspace-actions';
 import { importSpecForName, moduleSpecAtColumn, localDeclarationLine } from '../lib/go-to-definition';
 import { REACT_SNIPPETS } from './react-snippets';
@@ -346,8 +347,70 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
     },
   });
 
+  registerInlineCompletions(monaco);
+
   registerSnippets(monaco, SELECTOR, REACT_SNIPPETS, '⚛', 'tsx');
   registerSnippets(monaco, ['java'], JAVA_SNIPPETS, '☕', 'java');
+}
+
+/** Pause `ms`, resolving false early if `token` is cancelled (the user typed again). */
+function debounce(ms: number, token: monacoNs.CancellationToken): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (token.isCancellationRequested) return resolve(false);
+    const timer = setTimeout(() => resolve(true), ms);
+    token.onCancellationRequested(() => {
+      clearTimeout(timer);
+      resolve(false);
+    });
+  });
+}
+
+/**
+ * Register Copilot-style ghost-text completions backed by the AI provider. Gated behind the
+ * `inlineSuggest` toggle (off by default). Each keystroke cancels the prior request via Monaco's
+ * cancellation token, which both stops the debounce and aborts any in-flight model call in main.
+ * Skips large files and empty-context positions to avoid pointless requests.
+ */
+function registerInlineCompletions(monaco: typeof monacoNs): void {
+  const DEBOUNCE_MS = 300;
+  monaco.languages.registerInlineCompletionsProvider(FEATURE_SELECTOR, {
+    async provideInlineCompletions(model, position, _ctx, token) {
+      if (!useAiStore.getState().inlineSuggest) {
+        console.debug('[forge:inline] skipped — toggle is off');
+        return undefined;
+      }
+      if (model.getValueLength() > LARGE_FILE_CHARS) return undefined;
+      // Debounce: only fire once the user pauses typing.
+      if (!(await debounce(DEBOUNCE_MS, token))) return undefined;
+
+      const offset = model.getOffsetAt(position);
+      const text = model.getValue();
+      const prefix = text.slice(0, offset);
+      const suffix = text.slice(offset);
+      if (!prefix.trim()) return undefined;
+
+      const id = crypto.randomUUID();
+      token.onCancellationRequested(() => window.forge.cancelCompletion(id));
+      console.debug('[forge:inline] requesting completion…');
+      const res = await window.forge.requestCompletion({
+        id,
+        language: model.getLanguageId(),
+        prefix,
+        suffix,
+      });
+      console.debug('[forge:inline] result', res);
+      if (token.isCancellationRequested || !res.ok || !res.data) return undefined;
+
+      const range = new monaco.Range(
+        position.lineNumber,
+        position.column,
+        position.lineNumber,
+        position.column,
+      );
+      return { items: [{ insertText: res.data, range }] };
+    },
+    freeInlineCompletions() {},
+  });
 }
 
 /** Render a snippet body as readable preview text (strip tab stops / variables). */
