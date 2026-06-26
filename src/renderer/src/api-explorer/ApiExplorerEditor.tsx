@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Send, Wand2, Copy, Loader2 } from 'lucide-react';
+import { Send, Wand2, Loader2 } from 'lucide-react';
 
 import type { HeaderRow, BodyMode, ExecutionResult, HttpMethod, ParamRow, FormRow } from './types';
 import { UNSAFE_METHODS } from './types';
