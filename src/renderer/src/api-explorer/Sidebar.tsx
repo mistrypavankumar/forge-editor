@@ -68,7 +68,10 @@ function HistoryList({
     const term = search.trim().toLowerCase();
     if (!term) return history;
     return history.filter(
-      (h) => h.operationName.toLowerCase().includes(term) || h.query.toLowerCase().includes(term),
+      (h) =>
+        h.label.toLowerCase().includes(term) ||
+        h.url.toLowerCase().includes(term) ||
+        h.query.toLowerCase().includes(term),
     );
   }, [history, search]);
 
@@ -94,11 +97,11 @@ function HistoryList({
                 item.status === 'success' ? 'bg-emerald-400' : 'bg-red-400',
               )}
             />
-            <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-fg">
-              {item.operationName}
+            <span className="rounded bg-surface-3 px-1 py-0.5 text-[8.5px] font-bold uppercase text-accent">
+              {item.method}
             </span>
-            <span className="rounded bg-surface-3 px-1 py-0.5 text-[8.5px] font-bold uppercase text-muted">
-              {item.operationType}
+            <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-fg">
+              {item.label}
             </span>
           </div>
           <div className="mt-1 flex items-center justify-between">

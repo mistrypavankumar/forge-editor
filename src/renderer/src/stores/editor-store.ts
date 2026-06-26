@@ -11,6 +11,8 @@ export interface OpenFile {
   filePath?: string;
   /** When set, the tab renders as a side-by-side diff: `original` (left) vs `content` (right). */
   original?: string;
+  /** Tab kind. Defaults to a normal file; `api-explorer` renders the API Explorer in the tab. */
+  kind?: 'file' | 'api-explorer';
 }
 
 /**
@@ -58,6 +60,7 @@ export interface EditorState {
     readOnly?: boolean;
     filePath?: string;
     original?: string;
+    kind?: 'file' | 'api-explorer';
   }) => void;
   closeFile: (path: string, groupId?: string) => void;
   setActive: (path: string, groupId?: string) => void;

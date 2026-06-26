@@ -2,7 +2,7 @@ import { commandRegistry } from './command-registry';
 import { useEditorStore } from '../stores/editor-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
-import { openFolderDialog, openFileDialog } from '../lib/workspace-actions';
+import { openFolderDialog, openFileDialog, openApiExplorer } from '../lib/workspace-actions';
 import { newFile } from '../lib/fs-actions';
 import { formatActiveFile, maybeFormatOnSave } from '../lib/format-actions';
 import { saveAllFiles } from '../lib/save-actions';
@@ -267,7 +267,7 @@ export function registerCoreCommands(): void {
     id: 'workbench.openApiExplorer',
     title: 'Open API Explorer',
     category: 'View',
-    run: () => useLayoutStore.getState().setApiExplorerOpen(true),
+    run: () => openApiExplorer(),
   });
   commandRegistry.register({
     id: 'workbench.checkProblems',

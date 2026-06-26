@@ -44,7 +44,6 @@ import { GitUserPicker } from './GitUserPicker';
 import { useGitUserStore } from '../stores/git-user-store';
 import { SettingsView } from './SettingsView';
 import { FeaturesView } from './FeaturesView';
-import { ApiExplorerView } from '../api-explorer';
 import { ContextMenu } from './ui/ContextMenu';
 
 export function AppShell(): React.JSX.Element {
@@ -244,7 +243,6 @@ export function AppShell(): React.JSX.Element {
         <GitUserPicker />
         <SettingsView />
         <FeaturesView />
-        <ApiExplorerView />
       </div>
     );
   }
@@ -333,7 +331,6 @@ export function AppShell(): React.JSX.Element {
       <GitUserPicker />
       <SettingsView />
       <FeaturesView />
-      <ApiExplorerView />
       {menu ? (
         <ContextMenu
           x={menu.x}

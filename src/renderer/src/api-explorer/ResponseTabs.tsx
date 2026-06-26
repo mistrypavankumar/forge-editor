@@ -6,7 +6,7 @@ import type { ExecutionResult } from './types';
 import { cn } from '../lib/cn';
 import { formatTime, formatBytes } from './graphql-utils';
 
-type ResponseTab = 'pretty' | 'raw' | 'errors' | 'metadata';
+type ResponseTab = 'pretty' | 'raw' | 'headers' | 'errors' | 'metadata';
 
 function CopyButton({ value }: { value: string }): React.JSX.Element {
   const [copied, setCopied] = useState(false);
@@ -51,6 +51,7 @@ function MetaRow({ label, value }: { label: string; value: string }): React.JSX.
 const TABS: { id: ResponseTab; label: string }[] = [
   { id: 'pretty', label: 'Pretty' },
   { id: 'raw', label: 'Raw' },
+  { id: 'headers', label: 'Headers' },
   { id: 'errors', label: 'Errors' },
   { id: 'metadata', label: 'Metadata' },
 ];
@@ -79,6 +80,17 @@ export function ResponseTabs({
 
   const errorCount = result?.errors?.length ?? 0;
   const hasNetworkError = Boolean(result?.networkError);
+
+  const headerEntries = useMemo(
+    () => Object.entries(result?.responseHeaders ?? {}),
+    [result],
+  );
+  const copyValue =
+    tab === 'raw'
+      ? (result?.raw ?? '')
+      : tab === 'headers'
+        ? headerEntries.map(([k, v]) => `${k}: ${v}`).join('\n')
+        : prettyText;
 
   const statusTone = !result
     ? 'idle'
@@ -115,7 +127,7 @@ export function ResponseTabs({
             </span>
           ) : null}
         </div>
-        {result ? <CopyButton value={tab === 'raw' ? result.raw : prettyText} /> : null}
+        {result ? <CopyButton value={copyValue} /> : null}
       </div>
 
       <div className="flex items-center gap-1 px-2 pt-1">
@@ -158,6 +170,16 @@ export function ResponseTabs({
           ) : (
             <div className="grid h-full place-items-center text-[12px] text-faint">Empty response body.</div>
           )
+        ) : tab === 'headers' ? (
+          headerEntries.length > 0 ? (
+            <div className="px-1">
+              {headerEntries.map(([k, v]) => (
+                <MetaRow key={k} label={k} value={v} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid h-full place-items-center text-[12px] text-faint">No response headers.</div>
+          )
         ) : tab === 'errors' ? (
           hasNetworkError || errorCount > 0 ? (
             <div className="flex flex-col gap-2">
@@ -186,9 +208,14 @@ export function ResponseTabs({
           )
         ) : (
           <div className="px-1">
-            <MetaRow label="Endpoint" value={result.endpoint} />
-            <MetaRow label="Operation" value={result.operationName} />
-            <MetaRow label="Type" value={result.operationType} />
+            <MetaRow label="Method" value={result.method} />
+            <MetaRow label="URL" value={result.url} />
+            {result.operationType ? (
+              <>
+                <MetaRow label="Operation" value={result.operationName} />
+                <MetaRow label="Type" value={result.operationType} />
+              </>
+            ) : null}
             <MetaRow
               label="HTTP status"
               value={result.networkError ? 'failed' : `${result.httpStatus ?? '—'} ${result.httpStatusText}`}

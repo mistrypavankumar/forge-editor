@@ -8,6 +8,7 @@ import { BinaryFileView } from './BinaryFileView';
 import { ImageView } from './ImageView';
 import { MarkdownPreview } from './MarkdownPreview';
 import { DiffView } from './DiffView';
+import { ApiExplorerEditor } from '../api-explorer';
 
 /** One editor column: its tab strip, breadcrumbs, code editor, and preview/diff overlays. */
 export function EditorGroupView({ groupId }: { groupId: string }): React.JSX.Element {
@@ -17,7 +18,8 @@ export function EditorGroupView({ groupId }: { groupId: string }): React.JSX.Ele
   );
   const mdPreview = useEditorStore((s) => s.mdPreview);
   const activeTab = tabs.find((t) => t.path === activePath);
-  const showDiff = !!activeTab && activeTab.original !== undefined;
+  const showApiExplorer = !!activeTab && activeTab.kind === 'api-explorer';
+  const showDiff = !!activeTab && !showApiExplorer && activeTab.original !== undefined;
   // Images render in the image viewer (from raw bytes), never the text editor or binary guard.
   const showImage = !!activeTab && !showDiff && isImagePath(activeTab.name);
   // Don't feed undecodable bytes to Monaco — diffs are always git text, so only guard plain tabs.
@@ -28,25 +30,33 @@ export function EditorGroupView({ groupId }: { groupId: string }): React.JSX.Ele
   return (
     <div data-testid="editor-region" className="flex h-full flex-col bg-bg">
       <EditorTabs groupId={groupId} />
-      <Breadcrumbs groupId={groupId} />
-      <div className="relative min-h-0 flex-1">
-        {showImage && activeTab ? (
-          <ImageView path={activeTab.filePath ?? activeTab.path} name={activeTab.name} />
-        ) : showBinary && activeTab ? (
-          <BinaryFileView name={activeTab.name} />
-        ) : (
-          <CodeEditor groupId={groupId} />
-        )}
-        {showPreview && activeTab ? <MarkdownPreview content={activeTab.content} /> : null}
-        {showDiff && activeTab ? (
-          <DiffView
-            original={activeTab.original ?? ''}
-            modified={activeTab.content}
-            // Use the real file path for language detection — the tab name may carry a "@ hash" suffix.
-            name={activeTab.filePath ?? activeTab.name}
-          />
-        ) : null}
-      </div>
+      {showApiExplorer ? (
+        <div className="min-h-0 flex-1">
+          <ApiExplorerEditor />
+        </div>
+      ) : (
+        <>
+          <Breadcrumbs groupId={groupId} />
+          <div className="relative min-h-0 flex-1">
+            {showImage && activeTab ? (
+              <ImageView path={activeTab.filePath ?? activeTab.path} name={activeTab.name} />
+            ) : showBinary && activeTab ? (
+              <BinaryFileView name={activeTab.name} />
+            ) : (
+              <CodeEditor groupId={groupId} />
+            )}
+            {showPreview && activeTab ? <MarkdownPreview content={activeTab.content} /> : null}
+            {showDiff && activeTab ? (
+              <DiffView
+                original={activeTab.original ?? ''}
+                modified={activeTab.content}
+                // Use the real file path for language detection — the tab name may carry a "@ hash" suffix.
+                name={activeTab.filePath ?? activeTab.name}
+              />
+            ) : null}
+          </div>
+        </>
+      )}
     </div>
   );
 }

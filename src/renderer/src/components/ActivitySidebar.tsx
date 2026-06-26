@@ -11,7 +11,9 @@ import {
 } from 'lucide-react';
 import { useLayoutStore, type ActivityId } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { useEditorStore } from '../stores/editor-store';
 import { commandRegistry } from '../commands/command-registry';
+import { openApiExplorer, API_EXPLORER_PATH } from '../lib/workspace-actions';
 import { cn } from '../lib/cn';
 
 interface Item {
@@ -39,8 +41,7 @@ export function ActivitySidebar({
   const setActivity = useLayoutStore((s) => s.setActivity);
   const togglePanel = useLayoutStore((s) => s.togglePanel);
   const setPanelVisible = useLayoutStore((s) => s.setPanelVisible);
-  const apiExplorerOpen = useLayoutStore((s) => s.apiExplorerOpen);
-  const setApiExplorerOpen = useLayoutStore((s) => s.setApiExplorerOpen);
+  const apiExplorerOpen = useEditorStore((s) => s.tabs.some((t) => t.path === API_EXPLORER_PATH));
   const changeCount = useWorkspaceStore((s) => s.changeCount);
 
   const onSelect = (id: ActivityId): void => {
@@ -92,7 +93,7 @@ export function ActivitySidebar({
           type="button"
           title="API Explorer"
           aria-label="API Explorer"
-          onClick={() => setApiExplorerOpen(!apiExplorerOpen)}
+          onClick={openApiExplorer}
           className={cn(
             'relative flex h-11 w-full items-center justify-center text-faint transition-colors',
             'hover:text-fg',
