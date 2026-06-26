@@ -33,6 +33,12 @@ export async function readFileText(filePath: string): Promise<string> {
   return fs.readFile(filePath, 'utf8');
 }
 
+/** Read a file's raw bytes as base64 — used to render images (and other binaries) in the renderer. */
+export async function readFileBase64(filePath: string): Promise<string> {
+  const buf = await fs.readFile(filePath);
+  return buf.toString('base64');
+}
+
 export async function writeFileText(filePath: string, content: string): Promise<void> {
   await fs.writeFile(filePath, content, 'utf8');
 }

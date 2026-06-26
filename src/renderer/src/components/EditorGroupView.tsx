@@ -1,7 +1,11 @@
 import { useEditorStore } from '../stores/editor-store';
+import { isBinaryContent } from '../lib/is-binary';
+import { isImagePath } from '../lib/is-image';
 import { EditorTabs } from './EditorTabs';
 import { Breadcrumbs } from './Breadcrumbs';
 import { CodeEditor } from './CodeEditor';
+import { BinaryFileView } from './BinaryFileView';
+import { ImageView } from './ImageView';
 import { MarkdownPreview } from './MarkdownPreview';
 import { DiffView } from './DiffView';
 
@@ -14,14 +18,25 @@ export function EditorGroupView({ groupId }: { groupId: string }): React.JSX.Ele
   const mdPreview = useEditorStore((s) => s.mdPreview);
   const activeTab = tabs.find((t) => t.path === activePath);
   const showDiff = !!activeTab && activeTab.original !== undefined;
-  const showPreview = mdPreview && !showDiff && !!activeTab && /\.mdx?$/i.test(activeTab.name);
+  // Images render in the image viewer (from raw bytes), never the text editor or binary guard.
+  const showImage = !!activeTab && !showDiff && isImagePath(activeTab.name);
+  // Don't feed undecodable bytes to Monaco — diffs are always git text, so only guard plain tabs.
+  const showBinary = !!activeTab && !showDiff && !showImage && isBinaryContent(activeTab.content);
+  const showPreview =
+    mdPreview && !showDiff && !showImage && !showBinary && !!activeTab && /\.mdx?$/i.test(activeTab.name);
 
   return (
     <div data-testid="editor-region" className="flex h-full flex-col bg-bg">
       <EditorTabs groupId={groupId} />
       <Breadcrumbs groupId={groupId} />
       <div className="relative min-h-0 flex-1">
-        <CodeEditor groupId={groupId} />
+        {showImage && activeTab ? (
+          <ImageView path={activeTab.filePath ?? activeTab.path} name={activeTab.name} />
+        ) : showBinary && activeTab ? (
+          <BinaryFileView name={activeTab.name} />
+        ) : (
+          <CodeEditor groupId={groupId} />
+        )}
         {showPreview && activeTab ? <MarkdownPreview content={activeTab.content} /> : null}
         {showDiff && activeTab ? (
           <DiffView

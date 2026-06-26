@@ -11,11 +11,13 @@ import {
   Coffee,
   Loader,
   Zap,
+  Ghost,
 } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useInlineRunStore } from '../stores/inline-run-store';
+import { useAiStore } from '../stores/ai-store';
 import { useAwsStore } from '../stores/aws-store';
 import { useGitUserStore } from '../stores/git-user-store';
 import { isProtectedBranch } from '../lib/protected-branch';
@@ -96,6 +98,8 @@ export function StatusBar(): React.JSX.Element {
   const openGitUserPicker = useGitUserStore((s) => s.openPicker);
   const javaStatus = useJavaStatusStore((s) => s.status);
   const activePath = useEditorStore((s) => s.activePath);
+  const ghostEnabled = useAiStore((s) => s.inlineSuggest);
+  const toggleGhost = useAiStore((s) => s.toggleInlineSuggest);
   const inlineEnabled = useInlineRunStore((s) => s.enabled);
   const inlineByPath = useInlineRunStore((s) => s.byPath);
   const toggleInline = useInlineRunStore((s) => s.toggle);
@@ -174,6 +178,18 @@ export function StatusBar(): React.JSX.Element {
             {JAVA_STATUS[javaStatus].label}
           </Segment>
         ) : null}
+        <Segment
+          onClick={toggleGhost}
+          className={ghostEnabled ? 'text-accent' : undefined}
+          title={
+            ghostEnabled
+              ? 'AI inline suggestions are ON — ghost text appears as you type; Tab to accept. Click to turn off.'
+              : 'AI inline suggestions are OFF — click to turn on Copilot-style ghost text.'
+          }
+        >
+          <Ghost size={12} />
+          {ghostEnabled ? 'Ghost: on' : 'Ghost'}
+        </Segment>
         <Segment
           onClick={toggleInline}
           className={

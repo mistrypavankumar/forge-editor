@@ -17,6 +17,7 @@ export const api: ForgeApi = {
   saveDialog: (defaultName) => ipcRenderer.invoke(IpcChannels.saveDialog, defaultName),
   readDirectory: (path) => ipcRenderer.invoke(IpcChannels.readDirectory, path),
   readFile: (path) => ipcRenderer.invoke(IpcChannels.readFile, path),
+  readFileBase64: (path) => ipcRenderer.invoke(IpcChannels.readFileBase64, path),
   writeFile: (path, content) => ipcRenderer.invoke(IpcChannels.writeFile, path, content),
   listFiles: (rootPath) => ipcRenderer.invoke(IpcChannels.listFiles, rootPath),
   gitBranch: (rootPath) => ipcRenderer.invoke(IpcChannels.gitBranch, rootPath),
@@ -60,6 +61,8 @@ export const api: ForgeApi = {
     ipcRenderer.on(IpcChannels.assistantDone, listener);
     return () => ipcRenderer.removeListener(IpcChannels.assistantDone, listener);
   },
+  requestCompletion: (args) => ipcRenderer.invoke(IpcChannels.aiCompletion, args),
+  cancelCompletion: (id) => ipcRenderer.send(IpcChannels.aiCompletionCancel, id),
   aiKeyStatus: () => ipcRenderer.invoke(IpcChannels.aiKeyStatus),
   aiSetKey: (provider, key) => ipcRenderer.invoke(IpcChannels.aiSetKey, provider, key),
   search: (rootPath, options) => ipcRenderer.invoke(IpcChannels.search, rootPath, options),
@@ -75,6 +78,11 @@ export const api: ForgeApi = {
     const listener = (_e: unknown, id: string): void => cb(id);
     ipcRenderer.on(IpcChannels.menuAction, listener);
     return () => ipcRenderer.removeListener(IpcChannels.menuAction, listener);
+  },
+  onOpenFile: (cb) => {
+    const listener = (_e: unknown, path: string): void => cb(path);
+    ipcRenderer.on(IpcChannels.openPath, listener);
+    return () => ipcRenderer.removeListener(IpcChannels.openPath, listener);
   },
   syncMenuState: (autoSave) => ipcRenderer.send(IpcChannels.menuSyncState, autoSave),
   newWindow: () => ipcRenderer.send(IpcChannels.newWindow),

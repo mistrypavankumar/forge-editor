@@ -4,6 +4,9 @@ export function languageFor(name: string): string {
   // / `.env.example` / `prod.env` would otherwise be read as `local` / `example` / `env`.
   const base = name.slice(Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\')) + 1).toLowerCase();
   if (base === '.env' || base.startsWith('.env.') || base.endsWith('.env')) return 'dotenv';
+  // Makefiles are matched by name (they have no extension): `Makefile`, `GNUmakefile`,
+  // `Makefile.local`, plus the `.mk` / `.mak` / `.make` extensions used for includes.
+  if (base === 'makefile' || base === 'gnumakefile' || base.startsWith('makefile.')) return 'makefile';
 
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
   const map: Record<string, string> = {
@@ -26,6 +29,9 @@ export function languageFor(name: string): string {
     yaml: 'yaml',
     graphql: 'graphql',
     gql: 'graphql',
+    mk: 'makefile',
+    mak: 'makefile',
+    make: 'makefile',
   };
   return map[ext] ?? 'plaintext';
 }

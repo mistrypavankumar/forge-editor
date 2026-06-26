@@ -1,6 +1,7 @@
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useRecentsStore } from '../stores/recents-store';
+import { isImagePath } from './is-image';
 import type { DirEntry, GitChange } from '@shared/ipc-contract';
 
 function base(p: string): string {
@@ -36,8 +37,14 @@ export async function openFileDialog(): Promise<void> {
 
 /** Open a file by path. `record` adds it to Recent (only for landing/recents flows). */
 export async function openFilePath(path: string, name?: string, record = false): Promise<void> {
+  const fileName = name ?? base(path);
+  // Images render from raw bytes in the image viewer — skip the text read.
+  if (isImagePath(fileName)) {
+    applyFile(path, fileName, '', record);
+    return;
+  }
   const res = await window.forge.readFile(path);
-  if (res.ok) applyFile(path, name ?? base(path), res.data, record);
+  if (res.ok) applyFile(path, fileName, res.data, record);
 }
 
 /** Open a read-only side-by-side diff of the staged (index) version against HEAD. */

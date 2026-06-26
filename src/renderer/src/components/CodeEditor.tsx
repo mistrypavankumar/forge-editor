@@ -130,6 +130,14 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
       fontLigatures: true,
       // Type-over: typing a closing bracket/quote skips an existing one instead of duplicating.
       autoClosingOvertype: 'always',
+      // Cmd/Ctrl+click jumps to the first definition instead of opening a peek list. TS returns
+      // multiple definitions for shorthand object properties (the local value AND the matching
+      // property in the target type) and merged/overloaded declarations; default 'peek' makes
+      // those feel like "nothing happened". 'goto' navigates to the first (the value decl).
+      gotoLocation: { multipleDefinitions: 'goto', multipleTypeDefinitions: 'goto' },
+      // Render Copilot-style AI ghost text (Tab to accept). The provider itself is gated behind
+      // the AI "inline suggestions" toggle, so this just lets the suggestions show when on.
+      inlineSuggest: { enabled: true },
       lineNumbersMinChars: 4,
       padding: { top: 12 },
       smoothScrolling: true,
@@ -246,6 +254,9 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     // Click the change gutter (colored bar / deletion marker) to open the diff peek.
     disposables.push(
       instance.onMouseDown((e) => {
+        // Left-click only — otherwise a right-click on a changed line's gutter would preventDefault
+        // here and swallow the context menu (the "right-click sometimes doesn't work" case).
+        if (!e.event.leftButton) return;
         const { GUTTER_LINE_DECORATIONS, GUTTER_GLYPH_MARGIN } = monaco.editor.MouseTargetType;
         if (e.target.type !== GUTTER_LINE_DECORATIONS && e.target.type !== GUTTER_GLYPH_MARGIN) {
           return;

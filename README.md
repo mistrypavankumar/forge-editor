@@ -66,6 +66,36 @@ pnpm dev          # launch the app with hot reload
 | `pnpm test:watch` | Run tests in watch mode |
 | `pnpm lint` | Lint with ESLint (flat config) |
 
+## Use as your editor for dev tools (`REACT_EDITOR`)
+
+Forge is GUI-only — it has no `code`-style `file:line:column` CLI — so tools that
+shell out to an editor (Next.js's `launch-editor` / `REACT_EDITOR`, react-dev-utils,
+error overlays) need a small wrapper that opens files via the macOS app association.
+
+Create `~/.local/bin/forge-open`:
+
+```sh
+#!/bin/sh
+# Open files in Forge for tools that use REACT_EDITOR. Strips any :line:column
+# suffix (Forge can't jump to a position via argv) and uses the macOS association.
+files=""
+for arg in "$@"; do files="$files ${arg%%:*}"; done
+exec open -a Forge $files
+```
+
+```bash
+chmod +x ~/.local/bin/forge-open
+```
+
+Then point your project's `.env.local` (or shell) at it:
+
+```bash
+# Forge is GUI-only (no file:line:column CLI) — route opens through a wrapper that uses `open -a Forge`.
+REACT_EDITOR=/Users/pavankumarmistry/.local/bin/forge-open
+```
+
+Restart the dev server afterward — `.env.local` is read only at startup.
+
 ## Project structure
 
 ```
