@@ -80,7 +80,6 @@ export const useLayoutStore = create<LayoutState>((set) => ({
   setBottomTab: (tab) => set({ bottomTab: tab }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   setFeaturesOpen: (open) => set({ featuresOpen: open }),
-  setApiExplorerOpen: (open) => set({ apiExplorerOpen: open }),
   setSearchExclude: (folders) => set({ searchExclude: folders }),
   setSearchExcludeSeeded: (seeded) => set({ searchExcludeSeeded: seeded }),
   setScmGraphHeight: (height) => set({ scmGraphHeight: height }),

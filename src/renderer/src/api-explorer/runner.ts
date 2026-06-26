@@ -8,7 +8,6 @@ import type {
 } from './types';
 
 import { byteLength, extractGraphqlErrors, detectOperationType } from './graphql-utils';
-import { splitUrl } from './http-utils';
 
 export interface RunArgs {
   method: HttpMethod;

@@ -122,7 +122,11 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
         url: s.url,
         params: s.params,
         // Drop secret auth fields; keep the type/shape so the editor reopens to the right mode.
-        auth: { type: s.auth.type, apiKeyName: s.auth.apiKeyName, apiKeyIn: s.auth.apiKeyIn },
+        auth: {
+          type: s.auth.type,
+          apiKeyName: s.auth.apiKeyName,
+          apiKeyIn: s.auth.apiKeyIn,
+        } as AuthConfig,
         headers: s.headers,
         bodyMode: s.bodyMode,
         bodyText: s.bodyText,

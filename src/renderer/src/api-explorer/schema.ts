@@ -24,7 +24,7 @@ import type {
 } from 'graphql';
 import type { SchemaField, SchemaArgNode, SchemaOperations } from './types';
 
-import { runGraphQL } from './runner';
+import { runHttp } from './runner';
 
 const MAX_INPUT_DEPTH = 5;
 const schemaCache = new Map<string, GraphQLSchema>();
@@ -39,12 +39,16 @@ async function introspect(args: IntrospectArgs): Promise<GraphQLSchema> {
   const cached = schemaCache.get(args.endpoint);
   if (cached) return cached;
 
-  const result = await runGraphQL({
-    endpoint: args.endpoint,
+  const result = await runHttp({
+    method: 'POST',
+    url: args.endpoint,
+    auth: args.token ? { type: 'bearer', token: args.token } : { type: 'none' },
+    headers: args.headers ?? {},
+    bodyMode: 'graphql',
+    bodyText: '',
+    formRows: [],
     query: getIntrospectionQuery(),
     operationName: 'IntrospectionQuery',
-    token: args.token,
-    headers: args.headers,
   });
 
   if (result.networkError) throw new Error(result.networkError);
