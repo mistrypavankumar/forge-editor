@@ -13,6 +13,17 @@ const sessions = new Map<string, IPty>();
 const pollers = new Map<string, ReturnType<typeof setInterval>>();
 const BUSY_POLL_MS = 400;
 
+// Flow control: bound how much PTY output can be in flight (sent but not yet
+// processed by xterm in the renderer). Without this, a flood of output — a build,
+// `cat` on a big file, an AI streaming a long reply — outruns xterm's DOM renderer
+// and locks up the window. We pause the PTY once `unacked` characters exceed the
+// high-water mark and resume once the renderer's acks bring it back under the low
+// mark. Mirrors VS Code's terminal flow-control numbers.
+const FLOW_HIGH_WATER = 100_000;
+const FLOW_LOW_WATER = 5_000;
+/** Per-session count of characters sent to the renderer but not yet acked, + pause state. */
+const flow = new Map<string, { unacked: number; paused: boolean }>();
+
 function defaultShell(): string {
   if (process.platform === 'win32') return process.env.COMSPEC ?? 'powershell.exe';
   return process.env.SHELL ?? '/bin/zsh';
@@ -41,6 +52,7 @@ function stopPoller(id: string): void {
 
 export function createTerminal(sender: WebContents, args: TerminalCreateArgs): void {
   sessions.get(args.id)?.kill();
+  flow.set(args.id, { unacked: 0, paused: false });
 
   const proc = pty.spawn(defaultShell(), shellArgs(), {
     name: 'xterm-256color',
@@ -59,13 +71,23 @@ export function createTerminal(sender: WebContents, args: TerminalCreateArgs): v
   sessions.set(args.id, proc);
 
   proc.onData((chunk) => {
-    if (!sender.isDestroyed()) sender.send(IpcChannels.terminalData, { id: args.id, chunk });
+    if (sender.isDestroyed()) return;
+    sender.send(IpcChannels.terminalData, { id: args.id, chunk });
+    const f = flow.get(args.id);
+    if (f) {
+      f.unacked += chunk.length;
+      if (!f.paused && f.unacked >= FLOW_HIGH_WATER) {
+        f.paused = true;
+        proc.pause();
+      }
+    }
   });
   proc.onExit(({ exitCode }) => {
     // Only clear the map if this is still the active pty for the id — a fast
     // re-create (e.g. React StrictMode remount) may have replaced it already.
     if (sessions.get(args.id) === proc) {
       sessions.delete(args.id);
+      flow.delete(args.id);
       stopPoller(args.id);
       if (!sender.isDestroyed()) {
         sender.send(IpcChannels.terminalExit, { id: args.id, code: exitCode });
@@ -106,6 +128,21 @@ export function writeTerminal(id: string, data: string): void {
   sessions.get(id)?.write(data);
 }
 
+/**
+ * Called by the renderer once xterm has finished processing `charCount` characters of
+ * output. Drains the in-flight counter and resumes a paused PTY once the renderer has
+ * caught up below the low-water mark.
+ */
+export function ackTerminal(id: string, charCount: number): void {
+  const f = flow.get(id);
+  if (!f) return;
+  f.unacked = Math.max(0, f.unacked - charCount);
+  if (f.paused && f.unacked <= FLOW_LOW_WATER) {
+    f.paused = false;
+    sessions.get(id)?.resume();
+  }
+}
+
 export function resizeTerminal(id: string, cols: number, rows: number): void {
   try {
     sessions.get(id)?.resize(Math.max(cols, 2), Math.max(rows, 1));
@@ -117,5 +154,6 @@ export function resizeTerminal(id: string, cols: number, rows: number): void {
 export function killTerminal(id: string): void {
   sessions.get(id)?.kill();
   sessions.delete(id);
+  flow.delete(id);
   stopPoller(id);
 }

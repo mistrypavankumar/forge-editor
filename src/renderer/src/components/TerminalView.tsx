@@ -72,6 +72,9 @@ export function TerminalView({
       letterSpacing: 0,
       cursorBlink: true,
       cursorStyle: 'bar',
+      // Bound the scrollback so a long-lived session with heavy output doesn't grow
+      // the DOM buffer without limit.
+      scrollback: 5000,
       // Let the panel's translucent background and the window vibrancy show through the
       // terminal, matching the frosted-glass look of the editor and chrome.
       allowTransparency: true,
@@ -196,8 +199,26 @@ export function TerminalView({
       rows: term.rows,
     });
 
+    // Batch PTY output: accumulate incoming chunks and flush once per animation frame
+    // with a single term.write, then ack the processed length back to main from xterm's
+    // write callback. This collapses hundreds of tiny per-chunk writes/sec into one per
+    // frame, and the acks drive main's flow control (it pauses the PTY when we fall
+    // behind), so a flood of output can no longer outrun xterm and freeze the window.
+    let pending = '';
+    let flushRaf = 0;
+    const flush = (): void => {
+      flushRaf = 0;
+      if (disposed || !pending) return;
+      const data = pending;
+      pending = '';
+      term.write(data, () => {
+        if (!disposed) window.forge.ackTerminal(sessionId, data.length);
+      });
+    };
     const offData = window.forge.onTerminalData((e) => {
-      if (e.id === sessionId) term.write(e.chunk);
+      if (e.id !== sessionId) return;
+      pending += e.chunk;
+      if (!flushRaf) flushRaf = requestAnimationFrame(flush);
     });
     const offExit = window.forge.onTerminalExit((e) => {
       if (e.id === sessionId) {
@@ -240,6 +261,7 @@ export function TerminalView({
 
     return () => {
       disposed = true;
+      if (flushRaf) cancelAnimationFrame(flushRaf);
       unregisterExec(sessionId);
       offData();
       offExit();

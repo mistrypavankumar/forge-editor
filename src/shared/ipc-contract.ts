@@ -75,6 +75,7 @@ export const IpcChannels = {
   terminalResize: 'forge:terminal:resize',
   terminalKill: 'forge:terminal:kill',
   terminalData: 'forge:terminal:data',
+  terminalAck: 'forge:terminal:ack',
   terminalExit: 'forge:terminal:exit',
   terminalBusy: 'forge:terminal:busy',
   openExternal: 'forge:shell:openExternal',
@@ -770,6 +771,13 @@ export interface ForgeApi {
   resolveImport: (rootPath: string, fromFile: string, spec: string) => Promise<Result<string | null>>;
   createTerminal: (args: TerminalCreateArgs) => Promise<Result<void>>;
   sendInput: (id: string, data: string) => void;
+  /**
+   * Acknowledge that the renderer has processed `charCount` characters of PTY output.
+   * Drives flow control: the main process pauses the PTY when too much output is
+   * outstanding (unacked) and resumes once the renderer catches up, so a flood of
+   * output can't outrun xterm and lock up the window.
+   */
+  ackTerminal: (id: string, charCount: number) => void;
   resizeTerminal: (id: string, cols: number, rows: number) => void;
   killCommand: (id: string) => Promise<Result<void>>;
   openExternal: (url: string) => Promise<Result<void>>;

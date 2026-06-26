@@ -105,6 +105,7 @@ export const api: ForgeApi = {
     ipcRenderer.invoke(IpcChannels.resolveImport, rootPath, fromFile, spec),
   createTerminal: (args) => ipcRenderer.invoke(IpcChannels.terminalCreate, args),
   sendInput: (id, data) => ipcRenderer.send(IpcChannels.terminalInput, id, data),
+  ackTerminal: (id, charCount) => ipcRenderer.send(IpcChannels.terminalAck, id, charCount),
   resizeTerminal: (id, cols, rows) => ipcRenderer.send(IpcChannels.terminalResize, id, cols, rows),
   killCommand: (id) => ipcRenderer.invoke(IpcChannels.terminalKill, id),
   openExternal: (url) => ipcRenderer.invoke(IpcChannels.openExternal, url),
