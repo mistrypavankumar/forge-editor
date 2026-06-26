@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X, FileCode2, Wand2, Search, GitBranch, TerminalSquare, Command, Settings,
-  PanelsTopLeft, GitCompare, Code2, type LucideIcon,
+  PanelsTopLeft, GitCompare, Code2, Sparkles, type LucideIcon,
 } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
 
@@ -27,6 +27,18 @@ const GROUPS: Group[] = [
       { name: 'Tab-out & type-over', desc: 'Tab jumps past a closing bracket/quote; retyping it skips over.', shortcut: 'Tab' },
       { name: 'Go to Line', desc: 'Jump to any line/column.', shortcut: '⌘G' },
       { name: 'Adjustable font size', desc: 'Set the editor font size in Settings.' },
+    ],
+  },
+  {
+    icon: Sparkles,
+    title: 'Language intelligence',
+    features: [
+      { name: 'Code completion', desc: 'Context-aware suggestions with auto-import for TS/JS.', shortcut: '⌃Space' },
+      { name: 'Hover & signature help', desc: 'Types, JSDoc, and parameter hints as you type.' },
+      { name: 'Go to Definition', desc: 'Jump to where a symbol is defined.', shortcut: 'F12' },
+      { name: 'References & Rename', desc: 'See every use, or rename a symbol across files.', shortcut: 'F2' },
+      { name: 'Inline diagnostics', desc: 'Type errors and warnings highlighted as you edit.' },
+      { name: 'Java support', desc: 'TS/JS built in; Java via jdtls (bring your own JDK).' },
     ],
   },
   {
@@ -73,6 +85,7 @@ const GROUPS: Group[] = [
     features: [
       { name: 'Integrated terminal', desc: 'A real shell, with clickable path:line links.', shortcut: '⌃`' },
       { name: 'Task runner', desc: 'Run package.json scripts (auto-detects your package manager).' },
+      { name: 'Open from terminal', desc: 'Run `forge <file>` to open it here, or set Forge as your $EDITOR.' },
     ],
   },
   {
