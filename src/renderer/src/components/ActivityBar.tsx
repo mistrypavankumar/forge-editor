@@ -1,4 +1,4 @@
-import { Files, Search, GitBranch, Settings, type LucideIcon } from 'lucide-react';
+import { Files, Search, GitBranch, Settings, SquareTerminal, type LucideIcon } from 'lucide-react';
 import { useLayoutStore } from '../stores/layout-store';
 
 interface ActivityItem {
@@ -39,6 +39,15 @@ export function ActivityBar(): React.JSX.Element {
         })}
       </div>
       <div className="activitybar-bottom">
+        <button
+          type="button"
+          className="activitybar-item"
+          title="API Explorer"
+          aria-label="API Explorer"
+          onClick={() => useLayoutStore.getState().setApiExplorerOpen(true)}
+        >
+          <SquareTerminal size={22} strokeWidth={1.6} />
+        </button>
         <button type="button" className="activitybar-item" title="Settings" aria-label="Settings">
           <Settings size={22} strokeWidth={1.6} />
         </button>

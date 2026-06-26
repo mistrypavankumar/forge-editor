@@ -264,6 +264,12 @@ export function registerCoreCommands(): void {
     run: () => useLayoutStore.getState().setSettingsOpen(true),
   });
   commandRegistry.register({
+    id: 'workbench.openApiExplorer',
+    title: 'Open API Explorer',
+    category: 'View',
+    run: () => useLayoutStore.getState().setApiExplorerOpen(true),
+  });
+  commandRegistry.register({
     id: 'workbench.checkProblems',
     title: 'Check Problems (project-wide)',
     category: 'View',

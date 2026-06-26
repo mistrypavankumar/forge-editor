@@ -79,6 +79,8 @@ export const IpcChannels = {
   terminalExit: 'forge:terminal:exit',
   terminalBusy: 'forge:terminal:busy',
   openExternal: 'forge:shell:openExternal',
+  // GraphQL HTTP request (API Explorer) — performed in main to bypass renderer CORS.
+  graphqlRequest: 'forge:graphql:request',
   // TypeScript Language Service (real IDE intelligence).
   langInit: 'forge:lang:init',
   langOpenDoc: 'forge:lang:openDoc',
@@ -661,6 +663,27 @@ export interface TerminalBusyEvent {
   proc: string;
 }
 
+// ---- GraphQL HTTP (API Explorer) -------------------------------------------
+
+/** A GraphQL HTTP request executed in the main process (no renderer CORS). */
+export interface GraphqlHttpRequest {
+  url: string;
+  /** Extra request headers (e.g. Authorization), merged onto content-type/accept. */
+  headers?: Record<string, string>;
+  /** Pre-serialized JSON body: `{ query, variables?, operationName? }`. */
+  body: string;
+}
+
+/** The raw HTTP outcome of a {@link GraphqlHttpRequest}. */
+export interface GraphqlHttpResponse {
+  status: number;
+  statusText: string;
+  /** Raw response body text, exactly as received. */
+  body: string;
+  /** Response headers (lowercased keys). */
+  headers: Record<string, string>;
+}
+
 export interface ForgeApi {
   ping: (msg: string) => Promise<string>;
   openFolder: () => Promise<Result<WorkspaceData | null>>;
@@ -796,6 +819,8 @@ export interface ForgeApi {
   resizeTerminal: (id: string, cols: number, rows: number) => void;
   killCommand: (id: string) => Promise<Result<void>>;
   openExternal: (url: string) => Promise<Result<void>>;
+  /** Run a GraphQL HTTP request from the main process (no renderer CORS). Used by the API Explorer. */
+  graphqlRequest: (req: GraphqlHttpRequest) => Promise<Result<GraphqlHttpResponse>>;
   onTerminalData: (cb: (e: TerminalDataEvent) => void) => () => void;
   onTerminalExit: (cb: (e: TerminalExitEvent) => void) => () => void;
   onTerminalBusy: (cb: (e: TerminalBusyEvent) => void) => () => void;
