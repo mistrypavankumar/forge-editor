@@ -60,7 +60,7 @@ function shortLabel(url: string): string {
 /**
  * The API Explorer — a Postman-style HTTP client rendered inside an editor tab. Supports REST
  * (method + params + auth + body modes) and GraphQL (as one body mode, with the schema/templates
- * sidebar). Read-only by default: unsafe methods / mutations require disabling it + confirming.
+ * sidebar). Unsafe methods / mutations prompt for confirmation before sending.
  * Requests execute in the main process (no CORS).
  */
 export function ApiExplorerEditor(): React.JSX.Element {
@@ -72,7 +72,6 @@ export function ApiExplorerEditor(): React.JSX.Element {
   const bodyMode = useApiExplorerStore((s) => s.bodyMode);
   const bodyText = useApiExplorerStore((s) => s.bodyText);
   const formRows = useApiExplorerStore((s) => s.formRows);
-  const readOnly = useApiExplorerStore((s) => s.readOnly);
   const query = useApiExplorerStore((s) => s.query);
   const variables = useApiExplorerStore((s) => s.variables);
   const collections = useApiExplorerStore((s) => s.collections);
@@ -188,10 +187,6 @@ export function ApiExplorerEditor(): React.JSX.Element {
         return;
       }
       if (opType === 'mutation') {
-        if (readOnly) {
-          flash('Mutations are disabled in read-only mode.');
-          return;
-        }
         setConfirmRun(true);
         return;
       }
@@ -201,15 +196,11 @@ export function ApiExplorerEditor(): React.JSX.Element {
 
     // REST: guard state-changing methods.
     if (UNSAFE_METHODS.has(method)) {
-      if (readOnly) {
-        flash(`${method} is disabled in read-only mode.`);
-        return;
-      }
       setConfirmRun(true);
       return;
     }
     void execute();
-  }, [running, url, isGraphql, query, readOnly, method, execute, flash]);
+  }, [running, url, isGraphql, query, method, execute, flash]);
 
   const activeRequest = useMemo(
     () => collections.flatMap((c) => c.requests).find((r) => r.id === activeRequestId) ?? null,
@@ -456,27 +447,6 @@ export function ApiExplorerEditor(): React.JSX.Element {
             Save as…
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={() => store().setReadOnly(!readOnly)}
-          className="flex shrink-0 items-center gap-1.5"
-          title={readOnly ? 'Read-only blocks state-changing requests' : 'State-changing requests allowed'}
-        >
-          <span
-            className={cn(
-              'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-              readOnly ? 'bg-emerald-500' : 'bg-surface-3',
-            )}
-          >
-            <span
-              className={cn(
-                'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                readOnly ? 'translate-x-[18px]' : 'translate-x-0.5',
-              )}
-            />
-          </span>
-          <span className="text-[12px] font-semibold text-fg">Read-only</span>
-        </button>
       </div>
 
       {notice ? (

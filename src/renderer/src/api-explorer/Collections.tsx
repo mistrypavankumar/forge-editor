@@ -144,6 +144,7 @@ function CollectionGroup({
   const toggleCollection = useApiExplorerStore((s) => s.toggleCollection);
   const renameCollection = useApiExplorerStore((s) => s.renameCollection);
   const removeCollection = useApiExplorerStore((s) => s.removeCollection);
+  const createRequest = useApiExplorerStore((s) => s.createRequest);
 
   const term = search.trim().toLowerCase();
   const requests = term
@@ -187,6 +188,14 @@ function CollectionGroup({
         <span className="shrink-0 text-[10px] text-faint">{collection.requests.length}</span>
         {editingId !== collection.id ? (
           <div className="flex shrink-0 items-center opacity-0 group-hover:opacity-100">
+            <button
+              type="button"
+              title="New request in collection"
+              onClick={() => setEditingId(createRequest(collection.id, 'Untitled request'))}
+              className="rounded p-0.5 text-faint hover:bg-surface-3 hover:text-fg"
+            >
+              <Plus size={12} />
+            </button>
             <button
               type="button"
               title="Rename collection"

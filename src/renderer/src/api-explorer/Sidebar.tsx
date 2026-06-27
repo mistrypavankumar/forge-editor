@@ -1,59 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Search, Trash2, Copy, RotateCw } from 'lucide-react';
 
-import type { ApiTemplate, HistoryItem } from './types';
+import type { HistoryItem } from './types';
 
 import { cn } from '../lib/cn';
 import { SchemaTree } from './SchemaTree';
 import { Collections } from './Collections';
-import { API_TEMPLATES } from './templates';
 import { formatTime } from './graphql-utils';
 import { useApiExplorerStore } from './store';
 
-type SidebarTab = 'collections' | 'templates' | 'history' | 'schema';
-
-function TemplateList({
-  search,
-  onSelect,
-}: {
-  search: string;
-  onSelect: (t: ApiTemplate) => void;
-}): React.JSX.Element {
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return API_TEMPLATES;
-    return API_TEMPLATES.filter(
-      (t) =>
-        t.name.toLowerCase().includes(term) ||
-        t.description.toLowerCase().includes(term) ||
-        t.category.toLowerCase().includes(term),
-    );
-  }, [search]);
-
-  if (filtered.length === 0) {
-    return <div className="px-4 py-8 text-center text-[12px] text-faint">No templates match.</div>;
-  }
-  return (
-    <div className="flex flex-col gap-1.5 p-1.5">
-      {filtered.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          onClick={() => onSelect(t)}
-          className="rounded-lg border border-line bg-surface/40 p-2 text-left transition-colors hover:border-accent/60 hover:bg-surface-2"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[12px] font-semibold text-fg">{t.name}</span>
-            <span className="rounded bg-accent/12 px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wide text-accent">
-              {t.category}
-            </span>
-          </div>
-          <div className="mt-0.5 text-[11px] text-muted">{t.description}</div>
-        </button>
-      ))}
-    </div>
-  );
-}
+type SidebarTab = 'collections' | 'history' | 'schema';
 
 function HistoryList({
   search,
@@ -164,13 +120,11 @@ export function Sidebar({
 }): React.JSX.Element {
   const [tab, setTab] = useState<SidebarTab>('collections');
   const [search, setSearch] = useState('');
-  const loadTemplate = useApiExplorerStore((s) => s.loadTemplate);
   const loadHistory = useApiExplorerStore((s) => s.loadHistory);
   const clearHistory = useApiExplorerStore((s) => s.clearHistory);
 
   const tabs: { id: SidebarTab; label: string }[] = [
     { id: 'collections', label: 'Collections' },
-    { id: 'templates', label: 'Templates' },
     { id: 'history', label: 'History' },
     { id: 'schema', label: 'Schema' },
   ];
@@ -183,7 +137,7 @@ export function Sidebar({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search collections, templates & schema"
+            placeholder="Search collections & schema"
             className="w-full bg-transparent text-[12px] text-fg outline-none placeholder:text-faint"
           />
         </div>
@@ -219,7 +173,6 @@ export function Sidebar({
 
       <div className="min-h-0 flex-1 overflow-auto">
         {tab === 'collections' ? <Collections search={search} /> : null}
-        {tab === 'templates' ? <TemplateList search={search} onSelect={loadTemplate} /> : null}
         {tab === 'history' ? <HistoryList search={search} onRerun={loadHistory} /> : null}
         {tab === 'schema' ? (
           <SchemaTree
