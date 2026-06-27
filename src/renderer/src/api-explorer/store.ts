@@ -78,10 +78,17 @@ export interface ApiExplorerState {
   /** GraphQL variables as a JSON string (used when `bodyMode === 'graphql'`). */
   variables: string;
   history: HistoryItem[];
+  /** Most-recently-used request URLs (most recent first), for the URL bar suggestions. */
+  recentUrls: string[];
   /** Saved request collections (Postman-style). */
   collections: Collection[];
   /** Id of the saved request currently loaded into the editor, if any. */
   activeRequestId: string | null;
+
+  /** Fraction (0–1) of the main column height given to the request section (rest is the response). */
+  requestPaneRatio: number;
+  /** Height in px of the GraphQL variables editor. */
+  variablesHeight: number;
 
   setMethod: (method: HttpMethod) => void;
   setUrl: (url: string) => void;
@@ -99,6 +106,9 @@ export interface ApiExplorerState {
   addHistory: (item: Omit<HistoryItem, 'id' | 'timestamp'>) => void;
   removeHistory: (id: string) => void;
   clearHistory: () => void;
+  /** Record a URL as recently used (deduped, most recent first). */
+  recordUrl: (url: string) => void;
+  removeRecentUrl: (url: string) => void;
 
   // Collections.
   createCollection: (name: string) => string;
@@ -116,6 +126,9 @@ export interface ApiExplorerState {
   renameRequest: (id: string, name: string) => void;
   removeRequest: (id: string) => void;
   duplicateRequest: (id: string) => void;
+
+  setRequestPaneRatio: (ratio: number) => void;
+  setVariablesHeight: (height: number) => void;
 }
 
 export const useApiExplorerStore = create<ApiExplorerState>()(
@@ -132,8 +145,11 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
       query: DEFAULT_QUERY,
       variables: DEFAULT_VARIABLES,
       history: [],
+      recentUrls: [],
       collections: [],
       activeRequestId: null,
+      requestPaneRatio: 0.5,
+      variablesHeight: 120,
 
       setMethod: (method) => set({ method }),
       setUrl: (url) => set({ url }),
@@ -169,6 +185,16 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
         }),
       removeHistory: (id) => set((s) => ({ history: s.history.filter((h) => h.id !== id) })),
       clearHistory: () => set({ history: [] }),
+      recordUrl: (url) =>
+        set((s) => {
+          const trimmed = url.trim();
+          if (!trimmed) return s;
+          return {
+            recentUrls: [trimmed, ...s.recentUrls.filter((u) => u !== trimmed)].slice(0, MAX_HISTORY),
+          };
+        }),
+      removeRecentUrl: (url) =>
+        set((s) => ({ recentUrls: s.recentUrls.filter((u) => u !== url) })),
 
       createCollection: (name) => {
         const id = nextId('aec');
@@ -299,6 +325,10 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
             return { ...c, requests };
           }),
         })),
+
+      setRequestPaneRatio: (ratio) =>
+        set({ requestPaneRatio: Math.max(0.15, Math.min(0.85, ratio)) }),
+      setVariablesHeight: (height) => set({ variablesHeight: Math.max(60, Math.min(600, height)) }),
     }),
     {
       name: 'forge:api-explorer',
@@ -321,8 +351,11 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
         query: s.query,
         variables: s.variables,
         history: s.history,
+        recentUrls: s.recentUrls,
         collections: s.collections,
         activeRequestId: s.activeRequestId,
+        requestPaneRatio: s.requestPaneRatio,
+        variablesHeight: s.variablesHeight,
       }),
       // v1 stored `endpoint`; map it onto `url` so saved endpoints survive the upgrade.
       // v2→v3 made the explorer REST-first: drop the old GraphQL-default method/bodyMode so

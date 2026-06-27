@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Send, Wand2, Loader2, Save } from 'lucide-react';
+import { Send, Wand2, Loader2, Save, History, X } from 'lucide-react';
 
 import type { HeaderRow, BodyMode, ExecutionResult, HttpMethod, ParamRow, FormRow } from './types';
 import { UNSAFE_METHODS } from './types';
@@ -76,6 +76,9 @@ export function ApiExplorerEditor(): React.JSX.Element {
   const variables = useApiExplorerStore((s) => s.variables);
   const collections = useApiExplorerStore((s) => s.collections);
   const activeRequestId = useApiExplorerStore((s) => s.activeRequestId);
+  const requestPaneRatio = useApiExplorerStore((s) => s.requestPaneRatio);
+  const variablesHeight = useApiExplorerStore((s) => s.variablesHeight);
+  const recentUrls = useApiExplorerStore((s) => s.recentUrls);
 
   const [requestTab, setRequestTab] = useState<RequestTab>('body');
   const [saveOpen, setSaveOpen] = useState(false);
@@ -89,11 +92,20 @@ export function ApiExplorerEditor(): React.JSX.Element {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ExecutionResult | null>(null);
   const [confirmRun, setConfirmRun] = useState(false);
+  const [urlFocused, setUrlFocused] = useState(false);
+  const [urlHighlight, setUrlHighlight] = useState(-1);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const isGraphql = bodyMode === 'graphql';
   const headersRecord = useMemo(() => rowsToHeaders(headers), [headers]);
   const bearerForSchema = auth.type === 'bearer' ? auth.token : undefined;
+
+  // URL suggestions: recents filtered by the current input (excluding an exact match).
+  const urlSuggestions = useMemo(() => {
+    const q = url.trim().toLowerCase();
+    return recentUrls.filter((u) => u !== url.trim() && (!q || u.toLowerCase().includes(q))).slice(0, 8);
+  }, [recentUrls, url]);
+  const showUrlSuggestions = urlFocused && urlSuggestions.length > 0;
 
   const flash = useCallback((message: string) => {
     setNotice(message);
@@ -102,6 +114,44 @@ export function ApiExplorerEditor(): React.JSX.Element {
   }, []);
 
   const store = useApiExplorerStore.getState;
+
+  // Drag-to-resize: request/response vertical split.
+  const mainColRef = useRef<HTMLDivElement>(null);
+  const startSplitResize = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    const col = mainColRef.current;
+    if (!col) return;
+    const rect = col.getBoundingClientRect();
+    const onMove = (ev: PointerEvent): void => {
+      store().setRequestPaneRatio((ev.clientY - rect.top) / rect.height);
+    };
+    const onUp = (): void => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      document.body.style.cursor = '';
+    };
+    document.body.style.cursor = 'row-resize';
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }, [store]);
+
+  // Drag-to-resize: GraphQL variables editor height (drag up grows it, down shrinks it).
+  const startVarsResize = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startHeight = useApiExplorerStore.getState().variablesHeight;
+    const onMove = (ev: PointerEvent): void => {
+      store().setVariablesHeight(startHeight + (startY - ev.clientY));
+    };
+    const onUp = (): void => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      document.body.style.cursor = '';
+    };
+    document.body.style.cursor = 'row-resize';
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }, [store]);
 
   // Two-way URL ⇄ params sync.
   const onUrlChange = useCallback(
@@ -117,6 +167,15 @@ export function ApiExplorerEditor(): React.JSX.Element {
       store().setUrl(buildUrl(url, rows));
     },
     [store, url],
+  );
+
+  const pickUrl = useCallback(
+    (picked: string) => {
+      onUrlChange(picked);
+      setUrlFocused(false);
+      setUrlHighlight(-1);
+    },
+    [onUrlChange],
   );
 
   const execute = useCallback(async () => {
@@ -147,6 +206,7 @@ export function ApiExplorerEditor(): React.JSX.Element {
     });
     setRunning(false);
     setResult(res);
+    store().recordUrl(url);
     store().addHistory({
       label: isGraphql ? operationName : shortLabel(res.url),
       method: res.method,
@@ -314,7 +374,14 @@ export function ApiExplorerEditor(): React.JSX.Element {
             />
           </div>
           {queryError ? <div className="text-[10.5px] text-red-400">{queryError}</div> : null}
-          <div className="mt-0.5 flex items-center justify-between">
+          <div
+            onPointerDown={startVarsResize}
+            title="Drag to resize variables"
+            className="group relative -my-0.5 h-2 shrink-0 cursor-row-resize"
+          >
+            <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-line-soft transition-colors group-hover:bg-accent/60" />
+          </div>
+          <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wide text-faint">
               Variables
             </span>
@@ -326,7 +393,10 @@ export function ApiExplorerEditor(): React.JSX.Element {
               <Wand2 size={13} /> Format
             </button>
           </div>
-          <div className="h-[120px] shrink-0 overflow-hidden rounded-lg border border-line">
+          <div
+            className="shrink-0 overflow-hidden rounded-lg border border-line"
+            style={{ height: variablesHeight }}
+          >
             <MonacoMini
               value={variables}
               onChange={(v) => {
@@ -412,13 +482,73 @@ export function ApiExplorerEditor(): React.JSX.Element {
             </option>
           ))}
         </select>
-        <input
-          value={url}
-          onChange={(e) => onUrlChange(e.target.value)}
-          placeholder="https://api.example.com/…"
-          spellCheck={false}
-          className="flex-1 rounded-lg border border-line bg-surface px-3 py-1.5 font-mono text-[12.5px] text-fg outline-none transition-colors placeholder:text-faint focus:border-accent/70"
-        />
+        <div className="relative flex-1">
+          <input
+            value={url}
+            onChange={(e) => {
+              onUrlChange(e.target.value);
+              setUrlHighlight(-1);
+            }}
+            onFocus={() => setUrlFocused(true)}
+            onBlur={() => setUrlFocused(false)}
+            onKeyDown={(e) => {
+              if (!showUrlSuggestions) return;
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setUrlHighlight((h) => (h + 1) % urlSuggestions.length);
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setUrlHighlight((h) => (h <= 0 ? urlSuggestions.length - 1 : h - 1));
+              } else if (e.key === 'Enter' && urlHighlight >= 0) {
+                e.preventDefault();
+                pickUrl(urlSuggestions[urlHighlight]);
+              } else if (e.key === 'Escape') {
+                setUrlFocused(false);
+              }
+            }}
+            placeholder="https://api.example.com/…"
+            spellCheck={false}
+            autoComplete="off"
+            className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 font-mono text-[12.5px] text-fg outline-none transition-colors placeholder:text-faint focus:border-accent/70"
+          />
+          {showUrlSuggestions ? (
+            <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-auto rounded-lg border border-line bg-surface py-1 shadow-lg">
+              {urlSuggestions.map((u, i) => (
+                <li key={u}>
+                  <div
+                    role="option"
+                    aria-selected={i === urlHighlight}
+                    // onMouseDown (not onClick) so the pick fires before the input's onBlur.
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      pickUrl(u);
+                    }}
+                    onMouseEnter={() => setUrlHighlight(i)}
+                    className={cn(
+                      'group flex cursor-pointer items-center gap-2 px-2.5 py-1.5 font-mono text-[12px]',
+                      i === urlHighlight ? 'bg-surface-2 text-fg' : 'text-muted',
+                    )}
+                  >
+                    <History size={13} className="shrink-0 text-faint" />
+                    <span className="flex-1 truncate">{u}</span>
+                    <button
+                      type="button"
+                      title="Remove from recents"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        store().removeRecentUrl(u);
+                      }}
+                      className="shrink-0 rounded p-0.5 text-faint opacity-0 transition-opacity hover:bg-line hover:text-fg group-hover:opacity-100"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={attemptRun}
@@ -468,9 +598,9 @@ export function ApiExplorerEditor(): React.JSX.Element {
         </div>
 
         {/* Main */}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div ref={mainColRef} className="flex min-w-0 flex-1 flex-col">
           {/* Request section */}
-          <div className="flex min-h-0 flex-col" style={{ flex: '0 0 50%' }}>
+          <div className="flex min-h-0 flex-col" style={{ flex: `${requestPaneRatio} 1 0%` }}>
             <div className="flex items-center gap-1 border-b border-line px-2 pt-1">
               {(['params', 'auth', 'headers', 'body'] as RequestTab[]).map((t) => (
                 <button
@@ -527,8 +657,17 @@ export function ApiExplorerEditor(): React.JSX.Element {
             </div>
           </div>
 
+          {/* Request/response splitter */}
+          <div
+            onPointerDown={startSplitResize}
+            title="Drag to resize"
+            className="group relative h-1.5 shrink-0 cursor-row-resize border-t border-line"
+          >
+            <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-line-soft transition-colors group-hover:bg-accent/60" />
+          </div>
+
           {/* Response */}
-          <div className="min-h-0 flex-1 border-t border-line">
+          <div className="min-h-0 overflow-hidden" style={{ flex: `${1 - requestPaneRatio} 1 0%` }}>
             <ResponseTabs result={result} running={running} />
           </div>
         </div>
