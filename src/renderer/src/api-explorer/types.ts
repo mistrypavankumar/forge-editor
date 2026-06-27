@@ -125,6 +125,36 @@ export interface HistoryItem {
   responseSummary: string;
 }
 
+/**
+ * A request snapshot saved into a collection. Holds everything needed to restore the editor,
+ * minus secrets — the auth value/token/password are kept in memory only and never persisted
+ * (only the auth *shape* is stored, mirroring `partialize`).
+ */
+export interface SavedRequest {
+  id: string;
+  name: string;
+  method: HttpMethod;
+  url: string;
+  params: ParamRow[];
+  auth: Pick<AuthConfig, 'type' | 'apiKeyName' | 'apiKeyIn'>;
+  headers: HeaderRow[];
+  bodyMode: BodyMode;
+  bodyText: string;
+  formRows: FormRow[];
+  query: string;
+  variables: string;
+  updatedAt: number;
+}
+
+/** A named group of saved requests, shown in the Collections sidebar. */
+export interface Collection {
+  id: string;
+  name: string;
+  requests: SavedRequest[];
+  /** Whether the group is collapsed in the sidebar tree. */
+  collapsed?: boolean;
+}
+
 /** One argument / nested input-object field in the schema browser tree. */
 export interface SchemaArgNode {
   name: string;

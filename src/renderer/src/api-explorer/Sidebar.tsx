@@ -5,11 +5,12 @@ import type { ApiTemplate, HistoryItem } from './types';
 
 import { cn } from '../lib/cn';
 import { SchemaTree } from './SchemaTree';
+import { Collections } from './Collections';
 import { API_TEMPLATES } from './templates';
 import { formatTime } from './graphql-utils';
 import { useApiExplorerStore } from './store';
 
-type SidebarTab = 'templates' | 'history' | 'schema';
+type SidebarTab = 'collections' | 'templates' | 'history' | 'schema';
 
 function TemplateList({
   search,
@@ -161,13 +162,14 @@ export function Sidebar({
   headers?: Record<string, string>;
   onInsertOperation: (query: string, variables: string) => void;
 }): React.JSX.Element {
-  const [tab, setTab] = useState<SidebarTab>('templates');
+  const [tab, setTab] = useState<SidebarTab>('collections');
   const [search, setSearch] = useState('');
   const loadTemplate = useApiExplorerStore((s) => s.loadTemplate);
   const loadHistory = useApiExplorerStore((s) => s.loadHistory);
   const clearHistory = useApiExplorerStore((s) => s.clearHistory);
 
   const tabs: { id: SidebarTab; label: string }[] = [
+    { id: 'collections', label: 'Collections' },
     { id: 'templates', label: 'Templates' },
     { id: 'history', label: 'History' },
     { id: 'schema', label: 'Schema' },
@@ -181,7 +183,7 @@ export function Sidebar({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search templates & schema"
+            placeholder="Search collections, templates & schema"
             className="w-full bg-transparent text-[12px] text-fg outline-none placeholder:text-faint"
           />
         </div>
@@ -195,7 +197,7 @@ export function Sidebar({
               type="button"
               onClick={() => setTab(t.id)}
               className={cn(
-                'rounded-md px-2 py-1 text-[12px]',
+                'rounded-md px-1.5 py-1 text-[11.5px]',
                 tab === t.id ? 'text-accent' : 'text-muted hover:bg-surface-2 hover:text-fg',
               )}
             >
@@ -216,6 +218,7 @@ export function Sidebar({
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">
+        {tab === 'collections' ? <Collections search={search} /> : null}
         {tab === 'templates' ? <TemplateList search={search} onSelect={loadTemplate} /> : null}
         {tab === 'history' ? <HistoryList search={search} onRerun={loadHistory} /> : null}
         {tab === 'schema' ? (
