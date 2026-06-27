@@ -73,8 +73,6 @@ export interface ApiExplorerState {
   bodyText: string;
   /** Field rows for form-data / x-www-form-urlencoded modes. */
   formRows: FormRow[];
-  /** Read-only blocks unsafe methods / mutations until explicitly disabled + confirmed. */
-  readOnly: boolean;
   /** GraphQL document (used when `bodyMode === 'graphql'`). */
   query: string;
   /** GraphQL variables as a JSON string (used when `bodyMode === 'graphql'`). */
@@ -93,7 +91,6 @@ export interface ApiExplorerState {
   setBodyMode: (mode: BodyMode) => void;
   setBodyText: (text: string) => void;
   setFormRows: (rows: FormRow[]) => void;
-  setReadOnly: (readOnly: boolean) => void;
   setQuery: (query: string) => void;
   setVariables: (variables: string) => void;
   loadTemplate: (template: ApiTemplate) => void;
@@ -110,6 +107,8 @@ export interface ApiExplorerState {
   toggleCollection: (id: string) => void;
   /** Snapshot the current request into a collection as a new saved request; returns its id. */
   saveRequest: (collectionId: string, name: string) => string;
+  /** Add a fresh blank request to a collection, load it into the editor; returns its id. */
+  createRequest: (collectionId: string, name: string) => string;
   /** Re-snapshot the current request onto the saved request that's currently loaded. */
   updateActiveRequest: () => void;
   /** Load a saved request into the editor and mark it active. */
@@ -130,7 +129,6 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
       bodyMode: 'none',
       bodyText: '',
       formRows: [],
-      readOnly: true,
       query: DEFAULT_QUERY,
       variables: DEFAULT_VARIABLES,
       history: [],
@@ -145,7 +143,6 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
       setBodyMode: (bodyMode) => set({ bodyMode }),
       setBodyText: (bodyText) => set({ bodyText }),
       setFormRows: (formRows) => set({ formRows }),
-      setReadOnly: (readOnly) => set({ readOnly }),
       setQuery: (query) => set({ query }),
       setVariables: (variables) => set({ variables }),
       loadTemplate: (template) =>
@@ -216,6 +213,34 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
           collections: s.collections.map((c) =>
             c.id === collectionId ? { ...c, requests: [...c.requests, req] } : c,
           ),
+          activeRequestId: id,
+        }));
+        return id;
+      },
+      createRequest: (collectionId, name) => {
+        const id = nextId('aer');
+        const req: SavedRequest = {
+          id,
+          name: name.trim() || 'Untitled request',
+          method: 'GET',
+          url: DEFAULT_ENDPOINT,
+          params: [],
+          auth: { ...DEFAULT_AUTH },
+          headers: [],
+          bodyMode: 'none',
+          bodyText: '',
+          formRows: [],
+          query: DEFAULT_QUERY,
+          variables: DEFAULT_VARIABLES,
+          updatedAt: Date.now(),
+        };
+        set((s) => ({
+          collections: s.collections.map((c) =>
+            c.id === collectionId
+              ? { ...c, collapsed: false, requests: [...c.requests, req] }
+              : c,
+          ),
+          ...applyRequest(req),
           activeRequestId: id,
         }));
         return id;
@@ -293,7 +318,6 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
         bodyMode: s.bodyMode,
         bodyText: s.bodyText,
         formRows: s.formRows,
-        readOnly: s.readOnly,
         query: s.query,
         variables: s.variables,
         history: s.history,
