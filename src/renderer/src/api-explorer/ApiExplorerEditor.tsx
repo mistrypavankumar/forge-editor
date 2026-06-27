@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Send, Wand2, Loader2 } from 'lucide-react';
+import { Send, Wand2, Loader2, Save } from 'lucide-react';
 
 import type { HeaderRow, BodyMode, ExecutionResult, HttpMethod, ParamRow, FormRow } from './types';
 import { UNSAFE_METHODS } from './types';
@@ -75,8 +75,14 @@ export function ApiExplorerEditor(): React.JSX.Element {
   const readOnly = useApiExplorerStore((s) => s.readOnly);
   const query = useApiExplorerStore((s) => s.query);
   const variables = useApiExplorerStore((s) => s.variables);
+  const collections = useApiExplorerStore((s) => s.collections);
+  const activeRequestId = useApiExplorerStore((s) => s.activeRequestId);
 
   const [requestTab, setRequestTab] = useState<RequestTab>('body');
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const [saveCollectionId, setSaveCollectionId] = useState('__new__');
+  const [newCollectionName, setNewCollectionName] = useState('');
   const [queryError, setQueryError] = useState<string | null>(null);
   const [varsError, setVarsError] = useState<string | null>(null);
   const [bodyError, setBodyError] = useState<string | null>(null);
@@ -204,6 +210,40 @@ export function ApiExplorerEditor(): React.JSX.Element {
     }
     void execute();
   }, [running, url, isGraphql, query, readOnly, method, execute, flash]);
+
+  const activeRequest = useMemo(
+    () => collections.flatMap((c) => c.requests).find((r) => r.id === activeRequestId) ?? null,
+    [collections, activeRequestId],
+  );
+
+  const openSaveDialog = useCallback(() => {
+    const fallback = isGraphql
+      ? extractOperationName(query) || 'GraphQL request'
+      : shortLabel(url) || method;
+    setSaveName(activeRequest?.name || fallback);
+    setSaveCollectionId(collections[0]?.id ?? '__new__');
+    setNewCollectionName('');
+    setSaveOpen(true);
+  }, [activeRequest, collections, isGraphql, query, url, method]);
+
+  const onSaveClick = useCallback(() => {
+    if (activeRequestId) {
+      store().updateActiveRequest();
+      flash(`Updated “${activeRequest?.name ?? 'request'}”`);
+    } else {
+      openSaveDialog();
+    }
+  }, [activeRequestId, activeRequest, store, flash, openSaveDialog]);
+
+  const commitSave = useCallback(() => {
+    let collectionId = saveCollectionId;
+    if (collectionId === '__new__' || collections.length === 0) {
+      collectionId = store().createCollection(newCollectionName || 'New Collection');
+    }
+    store().saveRequest(collectionId, saveName);
+    setSaveOpen(false);
+    flash(`Saved “${saveName.trim() || 'request'}”`);
+  }, [saveCollectionId, collections.length, newCollectionName, saveName, store, flash]);
 
   // Esc cancels the confirm dialog.
   useEffect(() => {
@@ -399,6 +439,25 @@ export function ApiExplorerEditor(): React.JSX.Element {
         </button>
         <button
           type="button"
+          onClick={onSaveClick}
+          title={activeRequestId ? 'Update saved request' : 'Save request to a collection'}
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-[12.5px] font-semibold text-fg transition-colors hover:border-line-strong"
+        >
+          <Save size={14} />
+          Save
+        </button>
+        {activeRequestId ? (
+          <button
+            type="button"
+            onClick={openSaveDialog}
+            title="Save as a new request"
+            className="shrink-0 rounded-lg border border-line px-2 py-1.5 text-[12px] text-muted transition-colors hover:border-line-strong hover:text-fg"
+          >
+            Save as…
+          </button>
+        ) : null}
+        <button
+          type="button"
           onClick={() => store().setReadOnly(!readOnly)}
           className="flex shrink-0 items-center gap-1.5"
           title={readOnly ? 'Read-only blocks state-changing requests' : 'State-changing requests allowed'}
@@ -539,6 +598,84 @@ export function ApiExplorerEditor(): React.JSX.Element {
                     className="rounded-lg bg-amber-500 px-3 py-1.5 text-[12.5px] font-semibold text-black hover:opacity-90"
                   >
                     {isGraphql ? 'Run mutation' : `Send ${method}`}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {/* Save-to-collection dialog */}
+      {saveOpen
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[3100] grid place-items-center bg-black/50"
+              onMouseDown={() => setSaveOpen(false)}
+            >
+              <div
+                className="w-[min(440px,92vw)] rounded-xl border border-line-strong bg-elevated p-5 shadow-2xl"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div className="text-[15px] font-semibold text-fg">Save request</div>
+                <label className="mt-4 block text-[11px] font-bold uppercase tracking-wide text-faint">
+                  Name
+                </label>
+                <input
+                  autoFocus
+                  value={saveName}
+                  onChange={(e) => setSaveName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitSave();
+                  }}
+                  placeholder="Request name"
+                  className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[12.5px] text-fg outline-none focus:border-accent/70"
+                />
+                <label className="mt-3 block text-[11px] font-bold uppercase tracking-wide text-faint">
+                  Collection
+                </label>
+                <select
+                  value={collections.length === 0 ? '__new__' : saveCollectionId}
+                  disabled={collections.length === 0}
+                  onChange={(e) => setSaveCollectionId(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-line bg-surface px-2 py-1.5 text-[12.5px] text-fg outline-none focus:border-accent/70 disabled:opacity-60"
+                >
+                  {collections.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                  <option value="__new__">＋ New collection…</option>
+                </select>
+                {collections.length === 0 || saveCollectionId === '__new__' ? (
+                  <input
+                    value={newCollectionName}
+                    onChange={(e) => setNewCollectionName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitSave();
+                    }}
+                    placeholder="New collection name"
+                    className="mt-2 w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[12.5px] text-fg outline-none focus:border-accent/70"
+                  />
+                ) : null}
+                <p className="mt-3 text-[11px] leading-snug text-faint">
+                  Secrets (tokens, passwords, API keys) are kept in memory only and are not saved.
+                </p>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSaveOpen(false)}
+                    className="rounded-lg border border-line px-3 py-1.5 text-[12.5px] text-fg hover:border-line-strong"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={commitSave}
+                    disabled={!saveName.trim()}
+                    className="rounded-lg bg-accent px-3 py-1.5 text-[12.5px] font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    Save
                   </button>
                 </div>
               </div>
