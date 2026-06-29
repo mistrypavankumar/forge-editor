@@ -134,6 +134,19 @@ function menuAction(id: string): void {
   BrowserWindow.getFocusedWindow()?.webContents.send(IpcChannels.menuAction, id);
 }
 
+/**
+ * Each window's currently-open workspace, keyed by webContents id and reported by the renderer.
+ * Backs the title-bar window switcher's list of open windows.
+ */
+const windowWorkspaces = new Map<number, { rootPath: string | null; name: string }>();
+
+/** Tell every live window that the set of open windows (or their focus/workspace) changed. */
+function broadcastWindows(): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send(IpcChannels.windowsChanged);
+  }
+}
+
 /** macOS: a full File menu in the native menu bar. Other platforms use the in-window menu. */
 function buildAppMenu(): void {
   const fileMenu: Electron.MenuItemConstructorOptions = {
@@ -163,7 +176,7 @@ function buildAppMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-function createWindow(): void {
+function createWindow(initialFolder?: string): void {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -190,8 +203,21 @@ function createWindow(): void {
     win.show();
   });
 
-  // Deliver any files the OS queued for us (Open With / CLI args) once the UI can receive them.
-  win.webContents.on('did-finish-load', () => flushPendingFiles(win));
+  // Track this window for the switcher; refresh every window's list on focus/blur/close.
+  const winId = win.webContents.id;
+  win.on('focus', broadcastWindows);
+  win.on('blur', broadcastWindows);
+  win.on('closed', () => {
+    windowWorkspaces.delete(winId);
+    broadcastWindows();
+  });
+
+  win.webContents.on('did-finish-load', () => {
+    // Deliver any files the OS queued for us (Open With / CLI args) once the UI can receive them.
+    flushPendingFiles(win);
+    // A window opened to show a specific folder (from the switcher's recents) loads it now.
+    if (initialFolder) win.webContents.send(IpcChannels.openFolderInWindow, initialFolder);
+  });
 
   if (process.env.ELECTRON_RENDERER_URL) {
     void win.loadURL(process.env.ELECTRON_RENDERER_URL);
@@ -392,6 +418,31 @@ app.whenReady().then(async () => {
     buildAppMenu();
   });
   ipcMain.on(IpcChannels.newWindow, () => createWindow());
+  ipcMain.on(IpcChannels.windowReport, (e, rootPath: string | null, name: string) => {
+    windowWorkspaces.set(e.sender.id, { rootPath, name });
+    broadcastWindows();
+  });
+  ipcMain.handle(IpcChannels.windowList, () =>
+    BrowserWindow.getAllWindows()
+      .filter((w) => !w.isDestroyed())
+      .map((w) => {
+        const info = windowWorkspaces.get(w.webContents.id);
+        return {
+          id: w.webContents.id,
+          rootPath: info?.rootPath ?? null,
+          name: info?.name ?? 'No workspace',
+          focused: w.isFocused(),
+        };
+      }),
+  );
+  ipcMain.on(IpcChannels.windowFocus, (_e, id: number) => {
+    const w = BrowserWindow.getAllWindows().find((win) => win.webContents.id === id);
+    if (w && !w.isDestroyed()) {
+      if (w.isMinimized()) w.restore();
+      w.focus();
+    }
+  });
+  ipcMain.on(IpcChannels.windowOpenFolder, (_e, path: string) => createWindow(path));
   ipcMain.handle(IpcChannels.rename, (_e, oldPath: string, newPath: string) =>
     toResult(() => renameEntry(oldPath, newPath)),
   );

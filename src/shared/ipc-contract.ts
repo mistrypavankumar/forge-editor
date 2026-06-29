@@ -59,6 +59,13 @@ export const IpcChannels = {
   // A file the OS asked us to open (Finder "Open With", dock/taskbar drop, or a CLI arg).
   openPath: 'forge:file:openPath',
   newWindow: 'forge:window:new',
+  // Title-bar window switcher: track each window's open repo and switch between windows.
+  windowReport: 'forge:window:report',
+  windowList: 'forge:window:list',
+  windowFocus: 'forge:window:focus',
+  windowOpenFolder: 'forge:window:openFolder',
+  windowsChanged: 'forge:window:changed',
+  openFolderInWindow: 'forge:window:openInThis',
   rename: 'forge:fs:rename',
   remove: 'forge:fs:remove',
   copyEntry: 'forge:fs:copyEntry',
@@ -593,6 +600,18 @@ export interface RecentEntry {
   name: string;
 }
 
+/** One open Forge window, for the title-bar window switcher. */
+export interface OpenWindowInfo {
+  /** webContents id — a stable handle to focus the window. */
+  id: number;
+  /** The window's open folder, or null on the landing screen. */
+  rootPath: string | null;
+  /** basename(rootPath), or 'No workspace'. */
+  name: string;
+  /** True for the currently-focused window. */
+  focused: boolean;
+}
+
 export interface ForgeSettings {
   themeId?: string;
   /** Editor syntax color scheme id ('auto' follows the interface theme). */
@@ -816,6 +835,18 @@ export interface ForgeApi {
   syncMenuState: (autoSave: boolean) => void;
   /** Open a fresh, empty editor window where the user can open a folder. */
   newWindow: () => void;
+  /** Report this window's current workspace to the main process (drives the window switcher). */
+  reportWindow: (rootPath: string | null, name: string) => void;
+  /** List every open Forge window (id, open folder, focused) for the title-bar switcher. */
+  listWindows: () => Promise<OpenWindowInfo[]>;
+  /** Bring the window with this webContents id to the front. */
+  focusWindow: (id: number) => void;
+  /** Open a folder in a brand-new window, leaving the current window untouched. */
+  openFolderInNewWindow: (path: string) => void;
+  /** Subscribe to "the set of open windows changed" events; returns an unsubscribe fn. */
+  onWindowsChanged: (cb: () => void) => () => void;
+  /** Subscribe to a request to open a folder in THIS window (a new window's initial folder). */
+  onOpenFolderInWindow: (cb: (path: string) => void) => () => void;
   isMac: boolean;
   rename: (oldPath: string, newPath: string) => Promise<Result<void>>;
   remove: (path: string) => Promise<Result<void>>;

@@ -15,6 +15,8 @@ import { useGitUserStore } from '../stores/git-user-store';
 import { commandRegistry } from '../commands/command-registry';
 import { IconButton } from './ui/IconButton';
 import { FileMenu } from './FileMenu';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import { useState } from 'react';
 
 function basename(p: string): string {
   const parts = p.split('/').filter(Boolean);
@@ -41,6 +43,7 @@ export function TopBar(): React.JSX.Element {
   const gitUser = useGitUserStore((s) => s.active);
   const openGitUserPicker = useGitUserStore((s) => s.openPicker);
   const avatarLabel = gitUser?.username || gitUser?.name;
+  const [switcher, setSwitcher] = useState<{ x: number; y: number } | null>(null);
 
   return (
     <header className="drag flex h-11 shrink-0 items-center gap-3 border-b border-line bg-surface pl-20 pr-3">
@@ -52,11 +55,23 @@ export function TopBar(): React.JSX.Element {
         {window.forge.isMac ? null : <FileMenu />}
         <button
           type="button"
+          aria-label="Switch window"
+          onClick={(e) => {
+            if (switcher) {
+              setSwitcher(null);
+              return;
+            }
+            const r = e.currentTarget.getBoundingClientRect();
+            setSwitcher({ x: r.left, y: r.bottom + 4 });
+          }}
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-fg hover:bg-surface-3"
         >
           {workspaceName}
           <ChevronDown size={14} className="text-faint" />
         </button>
+        {switcher ? (
+          <WorkspaceSwitcher x={switcher.x} y={switcher.y} onClose={() => setSwitcher(null)} />
+        ) : null}
       </div>
 
       {/* Center command bar */}
