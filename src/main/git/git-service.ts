@@ -10,6 +10,7 @@ import type {
   GitBranches,
   GitChange,
   GitCommit,
+  GitCommitDetail,
   GitCredentialTest,
   GitRef,
   GitUser,
@@ -686,6 +687,52 @@ export async function getCommitFiles(rootPath: string, hash: string): Promise<Gi
   } catch {
     return [];
   }
+}
+
+/**
+ * Rich detail for a single commit — full message, author email, an ISO date, change stats, and a
+ * link to the commit on the remote host — for the graph's hover card. Two `git show` calls: one for
+ * the metadata (NUL-separated fields), one `--shortstat` for the files/insertions/deletions line.
+ */
+export async function getCommitDetail(rootPath: string, hash: string): Promise<GitCommitDetail> {
+  // %H full hash, %h short, %an author, %ae email, %aI ISO date, %ar relative, %s subject, %b body.
+  const fmt = '%H%x00%h%x00%an%x00%ae%x00%aI%x00%ar%x00%s%x00%b';
+  const meta = await runGit(rootPath, ['show', '-s', `--format=${fmt}`, hash]);
+  const [full, short, author, email, iso, rel, subject, ...rest] = meta.split(FIELD_SEP);
+  // The body is the remainder; trailing newline from %b is trimmed for tidy rendering.
+  const body = rest.join('').replace(/\n+$/, '');
+
+  // `--shortstat` prints e.g. " 8 files changed, 51 insertions(+), 135 deletions(-)".
+  let filesChanged = 0;
+  let insertions = 0;
+  let deletions = 0;
+  try {
+    const stat = await runGit(rootPath, ['show', '--shortstat', '--format=', hash]);
+    filesChanged = Number(stat.match(/(\d+) files? changed/)?.[1] ?? 0);
+    insertions = Number(stat.match(/(\d+) insertions?\(\+\)/)?.[1] ?? 0);
+    deletions = Number(stat.match(/(\d+) deletions?\(-\)/)?.[1] ?? 0);
+  } catch {
+    /* root commit or empty diff — leave stats at zero */
+  }
+
+  const slug = await originSlug(rootPath);
+  const host = await originHost(rootPath);
+  const webUrl = slug ? `https://${host}/${slug}/commit/${full}` : null;
+
+  return {
+    hash: full,
+    shortHash: short,
+    author,
+    authorEmail: email,
+    isoDate: iso,
+    relativeDate: rel,
+    subject: subject ?? '',
+    body,
+    filesChanged,
+    insertions,
+    deletions,
+    webUrl,
+  };
 }
 
 /** A file's content at a ref (commit hash, branch, …); null when it doesn't exist there. */

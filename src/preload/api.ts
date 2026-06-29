@@ -40,6 +40,8 @@ export const api: ForgeApi = {
   gitLog: (rootPath, limit) => ipcRenderer.invoke(IpcChannels.gitLog, rootPath, limit),
   gitRefsSig: (rootPath) => ipcRenderer.invoke(IpcChannels.gitRefsSig, rootPath),
   gitCommitFiles: (rootPath, hash) => ipcRenderer.invoke(IpcChannels.gitCommitFiles, rootPath, hash),
+  gitCommitDetail: (rootPath, hash) =>
+    ipcRenderer.invoke(IpcChannels.gitCommitDetail, rootPath, hash),
   gitFileAt: (rootPath, ref, relPath) =>
     ipcRenderer.invoke(IpcChannels.gitFileAt, rootPath, ref, relPath),
   gitGetUser: (rootPath) => ipcRenderer.invoke(IpcChannels.gitGetUser, rootPath),

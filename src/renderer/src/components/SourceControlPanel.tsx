@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshCw, GitCommitVertical, GitBranch, Cloud, CircleDot, Tag, FileDiff, Plus, Minus, Undo2, FileSymlink, ChevronRight, ChevronDown, Lock, Sparkles, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { RefreshCw, GitCommitVertical, GitBranch, Cloud, CircleDot, Tag, FileDiff, Plus, Minus, Undo2, FileSymlink, ChevronRight, ChevronDown, Lock, Sparkles, Loader2, Copy, Check, ExternalLink, Clock } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { openFilePath, openGitStagedDiff, openGitCommitDiff } from '../lib/workspace-actions';
@@ -10,7 +11,7 @@ import { PanelHeader } from './ui/Panel';
 import { ModernFileIcon } from './ModernFileIcon';
 import { GitBranchBar } from './GitBranchBar';
 import { cn } from '../lib/cn';
-import type { GitChange, GitCommit, GitRef } from '@shared/ipc-contract';
+import type { GitChange, GitCommit, GitCommitDetail, GitRef } from '@shared/ipc-contract';
 
 // Geometry for the commit-graph rail. Row height drives both the SVG and the rows (kept in sync).
 const ROW_H = 24;
@@ -110,6 +111,191 @@ function GroupHeader({
   );
 }
 
+// Deterministic accent for an author's initials avatar, so the same person keeps the same colour.
+const AVATAR_COLORS = [
+  'bg-accent/25 text-accent',
+  'bg-info/25 text-info',
+  'bg-success/25 text-success',
+  'bg-warning/25 text-warning',
+  'bg-danger/25 text-danger',
+];
+function avatarStyle(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+function absoluteDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const date = d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `${date} at ${time}`;
+}
+
+// Lazily-fetched detail card shown when the user hovers a commit in the graph. Anchored beside the
+// hovered row (flips to the other side / clamps to stay on-screen) and rendered in a portal so it
+// escapes the panel's overflow clipping.
+function CommitHoverCard({
+  commit,
+  rootPath,
+  anchor,
+  onEnter,
+  onLeave,
+}: {
+  commit: GitCommit;
+  rootPath: string;
+  anchor: DOMRect;
+  onEnter: () => void;
+  onLeave: () => void;
+}): React.JSX.Element {
+  const ref = useRef<HTMLDivElement>(null);
+  const [detail, setDetail] = useState<GitCommitDetail | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    setDetail(null);
+    void window.forge.gitCommitDetail(rootPath, commit.hash).then((res) => {
+      if (live && res.ok) setDetail(res.data);
+    });
+    return () => {
+      live = false;
+    };
+  }, [rootPath, commit.hash]);
+
+  // Place the card to the left of the row (matching the panel living on the right); flip to the
+  // right when there's no room, and clamp vertically into the viewport.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    const gap = 8;
+    const pad = 8;
+    let left = anchor.left - width - gap;
+    if (left < pad) left = anchor.right + gap;
+    if (left + width > window.innerWidth - pad) left = Math.max(pad, window.innerWidth - width - pad);
+    let top = anchor.top;
+    if (top + height > window.innerHeight - pad) top = Math.max(pad, window.innerHeight - height - pad);
+    if (top < pad) top = pad;
+    setPos({ left, top });
+  }, [anchor, detail]);
+
+  return createPortal(
+    <div
+      ref={ref}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      className="fixed z-[2000] w-[380px] max-w-[90vw] overflow-hidden rounded-lg border border-line-strong bg-elevated text-fg shadow-2xl shadow-black/50"
+      style={{ left: pos?.left ?? -9999, top: pos?.top ?? -9999, visibility: pos ? 'visible' : 'hidden' }}
+    >
+      <div className="max-h-[70vh] overflow-auto p-3">
+        {/* Author + timestamp */}
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
+              avatarStyle(commit.author),
+            )}
+          >
+            {initials(commit.author)}
+          </span>
+          <span className="truncate text-[13px] font-semibold">{commit.author}</span>
+        </div>
+        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-faint">
+          <Clock size={11} className="shrink-0" />
+          <span className="truncate">
+            {commit.date}
+            {detail?.isoDate ? ` (${absoluteDate(detail.isoDate)})` : ''}
+          </span>
+        </div>
+
+        {/* Message: subject + body */}
+        <p className="mt-3 text-[13px] font-medium leading-snug">{commit.subject}</p>
+        {detail?.body ? (
+          <p className="mt-2 whitespace-pre-wrap break-words text-[12px] leading-relaxed text-muted">
+            {detail.body}
+          </p>
+        ) : null}
+
+        {/* Change stats */}
+        {detail && detail.filesChanged > 0 ? (
+          <p className="mt-3 text-[12px] text-muted">
+            <span className="font-medium text-fg">
+              {detail.filesChanged} file{detail.filesChanged === 1 ? '' : 's'} changed
+            </span>
+            {detail.insertions > 0 ? (
+              <>
+                , <span className="font-medium text-success">{detail.insertions} insertion{detail.insertions === 1 ? '' : 's'}(+)</span>
+              </>
+            ) : null}
+            {detail.deletions > 0 ? (
+              <>
+                , <span className="font-medium text-danger">{detail.deletions} deletion{detail.deletions === 1 ? '' : 's'}(-)</span>
+              </>
+            ) : null}
+          </p>
+        ) : null}
+
+        {/* Refs */}
+        {commit.refs.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {commit.refs.map((ref2) => {
+              const { icon: Icon, cls } = REF_STYLE[ref2.kind];
+              return (
+                <span
+                  key={`${ref2.kind}:${ref2.name}`}
+                  className={cn(
+                    'flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium',
+                    cls,
+                  )}
+                >
+                  <Icon size={10} />
+                  <span className="max-w-[160px] truncate">{ref2.name}</span>
+                </span>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Footer: hash + actions */}
+      <div className="flex items-center gap-2 border-t border-line-soft px-3 py-2 text-[11px] text-muted">
+        <span className="font-mono text-faint">{detail?.shortHash ?? commit.hash}</span>
+        <button
+          type="button"
+          aria-label="Copy commit hash"
+          title="Copy commit hash"
+          onClick={() => {
+            void navigator.clipboard.writeText(detail?.hash ?? commit.hash);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1200);
+          }}
+          className="flex h-5 w-5 items-center justify-center rounded text-faint hover:bg-surface-3 hover:text-fg"
+        >
+          {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}
+        </button>
+        {detail?.webUrl ? (
+          <button
+            type="button"
+            onClick={() => void window.forge.openExternal(detail.webUrl as string)}
+            className="ml-auto flex items-center gap-1 rounded text-info hover:underline"
+          >
+            <ExternalLink size={12} /> Open on GitHub
+          </button>
+        ) : null}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export function SourceControlPanel(): React.JSX.Element {
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const branch = useWorkspaceStore((s) => s.branch);
@@ -124,6 +310,22 @@ export function SourceControlPanel(): React.JSX.Element {
   // Which commit is expanded to show its changed files, and those files.
   const [openCommit, setOpenCommit] = useState<string | null>(null);
   const [commitFiles, setCommitFiles] = useState<GitChange[]>([]);
+  // The commit whose hover card is showing, plus the row rect it anchors to. A short open delay
+  // (and a grace period on leave) keeps the card from flickering as the pointer crosses rows.
+  const [hover, setHover] = useState<{ commit: GitCommit; rect: DOMRect } | null>(null);
+  const hoverTimer = useRef<number | null>(null);
+  const openHover = useCallback((commit: GitCommit, el: HTMLElement) => {
+    if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
+    const rect = el.getBoundingClientRect();
+    hoverTimer.current = window.setTimeout(() => setHover({ commit, rect }), 350);
+  }, []);
+  const closeHover = useCallback(() => {
+    if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
+    hoverTimer.current = window.setTimeout(() => setHover(null), 140);
+  }, []);
+  const keepHover = useCallback(() => {
+    if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
+  }, []);
 
   // Resizable commit-graph pane: height lives in the layout store so it survives tab switches.
   const graphHeight = useLayoutStore((s) => s.scmGraphHeight);
@@ -538,12 +740,13 @@ export function SourceControlPanel(): React.JSX.Element {
                     <div key={c.hash}>
                       <div
                         onClick={() => toggleCommit(c.hash)}
+                        onMouseEnter={(e) => openHover(c, e.currentTarget)}
+                        onMouseLeave={closeHover}
                         className={cn(
                           'group flex cursor-pointer items-center gap-2 pr-3 hover:bg-surface-2',
                           isOpen && 'bg-surface-2',
                         )}
                         style={{ paddingLeft: graphWidth, height: ROW_H }}
-                        title={`${c.subject}\n${c.hash} · ${c.author} · ${c.date}`}
                       >
                         <span
                           className={cn(
@@ -625,6 +828,16 @@ export function SourceControlPanel(): React.JSX.Element {
               </div>
             ) : null}
         </div>
+      ) : null}
+
+      {hover ? (
+        <CommitHoverCard
+          commit={hover.commit}
+          rootPath={root}
+          anchor={hover.rect}
+          onEnter={keepHover}
+          onLeave={closeHover}
+        />
       ) : null}
     </div>
   );
