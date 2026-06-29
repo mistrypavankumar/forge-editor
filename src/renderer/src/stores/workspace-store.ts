@@ -13,6 +13,12 @@ export interface WorkspaceState {
   creating: { dir: string; kind: 'file' | 'folder' } | null;
   syncTick: number;
   changeCount: number;
+  /** Local commits not yet pushed to the current branch's upstream. */
+  ahead: number;
+  /** Upstream commits not yet pulled into the current branch. */
+  behind: number;
+  /** False when the current branch has no upstream (nothing to compare push/pull against). */
+  hasUpstream: boolean;
   setWorkspace: (rootPath: string, entries: DirEntry[]) => void;
   setRootEntries: (entries: DirEntry[]) => void;
   setChildren: (path: string, entries: DirEntry[]) => void;
@@ -27,6 +33,7 @@ export interface WorkspaceState {
   collapseAll: () => void;
   bumpSync: () => void;
   setChangeCount: (n: number) => void;
+  setAheadBehind: (ahead: number, behind: number, hasUpstream: boolean) => void;
   closeWorkspace: () => void;
 }
 
@@ -42,6 +49,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   creating: null,
   syncTick: 0,
   changeCount: 0,
+  ahead: 0,
+  behind: 0,
+  hasUpstream: false,
   setWorkspace: (rootPath, entries) =>
     set({
       rootPath,
@@ -53,6 +63,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       renamingPath: null,
       selectedDir: null,
       creating: null,
+      ahead: 0,
+      behind: 0,
+      hasUpstream: false,
     }),
   setRootEntries: (entries) => set({ rootEntries: entries }),
   setChildren: (path, entries) =>
@@ -70,6 +83,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   collapseAll: () => set({ expandedPaths: {} }),
   bumpSync: () => set((s) => ({ syncTick: s.syncTick + 1 })),
   setChangeCount: (n) => set({ changeCount: n }),
+  setAheadBehind: (ahead, behind, hasUpstream) => set({ ahead, behind, hasUpstream }),
   closeWorkspace: () =>
     set({
       rootPath: null,
@@ -80,5 +94,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       branch: null,
       selectedDir: null,
       changeCount: 0,
+      ahead: 0,
+      behind: 0,
+      hasUpstream: false,
     }),
 }));
