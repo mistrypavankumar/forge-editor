@@ -4,6 +4,8 @@ import { App } from './App';
 import { registerCoreCommands } from './commands/core-commands';
 import { registerPaletteCommands } from './commands/palette-commands';
 import { registerThemeCommands } from './commands/theme-commands';
+import { registerDebugCommands } from './commands/debug-commands';
+import { initDebugStore } from './stores/debug-store';
 // Inter is the UI font for all chrome (everything except the code editor, which uses mono).
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
@@ -20,6 +22,9 @@ import './styles/global.css';
 registerCoreCommands();
 registerPaletteCommands();
 registerThemeCommands();
+registerDebugCommands();
+// Bind the main-process debug session's events into the store for the app's lifetime.
+initDebugStore();
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element #root not found');

@@ -118,6 +118,21 @@ export const IpcChannels = {
   editorIntegrationStatus: 'forge:editor-integration:status',
   editorIntegrationInstall: 'forge:editor-integration:install',
   editorIntegrationUninstall: 'forge:editor-integration:uninstall',
+  // Step debugger (Node V8 Inspector, driven over the Chrome DevTools Protocol).
+  debugStart: 'forge:debug:start',
+  debugStop: 'forge:debug:stop',
+  debugContinue: 'forge:debug:continue',
+  debugPause: 'forge:debug:pause',
+  debugStepOver: 'forge:debug:stepOver',
+  debugStepInto: 'forge:debug:stepInto',
+  debugStepOut: 'forge:debug:stepOut',
+  debugSetBreakpoints: 'forge:debug:setBreakpoints',
+  debugEvaluate: 'forge:debug:evaluate',
+  debugGetVariables: 'forge:debug:getVariables',
+  // Events pushed from the active session to the renderer.
+  debugState: 'forge:debug:state',
+  debugStopped: 'forge:debug:stopped',
+  debugOutput: 'forge:debug:output',
 } as const;
 
 export interface DirEntry {
@@ -675,6 +690,8 @@ export interface ForgeSettings {
   aiCompletionModel?: string;
   /** Set once the first-run "set Forge as default editor" prompt has been shown. */
   editorIntegrationPrompted?: boolean;
+  /** Debugger breakpoints, keyed by absolute file path → 1-based lines, so they survive restarts. */
+  breakpoints?: Record<string, number[]>;
 }
 
 /** Outcome of running a formatter CLI against a file. */
@@ -738,6 +755,118 @@ export interface ApiHttpResponse {
   body: string;
   /** Response headers (lowercased keys). */
   headers: Record<string, string>;
+}
+
+// ---- Step debugger (Node + TypeScript, via V8 Inspector / CDP) --------------
+
+/** How a launch configuration decides what to run. */
+export type DebugConfigKind = 'file' | 'task' | 'custom';
+
+/**
+ * A launch configuration. The two built-ins (`file`, `task`) are synthesized by the renderer;
+ * user-defined `custom` configs are persisted to `.forge/launch.json` in the workspace.
+ */
+export interface DebugConfig {
+  /** Stable id — 'file' / 'task' for the built-ins, a slug for saved configs. */
+  id: string;
+  name: string;
+  kind: DebugConfigKind;
+  /** Absolute path of the program to run. For `kind:'file'` it's filled at launch from the active editor. */
+  program?: string;
+  /** Extra CLI arguments passed to the program. */
+  args?: string[];
+  /** Working directory; defaults to the workspace root. */
+  cwd?: string;
+  /** Extra environment variables, merged onto the inherited environment. */
+  env?: Record<string, string>;
+}
+
+/** A breakpoint the user placed in a source file (1-based line). */
+export interface SourceBreakpoint {
+  /** Absolute file path. */
+  file: string;
+  line: number;
+}
+
+/** A breakpoint after the backend has tried to bind it against the program's loaded scripts. */
+export interface ResolvedBreakpoint extends SourceBreakpoint {
+  /** True once V8 bound it to real code (the owning script has been parsed). */
+  verified: boolean;
+}
+
+/** One frame of the paused call stack (top frame first). */
+export interface DebugStackFrame {
+  /** CDP callFrameId — scopes variable/evaluate requests to this frame. */
+  id: string;
+  /** Function name, or '(anonymous)'. */
+  name: string;
+  /** Authored source file (mapped back through source maps), or null for internal/native frames. */
+  file: string | null;
+  /** 1-based line within `file`. */
+  line: number;
+  /** 1-based column. */
+  column: number;
+}
+
+/** A variable, scope, or object property in the paused state. `reference` expands children lazily. */
+export interface DebugVariable {
+  name: string;
+  /** Rendered value preview. */
+  value: string;
+  /** Type hint: 'object' | 'string' | 'number' | 'function' | 'scope' | … */
+  type: string;
+  /** Opaque handle passed back to `getVariables` to expand children; empty when there are none. */
+  reference: string;
+}
+
+export type DebugStatus = 'inactive' | 'starting' | 'running' | 'paused' | 'terminated';
+
+/** Emitted whenever the session's run state changes. */
+export interface DebugStateEvent {
+  status: DebugStatus;
+  /** Human-readable reason a session failed to start or terminated (shown in the console). */
+  reason?: string;
+}
+
+/** Emitted when execution pauses — a breakpoint hit, a completed step, or the entry break. */
+export interface DebugStoppedEvent {
+  reason: 'breakpoint' | 'step' | 'entry' | 'exception' | 'pause';
+  /** The paused call stack, top frame first. */
+  frames: DebugStackFrame[];
+  /** Top frame's authored location, for the editor to reveal and highlight. */
+  topFile: string | null;
+  topLine: number;
+}
+
+/** A chunk of program or console output during a session. */
+export interface DebugOutputEvent {
+  category: 'stdout' | 'stderr' | 'console';
+  text: string;
+}
+
+/** Renderer-facing surface for the main-process Node debug session. */
+export interface DebugApi {
+  /** Launch `config` under the V8 inspector with the given breakpoints pre-armed. */
+  start: (config: DebugConfig, breakpoints: SourceBreakpoint[]) => Promise<Result<void>>;
+  /** Terminate the active session (kills the debuggee). */
+  stop: () => Promise<Result<void>>;
+  resume: () => void;
+  pause: () => void;
+  stepOver: () => void;
+  stepInto: () => void;
+  stepOut: () => void;
+  /** Replace the breakpoints for one file; returns each with its bound/verified state. */
+  setBreakpoints: (file: string, lines: number[]) => Promise<Result<ResolvedBreakpoint[]>>;
+  /** Evaluate an expression — on `frameId` when paused, else in the global context. */
+  evaluate: (expression: string, frameId?: string) => Promise<Result<string>>;
+  /** Expand a scope or object by its `reference` into its members. */
+  getVariables: (reference: string) => Promise<Result<DebugVariable[]>>;
+  /** Subscribe to run-state changes; returns an unsubscribe fn. */
+  onState: (cb: (e: DebugStateEvent) => void) => () => void;
+  /** Subscribe to pause events (stack + location); returns an unsubscribe fn. */
+  onStopped: (cb: (e: DebugStoppedEvent) => void) => () => void;
+  /** Subscribe to program/console output; returns an unsubscribe fn. */
+  onOutput: (cb: (e: DebugOutputEvent) => void) => () => void;
 }
 
 export interface ForgeApi {
@@ -898,6 +1027,8 @@ export interface ForgeApi {
   onTerminalBusy: (cb: (e: TerminalBusyEvent) => void) => () => void;
   /** Real TypeScript/JavaScript IDE intelligence backed by the main-process Language Service. */
   editorLanguage: EditorLanguageApi;
+  /** Node step debugger (breakpoints, stepping, variables) backed by the V8 inspector. */
+  debug: DebugApi;
   /** Current Java (jdtls) language-server status, for the status-bar indicator. */
   getJavaStatus: () => Promise<JdtlsStatus>;
   /** Subscribe to Java (jdtls) status changes; returns an unsubscribe fn. */

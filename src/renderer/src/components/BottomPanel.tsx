@@ -7,6 +7,7 @@ import { TerminalPanel } from './TerminalPanel';
 import { ProblemList } from './ProblemList';
 import { OutputPanel } from './OutputPanel';
 import { TestPanel } from './TestPanel';
+import { DebugConsolePanel } from './DebugConsolePanel';
 import { useWorkbenchStatusStore, markerCounts } from '../stores/workbench-status-store';
 import { cn } from '../lib/cn';
 
@@ -56,9 +57,7 @@ export function BottomPanel(): React.JSX.Element {
         ) : null}
         {bottomTab === 'output' ? <OutputPanel /> : null}
         {bottomTab === 'tests' ? <TestPanel /> : null}
-        {bottomTab === 'debug' ? (
-          <OutputPanel empty="No active debug session. Press F5 to start debugging." />
-        ) : null}
+        {bottomTab === 'debug' ? <DebugConsolePanel /> : null}
       </div>
     </div>
   );

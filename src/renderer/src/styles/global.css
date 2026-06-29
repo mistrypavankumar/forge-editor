@@ -300,6 +300,45 @@ body {
   border-top: 6px solid var(--danger);
 }
 
+/* Debugger gutter — a breakpoint dot in the glyph margin, plus the paused-line marker.
+   The glyph margin shows a faint hollow dot on hover so the click target is discoverable. */
+.forge-bp {
+  cursor: pointer;
+}
+.forge-bp::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--danger);
+}
+/* Unverified (not yet bound by a live session): hollow ring instead of a solid dot. */
+.forge-bp-unverified::before {
+  background: transparent;
+  border: 1.5px solid var(--danger);
+  opacity: 0.7;
+}
+/* The line execution is paused on. */
+.forge-debug-line {
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+}
+.forge-debug-arrow::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 9px solid var(--warning);
+}
+
 /* Inline git diff peek (opened by clicking a change in the gutter) */
 /* Monaco paints `.view-lines` (the text layer) above `.view-zones`, and its full-height box —
    which includes the vertical gap a view zone occupies — eats pointer events even where it's

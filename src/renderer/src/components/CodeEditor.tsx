@@ -5,6 +5,9 @@ import { getMonaco } from '../editor/monaco-setup';
 import { monacoThemeForScheme } from '../editor/editor-schemes';
 import { languageFor } from '../editor/language';
 import { hunkAtLine, hunkToDecoration, revertHunk } from '../editor/git-gutter';
+import { breakpointDecorations, currentLineDecoration } from '../editor/breakpoint-gutter';
+import { debugCommandForKey } from '../keybindings/debug-keys';
+import { useDebugStore } from '../stores/debug-store';
 import { goToChange, registerHunkSource, unregisterHunkSource } from '../editor/change-nav';
 import { DiffPeek } from '../editor/diff-peek';
 import { computeDiff, type DiffHunk } from '../lib/line-diff';
@@ -65,6 +68,9 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
   const modelsRef = useRef<Map<string, editor.ITextModel>>(new Map());
   const decoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   const runDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+  // Debugger gutter: breakpoint dots, and the highlight on the paused execution line.
+  const bpDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+  const dbgLineDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   const peekRef = useRef<DiffPeek | null>(null);
   const hunksRef = useRef<DiffHunk[]>([]);
   const blameRef = useRef<BlameLine[]>([]);
@@ -89,6 +95,9 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
   const syncTick = useWorkspaceStore((s) => s.syncTick);
   const inlineRunEnabled = useInlineRunStore((s) => s.enabled);
   const inlineRunByPath = useInlineRunStore((s) => s.byPath);
+  const breakpoints = useDebugStore((s) => s.breakpoints);
+  const bpVerified = useDebugStore((s) => s.verified);
+  const pausedLocation = useDebugStore((s) => s.pausedLocation);
   // Number of git-change hunks in the active file — drives the floating next/prev-change buttons.
   const [changeCount, setChangeCount] = useState(0);
 
@@ -159,6 +168,9 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     decoRef.current = instance.createDecorationsCollection();
     // Separate collection for the live console.log output (kept apart from the git gutter).
     runDecoRef.current = instance.createDecorationsCollection();
+    // Debugger gutter collections: breakpoint dots and the paused-line highlight.
+    bpDecoRef.current = instance.createDecorationsCollection();
+    dbgLineDecoRef.current = instance.createDecorationsCollection();
     // Publish this editor's live hunks so the global next/prev-change commands can navigate it.
     registerHunkSource(instance, () => hunksRef.current);
     peekRef.current = new DiffPeek(instance, monaco, {
@@ -199,7 +211,9 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     disposables.push(
       instance.onKeyDown((e) => {
         const bindings = mergeKeybindings(defaultKeybindings, useKeybindingsStore.getState().overrides);
-        const id = commandForKeyEvent(e.browserEvent, isMac, bindings);
+        // App chords (with a modifier) resolve first; bare debugger F-keys (F5/F9/F10/F11) fall
+        // through to the debug map so they work while the editor has focus.
+        const id = commandForKeyEvent(e.browserEvent, isMac, bindings) ?? debugCommandForKey(e.browserEvent);
         if (!id) return;
         e.preventDefault();
         e.stopPropagation();
@@ -251,20 +265,31 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     // editor opener registered in registerLanguageProviders(), which routes the target file into
     // this tab system and reveals/highlights the symbol (see the `reveal` effect below).
 
-    // Click the change gutter (colored bar / deletion marker) to open the diff peek.
+    // Click the change gutter (the colored bar in the lines-decorations strip) to open the diff
+    // peek. The glyph margin is reserved for breakpoints (handled below).
     disposables.push(
       instance.onMouseDown((e) => {
         // Left-click only — otherwise a right-click on a changed line's gutter would preventDefault
         // here and swallow the context menu (the "right-click sometimes doesn't work" case).
         if (!e.event.leftButton) return;
-        const { GUTTER_LINE_DECORATIONS, GUTTER_GLYPH_MARGIN } = monaco.editor.MouseTargetType;
-        if (e.target.type !== GUTTER_LINE_DECORATIONS && e.target.type !== GUTTER_GLYPH_MARGIN) {
-          return;
-        }
+        if (e.target.type !== monaco.editor.MouseTargetType.GUTTER_LINE_DECORATIONS) return;
         const line = e.target.position?.lineNumber;
         if (!line || !hunksRef.current.some((h) => hunkAtLine(h, line))) return;
         e.event.preventDefault();
         peekRef.current?.openAt(line);
+      }),
+    );
+
+    // Click the glyph margin to toggle a breakpoint on that line (VS Code-style).
+    disposables.push(
+      instance.onMouseDown((e) => {
+        if (!e.event.leftButton) return;
+        if (e.target.type !== monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) return;
+        const line = e.target.position?.lineNumber;
+        const model = instance.getModel();
+        if (!line || !model) return;
+        e.event.preventDefault();
+        useDebugStore.getState().toggleBreakpoint(model.uri.path, line);
       }),
     );
     disposables.push(
@@ -441,6 +466,34 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     const model = editorRef.current?.getModel();
     if (model && isRunnable(model)) runInlineNow(model);
   }, [inlineRunEnabled, activePath]);
+
+  // Render the active file's breakpoint dots in the glyph margin.
+  useEffect(() => {
+    const instance = editorRef.current;
+    const collection = bpDecoRef.current;
+    if (!instance || !collection) return;
+    const model = instance.getModel();
+    if (!model) {
+      collection.clear();
+      return;
+    }
+    const lines = breakpoints[model.uri.path] ?? [];
+    collection.set(breakpointDecorations(getMonaco(), lines, bpVerified[model.uri.path]));
+  }, [breakpoints, bpVerified, activePath]);
+
+  // Highlight (and reveal) the line execution is paused on, when it's in this file.
+  useEffect(() => {
+    const instance = editorRef.current;
+    const collection = dbgLineDecoRef.current;
+    if (!instance || !collection) return;
+    const model = instance.getModel();
+    if (!model || !pausedLocation || model.uri.path !== pausedLocation.file) {
+      collection.clear();
+      return;
+    }
+    collection.set([currentLineDecoration(getMonaco(), pausedLocation.line)]);
+    instance.revealLineInCenter(pausedLocation.line);
+  }, [pausedLocation, activePath]);
 
   // Spin up (or switch to) the main-process TypeScript Language Service for this workspace, then
   // (re-)register every already-open buffer so the project sees their live, possibly-dirty content.
