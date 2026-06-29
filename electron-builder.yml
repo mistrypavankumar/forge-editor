@@ -129,8 +129,14 @@ extraResources:
       - 'lib*.d.ts'
 
 # node-pty ships a native .node binary that cannot run from inside the asar.
+# tsx (+ its esbuild dependency, which carries a native binary) is the loader the step debugger
+# passes to a spawned `node` via --import so it can run TS/TSX debuggees. That plain `node` can't
+# read inside app.asar, so the loader and its deps must live unpacked on disk; node-debug-session
+# rewrites the resolved path from app.asar to app.asar.unpacked to match.
 asarUnpack:
   - '**/node_modules/node-pty/**'
+  - '**/node_modules/tsx/**'
+  - '**/node_modules/esbuild/**'
 
 mac:
   category: public.app-category.developer-tools

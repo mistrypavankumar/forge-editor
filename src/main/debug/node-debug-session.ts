@@ -1,6 +1,6 @@
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { extname, dirname } from 'node:path';
+import { extname, dirname, sep } from 'node:path';
 import type {
   DebugConfig,
   DebugOutputEvent,
@@ -68,12 +68,26 @@ function nodeMajor(): number {
   return cachedNodeMajor;
 }
 
-function hasTsx(cwd: string): boolean {
+/**
+ * Resolve the tsx ESM loader to an absolute path. Prefer the debuggee project's own tsx (its exact
+ * version and tsconfig handling win), then fall back to the copy Forge bundles, so TS/TSX debugging
+ * works even in projects that never installed tsx. Returns null only if neither is present.
+ *
+ * In a packaged build the resolved path points inside `app.asar`, which a spawned plain `node`
+ * (not Electron) can't read — rewrite it to the unpacked sibling that electron-builder extracts
+ * (see asarUnpack in electron-builder.yml). The rewrite is a no-op for the dev/unpacked path.
+ */
+function resolveTsxLoader(cwd: string): string | null {
+  const unpacked = (p: string): string => p.replace(`app.asar${sep}`, `app.asar.unpacked${sep}`);
   try {
-    requireFrom.resolve('tsx', { paths: [cwd] });
-    return true;
+    return unpacked(requireFrom.resolve('tsx', { paths: [cwd] }));
   } catch {
-    return false;
+    // project has no tsx — fall through to Forge's bundled copy
+  }
+  try {
+    return unpacked(requireFrom.resolve('tsx'));
+  } catch {
+    return null;
   }
 }
 
@@ -140,12 +154,16 @@ export class NodeDebugSession {
     const isJsx = ext === '.tsx' || ext === '.jsx';
     const nodeArgs = ['--inspect-brk=127.0.0.1:0', '--enable-source-maps'];
     if (isTs || isJsx) {
-      if (hasTsx(cwd)) {
-        nodeArgs.push('--import', 'tsx');
+      const tsxLoader = resolveTsxLoader(cwd);
+      if (tsxLoader) {
+        // tsx transforms every TS/JS/JSX flavour and emits inline source maps, so breakpoints land
+        // on the authored line. Pass the loader by absolute file URL: a bare `tsx` specifier would
+        // be resolved from the debuggee's cwd and miss the copy living in Forge's own node_modules.
+        nodeArgs.push('--import', pathToUrl(tsxLoader));
       } else if (isJsx) {
         throw new Error(
-          `To debug JSX (${ext}) files, install tsx (e.g. \`pnpm add -D tsx\`). ` +
-            `Node's built-in type stripping cannot transform JSX.`,
+          `Cannot debug JSX (${ext}): the tsx loader is unavailable. ` +
+            'Reinstall Forge, or install tsx in the project (e.g. `pnpm add -D tsx`).',
         );
       } else if (nodeMajor() >= 22) {
         // Node 22's loader strips/transforms types in place; with --enable-source-maps the
