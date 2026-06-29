@@ -79,12 +79,12 @@ function TreeNode({
   const isActive = !entry.isDirectory && entry.path === activePath;
   const rowRef = useRef<HTMLButtonElement>(null);
 
-  // Once this row becomes the active file (e.g. after reveal expands its folders), bring it into
-  // view. `block: 'nearest'` is a no-op when it's already visible, so manual scrolling is left be.
+  // Once this row becomes the active file (e.g. after reveal expands its folders), center it in
+  // the viewport so the user can see its surrounding context, not just the row pinned to an edge.
   useEffect(() => {
     // Guarded: scrollIntoView exists in Chromium but not in the jsdom test environment.
     if (isActive && typeof rowRef.current?.scrollIntoView === 'function') {
-      rowRef.current.scrollIntoView({ block: 'nearest' });
+      rowRef.current.scrollIntoView({ block: 'center' });
     }
   }, [isActive]);
 
