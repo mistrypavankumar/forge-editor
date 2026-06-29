@@ -31,8 +31,8 @@ export function RunPanel(): React.JSX.Element {
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <PanelHeader title="Run & Debug" />
+    <div className="flex flex-col">
+      <PanelHeader title="Tasks" />
       <div className="flex flex-col gap-1.5 p-2">
         {tasks.map((t) => {
           const count = runCounts.get(t.key) ?? 0;

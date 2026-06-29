@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Allotment } from 'allotment';
+import { Allotment, type AllotmentHandle } from 'allotment';
 import { useLayoutStore } from '../stores/layout-store';
 import { useThemeStore } from '../stores/theme-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
@@ -27,7 +27,9 @@ import { ActivitySidebar } from './ActivitySidebar';
 import { ProjectNavigator } from './ProjectNavigator';
 import { SearchPanel } from './SearchPanel';
 import { SourceControlPanel } from './SourceControlPanel';
-import { RunPanel } from './RunPanel';
+import { DebugPanel } from './DebugPanel';
+import { DebugToolbar } from './DebugToolbar';
+import { debugCommandForKey } from '../keybindings/debug-keys';
 import { PlaceholderPanel } from './PlaceholderPanel';
 import { Database, Blocks } from 'lucide-react';
 import { EditorGroupView } from './EditorGroupView';
@@ -53,6 +55,7 @@ export function AppShell(): React.JSX.Element {
   const activity = useLayoutStore((s) => s.activity);
   const sidebarSide = useLayoutStore((s) => s.sidebarSide);
   const setSidebarSide = useLayoutStore((s) => s.setSidebarSide);
+  const setPanelVisible = useLayoutStore((s) => s.setPanelVisible);
   const themeId = useThemeStore((s) => s.currentId);
   const glass = useThemeStore((s) => s.glass);
   const glassOpacity = useThemeStore((s) => s.glassOpacity);
@@ -60,6 +63,50 @@ export function AppShell(): React.JSX.Element {
   const rootEntries = useWorkspaceStore((s) => s.rootEntries);
   const tabCount = useEditorStore((s) => s.tabs.length);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // Refs for the vertical (editor / bottom-panel) split so the collapsed-state drag
+  // handle can both reveal the panel and drive its height imperatively.
+  const centerWrapRef = useRef<HTMLDivElement>(null);
+  const bottomSplitRef = useRef<AllotmentHandle>(null);
+
+  // When the bottom panel is collapsed Allotment hides its pane entirely, so the only
+  // remaining resize sash is a ~4px sliver clipped against the very bottom edge —
+  // practically impossible to grab. This handle replaces it with a full-width strip the
+  // user can drag up to open (and size) the panel, or click to open at the default height.
+  const onBottomHandleDown = (e: React.PointerEvent): void => {
+    e.preventDefault();
+    const wrap = centerWrapRef.current;
+    if (!wrap) return;
+    const total = wrap.clientHeight;
+    const startY = e.clientY;
+    const maxBottom = Math.max(120, total - 160); // leave the editor at least its minSize
+    let opened = false;
+
+    const onMove = (ev: PointerEvent): void => {
+      const draggedUp = startY - ev.clientY;
+      if (!opened) {
+        if (draggedUp < 4) return; // small threshold so a click isn't read as a drag
+        setPanelVisible('bottom', true);
+        opened = true;
+      }
+      const bottomH = Math.min(Math.max(draggedUp, 120), maxBottom);
+      // resize() can only grow the pane once it's visible (a hidden pane has max size 0),
+      // so the first frame after opening may no-op; subsequent moves track the cursor.
+      bottomSplitRef.current?.resize([total - bottomH, bottomH]);
+    };
+    const onUp = (): void => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      if (!opened) setPanelVisible('bottom', true); // a plain click opens at preferredSize
+    };
+
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
   // Restore the active AWS connection (and profile list) for the status-bar indicator.
   useEffect(() => {
@@ -156,6 +203,19 @@ export function AppShell(): React.JSX.Element {
     return window.forge.onOpenFile((path) => {
       void openFilePath(path, undefined, true);
     });
+  }, []);
+
+  // Debugger function keys (F5/F9/F10/F11) at the window level, so they work when the editor
+  // isn't focused. When the editor is focused it handles them first and stops propagation.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      const cmd = debugCommandForKey(e);
+      if (!cmd) return;
+      e.preventDefault();
+      void commandRegistry.run(cmd);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   useEffect(() => {
@@ -276,7 +336,7 @@ export function AppShell(): React.JSX.Element {
     ) : activity === 'git' ? (
       <SourceControlPanel />
     ) : activity === 'run' ? (
-      <RunPanel />
+      <DebugPanel />
     ) : activity === 'database' ? (
       <PlaceholderPanel
         title="Database / API"
@@ -299,27 +359,51 @@ export function AppShell(): React.JSX.Element {
 
   const centerPane = (
     <Allotment.Pane key="center" minSize={420}>
-      <Allotment vertical proportionalLayout={false}>
-        <Allotment.Pane minSize={160}>
-          {editorGroups.length > 1 ? (
-            <Allotment proportionalLayout>
-              {editorGroups.map((g) => (
-                <Allotment.Pane key={g.id} minSize={320}>
-                  <EditorGroupView groupId={g.id} />
-                </Allotment.Pane>
-              ))}
-            </Allotment>
-          ) : (
-            <EditorGroupView groupId={editorGroups[0]?.id ?? 'main'} />
-          )}
-        </Allotment.Pane>
-        {/* Always mounted; we toggle visibility (not mount) so live terminal PTY
-            sessions survive hiding/restoring the bottom panel. Unmounting it would
-            tear down every TerminalView and kill its shell. */}
-        <Allotment.Pane preferredSize={240} minSize={120} snap visible={bottomVisible}>
-          <BottomPanel />
-        </Allotment.Pane>
-      </Allotment>
+      <div ref={centerWrapRef} className="relative h-full">
+        <DebugToolbar />
+        <Allotment
+          ref={bottomSplitRef}
+          vertical
+          proportionalLayout={false}
+          // Dragging the sash down snaps the pane closed inside Allotment. Mirror that into the
+          // store, otherwise the controlled `visible` prop below stays true and forces it back open.
+          onVisibleChange={(index, visible) => {
+            if (index === 1 && !visible && bottomVisible) setPanelVisible('bottom', false);
+          }}
+        >
+          <Allotment.Pane minSize={160}>
+            {editorGroups.length > 1 ? (
+              <Allotment proportionalLayout>
+                {editorGroups.map((g) => (
+                  <Allotment.Pane key={g.id} minSize={320}>
+                    <EditorGroupView groupId={g.id} />
+                  </Allotment.Pane>
+                ))}
+              </Allotment>
+            ) : (
+              <EditorGroupView groupId={editorGroups[0]?.id ?? 'main'} />
+            )}
+          </Allotment.Pane>
+          {/* Always mounted; we toggle visibility (not mount) so live terminal PTY
+              sessions survive hiding/restoring the bottom panel. Unmounting it would
+              tear down every TerminalView and kill its shell. */}
+          <Allotment.Pane preferredSize={240} minSize={120} snap visible={bottomVisible}>
+            <BottomPanel />
+          </Allotment.Pane>
+        </Allotment>
+        {/* When collapsed, Allotment's own resize sash is an unhittable sliver at the
+            clipped bottom edge, so we overlay a grabbable strip to drag the panel open. */}
+        {!bottomVisible ? (
+          <div
+            data-testid="bottom-panel-resize-handle"
+            title="Drag up to open panel"
+            onPointerDown={onBottomHandleDown}
+            className="group absolute inset-x-0 bottom-0 z-40 h-1.5 cursor-ns-resize"
+          >
+            <div className="h-full w-full transition-colors group-hover:bg-accent/60" />
+          </div>
+        ) : null}
+      </div>
     </Allotment.Pane>
   );
 

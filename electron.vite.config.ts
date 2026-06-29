@@ -13,9 +13,10 @@ export default defineConfig({
           index: resolve(__dirname, 'src/main/index.ts'),
           'language.worker': resolve(__dirname, 'src/main/language/language.worker.ts'),
         },
-        // node-pty is native; typescript is large and uses dynamic requires — keep both external
-        // so they're require()d from node_modules at runtime instead of bundled.
-        external: ['node-pty', 'typescript'],
+        // node-pty is native; typescript is large and uses dynamic requires; ws does a guarded
+        // require() of optional native addons (bufferutil/utf-8-validate) that bundlers choke on —
+        // keep them external so they're require()d from node_modules at runtime instead of bundled.
+        external: ['node-pty', 'typescript', 'ws'],
       },
     },
     resolve: { alias: { '@shared': resolve(__dirname, 'src/shared') } },

@@ -3,6 +3,9 @@ import {
   IpcChannels,
   type AssistantChunkEvent,
   type AssistantDoneEvent,
+  type DebugOutputEvent,
+  type DebugStateEvent,
+  type DebugStoppedEvent,
   type ForgeApi,
   type JdtlsStatus,
   type TerminalBusyEvent,
@@ -146,6 +149,35 @@ export const api: ForgeApi = {
       ipcRenderer.invoke(IpcChannels.langRename, file, line, col, newName),
     formatDocument: (file) => ipcRenderer.invoke(IpcChannels.langFormat, file),
     getSemanticTokens: (file) => ipcRenderer.invoke(IpcChannels.langSemanticTokens, file),
+  },
+  debug: {
+    start: (config, breakpoints) => ipcRenderer.invoke(IpcChannels.debugStart, config, breakpoints),
+    stop: () => ipcRenderer.invoke(IpcChannels.debugStop),
+    resume: () => ipcRenderer.send(IpcChannels.debugContinue),
+    pause: () => ipcRenderer.send(IpcChannels.debugPause),
+    stepOver: () => ipcRenderer.send(IpcChannels.debugStepOver),
+    stepInto: () => ipcRenderer.send(IpcChannels.debugStepInto),
+    stepOut: () => ipcRenderer.send(IpcChannels.debugStepOut),
+    setBreakpoints: (file, lines) =>
+      ipcRenderer.invoke(IpcChannels.debugSetBreakpoints, file, lines),
+    evaluate: (expression, frameId) =>
+      ipcRenderer.invoke(IpcChannels.debugEvaluate, expression, frameId),
+    getVariables: (reference) => ipcRenderer.invoke(IpcChannels.debugGetVariables, reference),
+    onState: (cb) => {
+      const listener = (_e: unknown, payload: DebugStateEvent): void => cb(payload);
+      ipcRenderer.on(IpcChannels.debugState, listener);
+      return () => ipcRenderer.removeListener(IpcChannels.debugState, listener);
+    },
+    onStopped: (cb) => {
+      const listener = (_e: unknown, payload: DebugStoppedEvent): void => cb(payload);
+      ipcRenderer.on(IpcChannels.debugStopped, listener);
+      return () => ipcRenderer.removeListener(IpcChannels.debugStopped, listener);
+    },
+    onOutput: (cb) => {
+      const listener = (_e: unknown, payload: DebugOutputEvent): void => cb(payload);
+      ipcRenderer.on(IpcChannels.debugOutput, listener);
+      return () => ipcRenderer.removeListener(IpcChannels.debugOutput, listener);
+    },
   },
   getJavaStatus: () => ipcRenderer.invoke(IpcChannels.jdtlsGetStatus),
   onJavaStatus: (cb) => {
