@@ -50,6 +50,7 @@ import {
   getGitLog,
   getGitRefsSig,
   getCommitFiles,
+  getCommitDetail,
   getFileAtRef,
   getGitUser,
   setGitUser,
@@ -319,6 +320,9 @@ app.whenReady().then(async () => {
   );
   ipcMain.handle(IpcChannels.gitCommitFiles, (_e, rootPath: string, hash: string) =>
     toResult(() => getCommitFiles(rootPath, hash)),
+  );
+  ipcMain.handle(IpcChannels.gitCommitDetail, (_e, rootPath: string, hash: string) =>
+    toResult(() => getCommitDetail(rootPath, hash)),
   );
   ipcMain.handle(IpcChannels.gitFileAt, (_e, rootPath: string, ref: string, relPath: string) =>
     toResult(() => getFileAtRef(rootPath, ref, relPath)),

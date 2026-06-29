@@ -29,6 +29,7 @@ export const IpcChannels = {
   gitLog: 'forge:git:log',
   gitRefsSig: 'forge:git:refsSig',
   gitCommitFiles: 'forge:git:commitFiles',
+  gitCommitDetail: 'forge:git:commitDetail',
   gitFileAt: 'forge:git:fileAt',
   gitGetUser: 'forge:git:getUser',
   gitSetUser: 'forge:git:setUser',
@@ -167,6 +168,28 @@ export interface GitCommit {
   refs: GitRef[];
   /** Abbreviated parent hashes (matching `hash`); 2+ for merges, 0 for the root commit. */
   parents: string[];
+}
+
+/** Rich detail for a single commit, fetched lazily for the graph's hover card. */
+export interface GitCommitDetail {
+  /** Full (un-abbreviated) commit hash. */
+  hash: string;
+  /** Abbreviated hash, matching what the graph shows. */
+  shortHash: string;
+  author: string;
+  authorEmail: string;
+  /** Author date as ISO 8601, for the renderer to format absolutely. */
+  isoDate: string;
+  /** Relative author date (e.g. "4 minutes ago"). */
+  relativeDate: string;
+  subject: string;
+  /** Commit message body (everything after the subject); empty when there is none. */
+  body: string;
+  filesChanged: number;
+  insertions: number;
+  deletions: number;
+  /** The commit's page on the remote host (e.g. GitHub), or null when there's no usable remote. */
+  webUrl: string | null;
 }
 
 /** A git author identity (`user.name` / `user.email`) plus optional push credentials. */
@@ -723,6 +746,8 @@ export interface ForgeApi {
   gitRefsSig: (rootPath: string) => Promise<Result<string>>;
   /** Files changed by a single commit (status + path), for the graph's expandable file list. */
   gitCommitFiles: (rootPath: string, hash: string) => Promise<Result<GitChange[]>>;
+  /** Rich detail for one commit (full message, author email, stats, web URL) for the hover card. */
+  gitCommitDetail: (rootPath: string, hash: string) => Promise<Result<GitCommitDetail>>;
   /** A file's content at a given ref (e.g. a commit hash), or null if absent at that ref. */
   gitFileAt: (rootPath: string, ref: string, relPath: string) => Promise<Result<string | null>>;
   /** The repo's configured author identity (empty strings when unset). */
