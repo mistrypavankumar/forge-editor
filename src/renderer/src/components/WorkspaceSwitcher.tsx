@@ -106,9 +106,11 @@ export function WorkspaceSwitcher({ x, y, onClose }: WorkspaceSwitcherProps): Re
           ) : (
             <AppWindow size={15} className="text-faint" />
           )}
-          <span className="truncate text-[13px] text-fg">{w.name}</span>
+          <span className="min-w-0 flex-1 truncate text-[13px] text-fg">{w.name}</span>
           {w.rootPath ? (
-            <span className="ml-auto truncate pl-3 text-[11px] text-faint">{dirOf(w.rootPath)}</span>
+            <span className="max-w-[45%] shrink-0 truncate pl-3 text-[11px] text-faint">
+              {dirOf(w.rootPath)}
+            </span>
           ) : null}
         </button>
       ))}
@@ -128,8 +130,10 @@ export function WorkspaceSwitcher({ x, y, onClose }: WorkspaceSwitcherProps): Re
             >
               <span className="w-3.5 shrink-0" />
               <ModernFolderIcon name={r.name} />
-              <span className="truncate text-[13px] text-fg">{r.name}</span>
-              <span className="ml-auto truncate pl-3 text-[11px] text-faint">{dirOf(r.path)}</span>
+              <span className="min-w-0 flex-1 truncate text-[13px] text-fg">{r.name}</span>
+              <span className="max-w-[45%] shrink-0 truncate pl-3 text-[11px] text-faint">
+                {dirOf(r.path)}
+              </span>
             </button>
           ))}
         </>
