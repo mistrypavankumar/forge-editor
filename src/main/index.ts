@@ -47,6 +47,7 @@ import {
   gitPush,
   gitPull,
   gitFetch,
+  getAheadBehind,
   getGitLog,
   getGitRefsSig,
   getCommitFiles,
@@ -338,6 +339,9 @@ app.whenReady().then(async () => {
   ipcMain.handle(IpcChannels.gitPush, (_e, rootPath: string) => toResult(() => gitPush(rootPath)));
   ipcMain.handle(IpcChannels.gitPull, (_e, rootPath: string) => toResult(() => gitPull(rootPath)));
   ipcMain.handle(IpcChannels.gitFetch, (_e, rootPath: string) => toResult(() => gitFetch(rootPath)));
+  ipcMain.handle(IpcChannels.gitAheadBehind, (_e, rootPath: string) =>
+    toResult(() => getAheadBehind(rootPath)),
+  );
   ipcMain.handle(IpcChannels.gitLog, (_e, rootPath: string, limit?: number) =>
     toResult(() => getGitLog(rootPath, limit)),
   );

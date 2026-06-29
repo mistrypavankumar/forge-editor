@@ -184,14 +184,23 @@ export function AppShell(): React.JSX.Element {
     });
   }, [rootPath]);
 
-  // Keep the source-control change count (activity-bar badge) in sync.
+  // Keep the source-control change count (activity-bar badge) and the header branch pill's
+  // ahead/behind counts in sync.
   useEffect(() => {
     if (!rootPath) {
       useWorkspaceStore.getState().setChangeCount(0);
+      useWorkspaceStore.getState().setAheadBehind(0, 0, false);
       return;
     }
     void window.forge.gitChangedFiles(rootPath).then((res) => {
       useWorkspaceStore.getState().setChangeCount(res.ok ? res.data.length : 0);
+    });
+    void window.forge.gitAheadBehind(rootPath).then((res) => {
+      if (res.ok) {
+        useWorkspaceStore.getState().setAheadBehind(res.data.ahead, res.data.behind, res.data.upstream !== null);
+      } else {
+        useWorkspaceStore.getState().setAheadBehind(0, 0, false);
+      }
     });
   }, [rootPath, syncTick]);
 

@@ -26,6 +26,7 @@ export const IpcChannels = {
   gitPush: 'forge:git:push',
   gitPull: 'forge:git:pull',
   gitFetch: 'forge:git:fetch',
+  gitAheadBehind: 'forge:git:aheadBehind',
   gitLog: 'forge:git:log',
   gitRefsSig: 'forge:git:refsSig',
   gitCommitFiles: 'forge:git:commitFiles',
@@ -150,6 +151,16 @@ export interface GitChange {
   status: 'M' | 'A' | 'D' | 'R' | 'U';
   staged: boolean;
   unstaged: boolean;
+}
+
+/** How far the current branch has diverged from its upstream tracking branch. */
+export interface GitAheadBehind {
+  /** Local commits not yet pushed (HEAD is ahead of upstream). */
+  ahead: number;
+  /** Upstream commits not yet pulled (HEAD is behind upstream). */
+  behind: number;
+  /** The tracking branch (e.g. "origin/main"), or null when the branch has no upstream. */
+  upstream: string | null;
 }
 
 export interface GitBranches {
@@ -756,6 +767,8 @@ export interface ForgeApi {
   gitPush: (rootPath: string) => Promise<Result<void>>;
   gitPull: (rootPath: string) => Promise<Result<void>>;
   gitFetch: (rootPath: string) => Promise<Result<void>>;
+  /** Ahead/behind commit counts of the current branch vs its upstream (zeros when no upstream). */
+  gitAheadBehind: (rootPath: string) => Promise<Result<GitAheadBehind>>;
   gitLog: (rootPath: string, limit?: number) => Promise<Result<GitCommit[]>>;
   /**
    * A cheap signature of all ref tips (HEAD + branches + remotes). Changes whenever history moves

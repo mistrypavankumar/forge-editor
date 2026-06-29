@@ -16,6 +16,7 @@ import { commandRegistry } from '../commands/command-registry';
 import { IconButton } from './ui/IconButton';
 import { FileMenu } from './FileMenu';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import { BranchStatePill } from './BranchStatePill';
 import { useState } from 'react';
 
 function basename(p: string): string {
@@ -72,6 +73,7 @@ export function TopBar(): React.JSX.Element {
         {switcher ? (
           <WorkspaceSwitcher x={switcher.x} y={switcher.y} onClose={() => setSwitcher(null)} />
         ) : null}
+        <BranchStatePill />
       </div>
 
       {/* Center command bar */}

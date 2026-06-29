@@ -7,6 +7,7 @@ import type {
   GhAccount,
   GhAccounts,
   GhAuth,
+  GitAheadBehind,
   GitBranches,
   GitChange,
   GitCommit,
@@ -529,6 +530,38 @@ export async function getBranches(rootPath: string): Promise<GitBranches> {
     return { current, all, defaultBranch };
   } catch {
     return { current: null, all: [], defaultBranch: null };
+  }
+}
+
+/**
+ * How far the current branch has diverged from its upstream tracking branch. `upstream` is null
+ * when the branch has no tracking remote (a local-only branch — nothing to compare against), in
+ * which case ahead/behind are 0. Two cheap git calls; safe to run on the status poll.
+ */
+export async function getAheadBehind(rootPath: string): Promise<GitAheadBehind> {
+  let upstream: string | null = null;
+  try {
+    upstream =
+      (await runGit(rootPath, [
+        'rev-parse',
+        '--abbrev-ref',
+        '--symbolic-full-name',
+        '@{upstream}',
+      ])).trim() || null;
+  } catch {
+    // No upstream configured (detached HEAD or local-only branch) — nothing to compare against.
+    return { ahead: 0, behind: 0, upstream: null };
+  }
+  try {
+    // `--left-right --count A...B` prints "<left>\t<right>": commits reachable only from the
+    // upstream (behind) then only from HEAD (ahead).
+    const out = (
+      await runGit(rootPath, ['rev-list', '--left-right', '--count', '@{upstream}...HEAD'])
+    ).trim();
+    const [behind, ahead] = out.split(/\s+/).map((n) => Number.parseInt(n, 10) || 0);
+    return { ahead: ahead ?? 0, behind: behind ?? 0, upstream };
+  } catch {
+    return { ahead: 0, behind: 0, upstream };
   }
 }
 
