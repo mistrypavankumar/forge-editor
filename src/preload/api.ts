@@ -88,6 +88,20 @@ export const api: ForgeApi = {
   },
   syncMenuState: (autoSave) => ipcRenderer.send(IpcChannels.menuSyncState, autoSave),
   newWindow: () => ipcRenderer.send(IpcChannels.newWindow),
+  reportWindow: (rootPath, name) => ipcRenderer.send(IpcChannels.windowReport, rootPath, name),
+  listWindows: () => ipcRenderer.invoke(IpcChannels.windowList),
+  focusWindow: (id) => ipcRenderer.send(IpcChannels.windowFocus, id),
+  openFolderInNewWindow: (path) => ipcRenderer.send(IpcChannels.windowOpenFolder, path),
+  onWindowsChanged: (cb) => {
+    const listener = (): void => cb();
+    ipcRenderer.on(IpcChannels.windowsChanged, listener);
+    return () => ipcRenderer.removeListener(IpcChannels.windowsChanged, listener);
+  },
+  onOpenFolderInWindow: (cb) => {
+    const listener = (_e: unknown, path: string): void => cb(path);
+    ipcRenderer.on(IpcChannels.openFolderInWindow, listener);
+    return () => ipcRenderer.removeListener(IpcChannels.openFolderInWindow, listener);
+  },
   isMac: process.platform === 'darwin',
   rename: (oldPath, newPath) => ipcRenderer.invoke(IpcChannels.rename, oldPath, newPath),
   remove: (path) => ipcRenderer.invoke(IpcChannels.remove, path),

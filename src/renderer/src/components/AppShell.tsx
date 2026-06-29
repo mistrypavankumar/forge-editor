@@ -6,7 +6,7 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 import { applyCssVariables } from '../theme/theme-service';
 import { builtInThemes } from '../theme/themes';
 import { loadFiles } from '../lib/quickopen-cache';
-import { openFilePath } from '../lib/workspace-actions';
+import { openFilePath, openFolderPath } from '../lib/workspace-actions';
 import { refreshTree } from '../lib/fs-actions';
 import { detectPackageManager } from '../lib/detect-pm';
 import { detectFormatters } from '../lib/detect-formatters';
@@ -77,6 +77,20 @@ export function AppShell(): React.JSX.Element {
     const folder = rootPath ? (rootPath.split('/').filter(Boolean).pop() ?? rootPath) : null;
     document.title = folder ?? 'Forge';
   }, [rootPath]);
+
+  // Tell the main process which repo this window holds, so the title-bar window switcher in
+  // every window can list and jump to it.
+  useEffect(() => {
+    const name = rootPath ? (rootPath.split('/').filter(Boolean).pop() ?? rootPath) : 'No workspace';
+    window.forge.reportWindow(rootPath, name);
+  }, [rootPath]);
+
+  // A window opened from another window's switcher (a recent project) loads its folder here.
+  useEffect(() => {
+    return window.forge.onOpenFolderInWindow((path) => {
+      void openFolderPath(path);
+    });
+  }, []);
 
   const onSidebarContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault();
