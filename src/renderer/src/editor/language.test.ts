@@ -11,6 +11,19 @@ describe('languageFor', () => {
     expect(languageFor('Main.java')).toBe('java');
   });
 
+  it('maps JavaScript module variants', () => {
+    expect(languageFor('app.js')).toBe('javascript');
+    expect(languageFor('prettier.config.mjs')).toBe('javascript');
+    expect(languageFor('webpack.config.cjs')).toBe('javascript');
+  });
+
+  it('maps JSON-format rc dotfiles', () => {
+    expect(languageFor('.swcrc')).toBe('json');
+    expect(languageFor('apps/scm/.swcrc')).toBe('json');
+    expect(languageFor('.tsbuildinfo')).toBe('json');
+    expect(languageFor('tsconfig.tsbuildinfo')).toBe('json');
+  });
+
   it('detects dotenv files by name, not extension', () => {
     expect(languageFor('.env')).toBe('dotenv');
     expect(languageFor('.env.local')).toBe('dotenv');

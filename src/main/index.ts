@@ -45,6 +45,7 @@ import {
   checkoutBranch,
   createBranch,
   gitPush,
+  publishBranch,
   gitPull,
   gitFetch,
   getAheadBehind,
@@ -338,6 +339,9 @@ app.whenReady().then(async () => {
     toResult(() => createBranch(rootPath, name)),
   );
   ipcMain.handle(IpcChannels.gitPush, (_e, rootPath: string) => toResult(() => gitPush(rootPath)));
+  ipcMain.handle(IpcChannels.gitPublishBranch, (_e, rootPath: string) =>
+    toResult(() => publishBranch(rootPath)),
+  );
   ipcMain.handle(IpcChannels.gitPull, (_e, rootPath: string) => toResult(() => gitPull(rootPath)));
   ipcMain.handle(IpcChannels.gitFetch, (_e, rootPath: string) => toResult(() => gitFetch(rootPath)));
   ipcMain.handle(IpcChannels.gitAheadBehind, (_e, rootPath: string) =>

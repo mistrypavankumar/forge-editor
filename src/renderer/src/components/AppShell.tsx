@@ -46,6 +46,8 @@ import { GitUserPicker } from './GitUserPicker';
 import { useGitUserStore } from '../stores/git-user-store';
 import { SettingsView } from './SettingsView';
 import { FeaturesView } from './FeaturesView';
+import { WellnessBreakOverlay } from './WellnessBreakOverlay';
+import { useWellnessBreaks } from '../settings/use-wellness-breaks';
 import { ContextMenu } from './ui/ContextMenu';
 
 export function AppShell(): React.JSX.Element {
@@ -150,6 +152,7 @@ export function AppShell(): React.JSX.Element {
   useAutoSave();
   useAutoFormat();
   useAutoDiagnostics();
+  useWellnessBreaks();
 
   const autoSave = useEditorStore((s) => s.autoSave);
   const editorGroups = useEditorStore((s) => s.groups);
@@ -249,7 +252,7 @@ export function AppShell(): React.JSX.Element {
   useEffect(() => {
     if (!rootPath) {
       useWorkspaceStore.getState().setChangeCount(0);
-      useWorkspaceStore.getState().setAheadBehind(0, 0, false);
+      useWorkspaceStore.getState().setAheadBehind(0, 0, false, 0, null);
       return;
     }
     void window.forge.gitChangedFiles(rootPath).then((res) => {
@@ -257,9 +260,17 @@ export function AppShell(): React.JSX.Element {
     });
     void window.forge.gitAheadBehind(rootPath).then((res) => {
       if (res.ok) {
-        useWorkspaceStore.getState().setAheadBehind(res.data.ahead, res.data.behind, res.data.upstream !== null);
+        useWorkspaceStore
+          .getState()
+          .setAheadBehind(
+            res.data.ahead,
+            res.data.behind,
+            res.data.upstream !== null,
+            res.data.baseBehind,
+            res.data.base,
+          );
       } else {
-        useWorkspaceStore.getState().setAheadBehind(0, 0, false);
+        useWorkspaceStore.getState().setAheadBehind(0, 0, false, 0, null);
       }
     });
   }, [rootPath, syncTick]);
@@ -326,6 +337,7 @@ export function AppShell(): React.JSX.Element {
         <GitUserPicker />
         <SettingsView />
         <FeaturesView />
+        <WellnessBreakOverlay />
       </div>
     );
   }
@@ -438,6 +450,7 @@ export function AppShell(): React.JSX.Element {
       <GitUserPicker />
       <SettingsView />
       <FeaturesView />
+      <WellnessBreakOverlay />
       {menu ? (
         <ContextMenu
           x={menu.x}

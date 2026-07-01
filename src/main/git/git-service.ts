@@ -534,9 +534,25 @@ export async function getBranches(rootPath: string): Promise<GitBranches> {
 }
 
 /**
- * How far the current branch has diverged from its upstream tracking branch. `upstream` is null
- * when the branch has no tracking remote (a local-only branch — nothing to compare against), in
- * which case ahead/behind are 0. Two cheap git calls; safe to run on the status poll.
+ * The remote tracking ref for the repo's default/integration branch (e.g. "origin/dev"), straight
+ * from origin/HEAD. This is the line feature branches merge into; we compare against it to flag a
+ * stale branch that needs a rebase. Null when origin/HEAD isn't configured. One cheap git call.
+ */
+async function defaultRemoteRef(rootPath: string): Promise<string | null> {
+  try {
+    return (await runGit(rootPath, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * How far the current branch has diverged from its upstream tracking branch, plus how far it's
+ * fallen behind the repo's default branch on the remote (e.g. "origin/dev"). `upstream` is null
+ * when the branch has no tracking remote (a local-only branch — nothing to push/pull against), in
+ * which case ahead/behind are 0; `baseBehind` is still computed so an unpublished feature branch
+ * that's drifted from the default branch still flags a rebase. A few cheap git calls; safe to run
+ * on the status poll.
  */
 export async function getAheadBehind(rootPath: string): Promise<GitAheadBehind> {
   let upstream: string | null = null;
@@ -549,20 +565,49 @@ export async function getAheadBehind(rootPath: string): Promise<GitAheadBehind> 
         '@{upstream}',
       ])).trim() || null;
   } catch {
-    // No upstream configured (detached HEAD or local-only branch) — nothing to compare against.
-    return { ahead: 0, behind: 0, upstream: null };
+    // No upstream configured (detached HEAD or local-only branch) — nothing to push/pull against.
+    upstream = null;
   }
-  try {
-    // `--left-right --count A...B` prints "<left>\t<right>": commits reachable only from the
-    // upstream (behind) then only from HEAD (ahead).
-    const out = (
-      await runGit(rootPath, ['rev-list', '--left-right', '--count', '@{upstream}...HEAD'])
-    ).trim();
-    const [behind, ahead] = out.split(/\s+/).map((n) => Number.parseInt(n, 10) || 0);
-    return { ahead: ahead ?? 0, behind: behind ?? 0, upstream };
-  } catch {
-    return { ahead: 0, behind: 0, upstream };
+
+  let ahead = 0;
+  let behind = 0;
+  if (upstream) {
+    try {
+      // `--left-right --count A...B` prints "<left>\t<right>": commits reachable only from the
+      // upstream (behind) then only from HEAD (ahead).
+      const out = (
+        await runGit(rootPath, ['rev-list', '--left-right', '--count', '@{upstream}...HEAD'])
+      ).trim();
+      const [b, a] = out.split(/\s+/).map((n) => Number.parseInt(n, 10) || 0);
+      behind = b ?? 0;
+      ahead = a ?? 0;
+    } catch {
+      /* leave ahead/behind at 0 */
+    }
   }
+
+  // How stale is this branch vs. the default branch it'll merge into? Skip when the default ref is
+  // the branch's own upstream (e.g. you're on `dev` tracking `origin/dev`) — that's just `behind`.
+  let baseBehind = 0;
+  let base: string | null = null;
+  const baseRef = await defaultRemoteRef(rootPath);
+  if (baseRef && baseRef !== upstream) {
+    try {
+      // Commits in the default branch not reachable from HEAD — what a rebase would replay onto.
+      const count = Number.parseInt(
+        (await runGit(rootPath, ['rev-list', '--count', `HEAD..${baseRef}`])).trim(),
+        10,
+      );
+      if (count > 0) {
+        baseBehind = count;
+        base = baseRef;
+      }
+    } catch {
+      /* baseRef unresolvable (e.g. not fetched) — leave baseBehind at 0 */
+    }
+  }
+
+  return { ahead, behind, upstream, baseBehind, base };
 }
 
 export async function checkoutBranch(rootPath: string, name: string): Promise<void> {
@@ -577,8 +622,19 @@ export async function gitPush(rootPath: string): Promise<void> {
   await runGit(rootPath, ['push']);
 }
 
+/**
+ * Publish the current branch: push it to `origin` and set it as the upstream, so a freshly created
+ * local-only branch starts tracking a remote. Used by the Source Control "Publish Branch" action
+ * that replaces "Commit" until the branch has an upstream.
+ */
+export async function publishBranch(rootPath: string): Promise<void> {
+  await runGit(rootPath, ['push', '-u', 'origin', 'HEAD']);
+}
+
 export async function gitPull(rootPath: string): Promise<void> {
-  await runGit(rootPath, ['pull', '--ff-only']);
+  // Rebase local commits on top of the upstream rather than weaving a merge commit, keeping the
+  // branch's history linear. The header pull button fetches first, so this replays cleanly.
+  await runGit(rootPath, ['pull', '--rebase']);
 }
 
 export async function gitFetch(rootPath: string): Promise<void> {

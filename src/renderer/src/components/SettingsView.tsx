@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, RotateCcw, SlidersHorizontal, Wand2, Keyboard, Search, FolderSearch, Sparkles } from 'lucide-react';
+import { X, RotateCcw, SlidersHorizontal, Wand2, Keyboard, Search, FolderSearch, Sparkles, HeartPulse, Check } from 'lucide-react';
 import { useAiStore } from '../stores/ai-store';
+import { useWellnessStore, WELLNESS_INTERVAL_MIN, WELLNESS_INTERVAL_MAX, WELLNESS_BREAK_MIN, WELLNESS_BREAK_MAX } from '../stores/wellness-store';
+import { WELLNESS_EXERCISES } from '../lib/wellness-exercises';
 import type { AiKeyStatus, AiProvider } from '@shared/ipc-contract';
 import { useThemeStore } from '../stores/theme-store';
 import { useEditorStore } from '../stores/editor-store';
@@ -21,6 +23,7 @@ const SECTIONS = [
   { id: 'formatting', label: 'Formatting', icon: Wand2 },
   { id: 'search', label: 'Search', icon: FolderSearch },
   { id: 'ai', label: 'AI', icon: Sparkles },
+  { id: 'wellness', label: 'Wellness', icon: HeartPulse },
   { id: 'keyboard', label: 'Keyboard Shortcuts', icon: Keyboard },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]['id'];
@@ -81,25 +84,27 @@ function Stepper({
   onChange,
   min,
   max,
+  step = 1,
   suffix,
 }: {
   value: number;
   onChange: (v: number) => void;
   min: number;
   max: number;
+  step?: number;
   suffix?: string;
 }): React.JSX.Element {
   const btn = 'flex h-7 w-7 items-center justify-center text-muted hover:bg-surface-3 hover:text-fg disabled:opacity-30';
   return (
     <div className="flex items-center overflow-hidden rounded-lg border border-line bg-surface">
-      <button type="button" className={btn} disabled={value <= min} onClick={() => onChange(value - 1)} aria-label="Decrease">
+      <button type="button" className={btn} disabled={value <= min} onClick={() => onChange(value - step)} aria-label="Decrease">
         −
       </button>
       <span className="min-w-[52px] border-x border-line px-2 py-1 text-center font-mono text-[12px] text-fg">
         {value}
         {suffix}
       </span>
-      <button type="button" className={btn} disabled={value >= max} onClick={() => onChange(value + 1)} aria-label="Increase">
+      <button type="button" className={btn} disabled={value >= max} onClick={() => onChange(value + step)} aria-label="Increase">
         +
       </button>
     </div>
@@ -184,6 +189,12 @@ export function SettingsView(): React.JSX.Element | null {
   const searchExclude = useLayoutStore((s) => s.searchExclude);
   const aiProvider = useAiStore((s) => s.provider);
   const aiModel = useAiStore((s) => s.model);
+  const wellnessEnabled = useWellnessStore((s) => s.enabled);
+  const wellnessIntervalMin = useWellnessStore((s) => s.intervalMin);
+  const wellnessBreakSec = useWellnessStore((s) => s.breakSec);
+  const wellnessStrict = useWellnessStore((s) => s.strict);
+  const wellnessExercises = useWellnessStore((s) => s.exercises);
+  const wellnessSound = useWellnessStore((s) => s.sound);
   const [keyStatus, setKeyStatus] = useState<AiKeyStatus | null>(null);
   const [keyDraft, setKeyDraft] = useState('');
   const [keySaving, setKeySaving] = useState(false);
@@ -505,6 +516,109 @@ export function SettingsView(): React.JSX.Element | null {
     </Card>
   );
 
+  const wellness = (
+    <div className="space-y-5">
+      <Card>
+        <SettingRow
+          label="Wellness breaks"
+          hint="Periodic full-screen reminders to rest your eyes and stretch. Never interrupts while you're typing."
+          last={!wellnessEnabled}
+        >
+          <Toggle on={wellnessEnabled} onChange={(v) => useWellnessStore.getState().setEnabled(v)} />
+        </SettingRow>
+        {wellnessEnabled ? (
+          <>
+            <SettingRow label="Remind me every" hint="Minutes of work between breaks">
+              <Stepper
+                value={wellnessIntervalMin}
+                min={WELLNESS_INTERVAL_MIN}
+                max={WELLNESS_INTERVAL_MAX}
+                step={5}
+                suffix=" min"
+                onChange={(v) => useWellnessStore.getState().setIntervalMin(v)}
+              />
+            </SettingRow>
+            <SettingRow label="Break length" hint="How long each break lasts">
+              <Stepper
+                value={wellnessBreakSec}
+                min={WELLNESS_BREAK_MIN}
+                max={WELLNESS_BREAK_MAX}
+                step={5}
+                suffix=" s"
+                onChange={(v) => useWellnessStore.getState().setBreakSec(v)}
+              />
+            </SettingRow>
+            <SettingRow
+              label="Strict mode"
+              hint="Wait out the full break — the only early exit is an “Emergency skip” button, for when you're mid-incident."
+            >
+              <Toggle on={wellnessStrict} onChange={(v) => useWellnessStore.getState().setStrict(v)} />
+            </SettingRow>
+            <SettingRow
+              label="Chime"
+              hint="Play a gentle chime when a break begins."
+              last
+            >
+              <Toggle on={wellnessSound} onChange={(v) => useWellnessStore.getState().setSound(v)} />
+            </SettingRow>
+          </>
+        ) : null}
+      </Card>
+
+      {wellnessEnabled ? (
+        <Card>
+          <div className="px-4 pt-3 pb-1">
+            <div className="text-[13px] font-medium text-fg">Exercises in rotation</div>
+            <div className="mt-0.5 text-[11.5px] leading-snug text-faint">
+              One is shown per break, cycling through your selection. At least one stays on.
+            </div>
+          </div>
+          <div className="px-2 pb-2">
+            {WELLNESS_EXERCISES.map((ex) => {
+              const on = wellnessExercises.includes(ex.id);
+              const lastOn = on && wellnessExercises.length === 1;
+              return (
+                <button
+                  key={ex.id}
+                  type="button"
+                  disabled={lastOn}
+                  onClick={() => useWellnessStore.getState().toggleExercise(ex.id)}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors',
+                    lastOn ? 'cursor-not-allowed' : 'hover:bg-surface-2',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-[5px] border transition-colors',
+                      on ? 'border-accent bg-accent text-white' : 'border-line-strong text-transparent',
+                    )}
+                  >
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <ex.icon size={15} className="shrink-0 text-muted" />
+                  <span className="min-w-0 flex-1">
+                    <span className="text-[12.5px] text-fg">{ex.title}</span>
+                    <span className="ml-2 text-[11px] text-faint">{ex.group}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex justify-end border-t border-line-soft px-4 py-3">
+            <button
+              type="button"
+              onClick={() => useWellnessStore.getState().startBreak()}
+              className="rounded-lg border border-line bg-surface px-3 py-1.5 text-[12px] text-fg transition-colors hover:border-line-strong"
+            >
+              Preview a break
+            </button>
+          </div>
+        </Card>
+      ) : null}
+    </div>
+  );
+
   const keyboard = (
     <>
       <div className="mb-3 flex items-center justify-end">
@@ -614,6 +728,7 @@ export function SettingsView(): React.JSX.Element | null {
             {active === 'formatting' ? formatting : null}
             {active === 'search' ? search : null}
             {active === 'ai' ? ai : null}
+            {active === 'wellness' ? wellness : null}
             {active === 'keyboard' ? keyboard : null}
           </div>
         </div>

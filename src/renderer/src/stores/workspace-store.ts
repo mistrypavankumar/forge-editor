@@ -19,6 +19,10 @@ export interface WorkspaceState {
   behind: number;
   /** False when the current branch has no upstream (nothing to compare push/pull against). */
   hasUpstream: boolean;
+  /** Commits the current branch is behind the default branch on the remote (needs a rebase). */
+  baseBehind: number;
+  /** The default-branch remote ref `baseBehind` is measured against (e.g. "origin/dev"), or null. */
+  base: string | null;
   setWorkspace: (rootPath: string, entries: DirEntry[]) => void;
   setRootEntries: (entries: DirEntry[]) => void;
   setChildren: (path: string, entries: DirEntry[]) => void;
@@ -33,7 +37,13 @@ export interface WorkspaceState {
   collapseAll: () => void;
   bumpSync: () => void;
   setChangeCount: (n: number) => void;
-  setAheadBehind: (ahead: number, behind: number, hasUpstream: boolean) => void;
+  setAheadBehind: (
+    ahead: number,
+    behind: number,
+    hasUpstream: boolean,
+    baseBehind: number,
+    base: string | null,
+  ) => void;
   closeWorkspace: () => void;
 }
 
@@ -52,6 +62,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   ahead: 0,
   behind: 0,
   hasUpstream: false,
+  baseBehind: 0,
+  base: null,
   setWorkspace: (rootPath, entries) =>
     set({
       rootPath,
@@ -66,6 +78,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       ahead: 0,
       behind: 0,
       hasUpstream: false,
+      baseBehind: 0,
+      base: null,
     }),
   setRootEntries: (entries) => set({ rootEntries: entries }),
   setChildren: (path, entries) =>
@@ -83,7 +97,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   collapseAll: () => set({ expandedPaths: {} }),
   bumpSync: () => set((s) => ({ syncTick: s.syncTick + 1 })),
   setChangeCount: (n) => set({ changeCount: n }),
-  setAheadBehind: (ahead, behind, hasUpstream) => set({ ahead, behind, hasUpstream }),
+  setAheadBehind: (ahead, behind, hasUpstream, baseBehind, base) =>
+    set({ ahead, behind, hasUpstream, baseBehind, base }),
   closeWorkspace: () =>
     set({
       rootPath: null,
@@ -97,5 +112,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       ahead: 0,
       behind: 0,
       hasUpstream: false,
+      baseBehind: 0,
+      base: null,
     }),
 }));

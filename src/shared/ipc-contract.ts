@@ -24,6 +24,7 @@ export const IpcChannels = {
   gitCheckout: 'forge:git:checkout',
   gitCreateBranch: 'forge:git:createBranch',
   gitPush: 'forge:git:push',
+  gitPublishBranch: 'forge:git:publishBranch',
   gitPull: 'forge:git:pull',
   gitFetch: 'forge:git:fetch',
   gitAheadBehind: 'forge:git:aheadBehind',
@@ -176,6 +177,16 @@ export interface GitAheadBehind {
   behind: number;
   /** The tracking branch (e.g. "origin/main"), or null when the branch has no upstream. */
   upstream: string | null;
+  /**
+   * Commits the current branch is behind the repo's default/integration branch on the remote
+   * (e.g. "origin/dev") — i.e. how stale this feature branch is vs. the line it'll merge into.
+   * This is independent of `behind`: a branch with no upstream (or one fully in sync with its own
+   * upstream) can still be behind the default branch and need a rebase. 0 when not applicable
+   * (on the default branch itself, when its remote ref is missing, or when it equals `upstream`).
+   */
+  baseBehind: number;
+  /** The default-branch remote ref compared against for `baseBehind` (e.g. "origin/dev"), or null. */
+  base: string | null;
 }
 
 export interface GitBranches {
@@ -692,6 +703,18 @@ export interface ForgeSettings {
   editorIntegrationPrompted?: boolean;
   /** Debugger breakpoints, keyed by absolute file path → 1-based lines, so they survive restarts. */
   breakpoints?: Record<string, number[]>;
+  /** Wellness breaks (stretch / eye-rest reminders) are enabled. */
+  wellnessEnabled?: boolean;
+  /** Minutes of work between wellness breaks. */
+  wellnessIntervalMin?: number;
+  /** Duration of each wellness break, in seconds. */
+  wellnessBreakSec?: number;
+  /** Strict mode: a break can only be ended early via the "Emergency skip" button. */
+  wellnessStrict?: boolean;
+  /** Ids of the exercises currently in the wellness-break rotation. */
+  wellnessExercises?: string[];
+  /** Play a gentle chime when a wellness break begins. */
+  wellnessSound?: boolean;
 }
 
 /** Outcome of running a formatter CLI against a file. */
@@ -894,9 +917,11 @@ export interface ForgeApi {
   gitCheckout: (rootPath: string, name: string) => Promise<Result<void>>;
   gitCreateBranch: (rootPath: string, name: string) => Promise<Result<void>>;
   gitPush: (rootPath: string) => Promise<Result<void>>;
+  /** Push the current branch to origin and set it as upstream (publish a local-only branch). */
+  gitPublishBranch: (rootPath: string) => Promise<Result<void>>;
   gitPull: (rootPath: string) => Promise<Result<void>>;
   gitFetch: (rootPath: string) => Promise<Result<void>>;
-  /** Ahead/behind commit counts of the current branch vs its upstream (zeros when no upstream). */
+  /** Ahead/behind vs upstream plus how far behind the default branch (zeros when no upstream/base). */
   gitAheadBehind: (rootPath: string) => Promise<Result<GitAheadBehind>>;
   gitLog: (rootPath: string, limit?: number) => Promise<Result<GitCommit[]>>;
   /**
