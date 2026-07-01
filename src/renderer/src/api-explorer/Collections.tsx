@@ -12,7 +12,17 @@ import {
 import type { Collection, SavedRequest } from './types';
 
 import { cn } from '../lib/cn';
-import { useApiExplorerStore } from './store';
+import { useApiExplorerStore, selectActiveRequestDirty } from './store';
+
+/** Amber dot marking content with unsaved edits (shown until autosave persists them). */
+function DirtyDot(): React.JSX.Element {
+  return (
+    <span
+      title="Unsaved changes"
+      className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"
+    />
+  );
+}
 
 /** Inline name editor shared by collections and requests. */
 function NameInput({
@@ -44,12 +54,14 @@ function NameInput({
 function RequestRow({
   request,
   active,
+  dirty,
   editing,
   onStartEdit,
   onStopEdit,
 }: {
   request: SavedRequest;
   active: boolean;
+  dirty: boolean;
   editing: boolean;
   onStartEdit: () => void;
   onStopEdit: () => void;
@@ -87,6 +99,7 @@ function RequestRow({
       ) : (
         <span className="min-w-0 flex-1 truncate text-[12px]">{request.name}</span>
       )}
+      {dirty && !editing ? <span className="group-hover:hidden"><DirtyDot /></span> : null}
       {!editing ? (
         <div className="flex shrink-0 items-center opacity-0 group-hover:opacity-100">
           <button
@@ -132,12 +145,14 @@ function CollectionGroup({
   collection,
   search,
   activeRequestId,
+  dirtyRequestId,
   editingId,
   setEditingId,
 }: {
   collection: Collection;
   search: string;
   activeRequestId: string | null;
+  dirtyRequestId: string | null;
   editingId: string | null;
   setEditingId: (id: string | null) => void;
 }): React.JSX.Element {
@@ -145,6 +160,9 @@ function CollectionGroup({
   const renameCollection = useApiExplorerStore((s) => s.renameCollection);
   const removeCollection = useApiExplorerStore((s) => s.removeCollection);
   const createRequest = useApiExplorerStore((s) => s.createRequest);
+
+  const collectionDirty =
+    dirtyRequestId != null && collection.requests.some((r) => r.id === dirtyRequestId);
 
   const term = search.trim().toLowerCase();
   const requests = term
@@ -185,6 +203,7 @@ function CollectionGroup({
             {collection.name}
           </button>
         )}
+        {collectionDirty ? <DirtyDot /> : null}
         <span className="shrink-0 text-[10px] text-faint">{collection.requests.length}</span>
         {editingId !== collection.id ? (
           <div className="flex shrink-0 items-center opacity-0 group-hover:opacity-100">
@@ -227,6 +246,7 @@ function CollectionGroup({
                 key={r.id}
                 request={r}
                 active={r.id === activeRequestId}
+                dirty={r.id === dirtyRequestId}
                 editing={editingId === r.id}
                 onStartEdit={() => setEditingId(r.id)}
                 onStopEdit={() => setEditingId(null)}
@@ -243,6 +263,9 @@ export function Collections({ search }: { search: string }): React.JSX.Element {
   const collections = useApiExplorerStore((s) => s.collections);
   const activeRequestId = useApiExplorerStore((s) => s.activeRequestId);
   const createCollection = useApiExplorerStore((s) => s.createCollection);
+  // Only the loaded request can have unsaved edits, so it's the single dirty id (or none).
+  const isDirty = useApiExplorerStore(selectActiveRequestDirty);
+  const dirtyRequestId = isDirty ? activeRequestId : null;
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const hasAny = collections.length > 0;
@@ -280,6 +303,7 @@ export function Collections({ search }: { search: string }): React.JSX.Element {
             collection={c}
             search={search}
             activeRequestId={activeRequestId}
+            dirtyRequestId={dirtyRequestId}
             editingId={editingId}
             setEditingId={setEditingId}
           />

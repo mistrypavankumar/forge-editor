@@ -38,6 +38,7 @@ export const api: ForgeApi = {
   gitCreateBranch: (rootPath, name) =>
     ipcRenderer.invoke(IpcChannels.gitCreateBranch, rootPath, name),
   gitPush: (rootPath) => ipcRenderer.invoke(IpcChannels.gitPush, rootPath),
+  gitPublishBranch: (rootPath) => ipcRenderer.invoke(IpcChannels.gitPublishBranch, rootPath),
   gitPull: (rootPath) => ipcRenderer.invoke(IpcChannels.gitPull, rootPath),
   gitFetch: (rootPath) => ipcRenderer.invoke(IpcChannels.gitFetch, rootPath),
   gitAheadBehind: (rootPath) => ipcRenderer.invoke(IpcChannels.gitAheadBehind, rootPath),

@@ -10,9 +10,13 @@ export function languageFor(name: string): string {
 
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
   const map: Record<string, string> = {
+    swcrc: 'json',
+    tsbuildinfo: 'json',
     ts: 'typescript',
     tsx: 'typescript',
     js: 'javascript',
+    mjs: 'javascript',
+    cjs: 'javascript',
     jsx: 'javascript',
     json: 'json',
     css: 'css',

@@ -44,6 +44,22 @@ function snapshotRequest(s: ApiExplorerState): RequestSnapshot {
   };
 }
 
+/** Cheap structural equality for two request snapshots (keys are produced in a stable order). */
+function sameSnapshot(a: RequestSnapshot, b: RequestSnapshot): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * Whether the live editor state diverges from the saved request it was loaded from. False when no
+ * request is active. Secret-only edits (tokens, passwords) don't count — they're not snapshotted.
+ */
+export function selectActiveRequestDirty(s: ApiExplorerState): boolean {
+  if (!s.activeRequestId) return false;
+  const saved = s.collections.flatMap((c) => c.requests).find((r) => r.id === s.activeRequestId);
+  if (!saved) return false;
+  return !sameSnapshot(snapshotRequest(s), snapshotRequest(saved as unknown as ApiExplorerState));
+}
+
 function applyRequest(r: SavedRequest): Partial<ApiExplorerState> {
   return {
     method: r.method,
@@ -275,6 +291,11 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
         const { activeRequestId } = get();
         if (!activeRequestId) return;
         const snap = snapshotRequest(get());
+        const saved = get()
+          .collections.flatMap((c) => c.requests)
+          .find((r) => r.id === activeRequestId);
+        // Nothing changed (e.g. autosave firing right after a load) — skip the updatedAt churn.
+        if (saved && sameSnapshot(snap, snapshotRequest(saved as unknown as ApiExplorerState))) return;
         set((s) => ({
           collections: s.collections.map((c) => ({
             ...c,

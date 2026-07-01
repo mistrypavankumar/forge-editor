@@ -299,12 +299,14 @@ function CommitHoverCard({
 export function SourceControlPanel(): React.JSX.Element {
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const branch = useWorkspaceStore((s) => s.branch);
+  const hasUpstream = useWorkspaceStore((s) => s.hasUpstream);
   const syncTick = useWorkspaceStore((s) => s.syncTick);
   const [changes, setChanges] = useState<GitChange[]>([]);
   const [commits, setCommits] = useState<GitCommit[]>([]);
   const [showHistory, setShowHistory] = useState(true);
   const [message, setMessage] = useState('');
   const [committing, setCommitting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [commitError, setCommitError] = useState<string | null>(null);
   // Which commit is expanded to show its changed files, and those files.
@@ -508,6 +510,21 @@ export function SourceControlPanel(): React.JSX.Element {
     }
   };
 
+  // A freshly created branch with no upstream yet: push it to origin and start tracking, instead of
+  // offering a commit. Once published, hasUpstream flips and the Commit button takes over.
+  const publish = async (): Promise<void> => {
+    setPublishing(true);
+    setCommitError(null);
+    const res = await window.forge.gitPublishBranch(root);
+    setPublishing(false);
+    if (res.ok) synced();
+    else setCommitError(res.error);
+  };
+
+  // Show "Publish Branch" in place of "Commit" while the branch is local-only and there's nothing
+  // staged to commit; with pending changes the user clearly wants to commit, so keep Commit.
+  const showPublish = !hasUpstream && changes.length === 0;
+
   return (
     <div ref={panelRef} className="flex h-full flex-col">
       <PanelHeader
@@ -525,6 +542,7 @@ export function SourceControlPanel(): React.JSX.Element {
       />
       <GitBranchBar root={root} onChanged={refresh} />
       <div className="flex flex-col gap-2 px-2 pb-2 pt-2">
+        {showPublish ? null : (
         <div className="relative">
           <textarea
             rows={2}
@@ -562,21 +580,35 @@ export function SourceControlPanel(): React.JSX.Element {
             )}
           </button>
         </div>
-        <button
-          type="button"
-          onClick={() => void commit()}
-          disabled={locked || committing || !message.trim() || changes.length === 0}
-          title={
-            locked
-              ? `"${branch}" is a protected branch — commit to a feature branch instead`
-              : undefined
-          }
-          className="flex items-center justify-center gap-1.5 rounded-md bg-accent py-1.5 text-xs font-medium text-accent-fg transition-opacity hover:bg-accent-hover disabled:opacity-40"
-        >
-          {locked ? <Lock size={13} /> : <GitCommitVertical size={14} />}
-          Commit
-        </button>
-        {locked ? (
+        )}
+        {showPublish ? (
+          <button
+            type="button"
+            onClick={() => void publish()}
+            disabled={publishing}
+            title="Push this branch to origin and start tracking it"
+            className="flex items-center justify-center gap-1.5 rounded-md bg-accent py-1.5 text-xs font-medium text-accent-fg transition-opacity hover:bg-accent-hover disabled:opacity-40"
+          >
+            {publishing ? <Loader2 size={14} className="animate-spin" /> : <Cloud size={14} />}
+            Publish Branch
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => void commit()}
+            disabled={locked || committing || !message.trim() || changes.length === 0}
+            title={
+              locked
+                ? `"${branch}" is a protected branch — commit to a feature branch instead`
+                : undefined
+            }
+            className="flex items-center justify-center gap-1.5 rounded-md bg-accent py-1.5 text-xs font-medium text-accent-fg transition-opacity hover:bg-accent-hover disabled:opacity-40"
+          >
+            {locked ? <Lock size={13} /> : <GitCommitVertical size={14} />}
+            Commit
+          </button>
+        )}
+        {locked && !showPublish ? (
           <p className="px-0.5 text-[11px] leading-snug text-faint">
             <span className="text-warning">{branch}</span> is protected — commit to a feature branch
             instead.

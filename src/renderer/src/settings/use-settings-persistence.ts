@@ -10,6 +10,7 @@ import { useDiagnosticsStore } from '../stores/diagnostics-store';
 import { useGitUserStore } from '../stores/git-user-store';
 import { useInlineRunStore } from '../stores/inline-run-store';
 import { useAiStore } from '../stores/ai-store';
+import { useWellnessStore } from '../stores/wellness-store';
 import { clearFileCache } from '../lib/quickopen-cache';
 import type { FormatterId } from '../lib/detect-formatters';
 
@@ -39,6 +40,12 @@ export function useSettingsPersistence(): void {
   const aiProvider = useAiStore((s) => s.provider);
   const aiModel = useAiStore((s) => s.model);
   const aiInlineSuggest = useAiStore((s) => s.inlineSuggest);
+  const wellnessEnabled = useWellnessStore((s) => s.enabled);
+  const wellnessIntervalMin = useWellnessStore((s) => s.intervalMin);
+  const wellnessBreakSec = useWellnessStore((s) => s.breakSec);
+  const wellnessStrict = useWellnessStore((s) => s.strict);
+  const wellnessExercises = useWellnessStore((s) => s.exercises);
+  const wellnessSound = useWellnessStore((s) => s.sound);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -93,6 +100,24 @@ export function useSettingsPersistence(): void {
         if (typeof res.data.aiInlineSuggest === 'boolean') {
           useAiStore.getState().setInlineSuggest(res.data.aiInlineSuggest);
         }
+        if (typeof res.data.wellnessEnabled === 'boolean') {
+          useWellnessStore.getState().setEnabled(res.data.wellnessEnabled);
+        }
+        if (typeof res.data.wellnessIntervalMin === 'number') {
+          useWellnessStore.getState().setIntervalMin(res.data.wellnessIntervalMin);
+        }
+        if (typeof res.data.wellnessBreakSec === 'number') {
+          useWellnessStore.getState().setBreakSec(res.data.wellnessBreakSec);
+        }
+        if (typeof res.data.wellnessStrict === 'boolean') {
+          useWellnessStore.getState().setStrict(res.data.wellnessStrict);
+        }
+        if (Array.isArray(res.data.wellnessExercises) && res.data.wellnessExercises.length > 0) {
+          useWellnessStore.setState({ exercises: res.data.wellnessExercises });
+        }
+        if (typeof res.data.wellnessSound === 'boolean') {
+          useWellnessStore.getState().setSound(res.data.wellnessSound);
+        }
         // Seed built-in default excludes once: union them with any stored list, then never re-add.
         if (res.data.searchExcludeSeeded) {
           useLayoutStore.getState().setSearchExclude(res.data.searchExclude ?? []);
@@ -136,8 +161,14 @@ export function useSettingsPersistence(): void {
       aiProvider,
       aiModel,
       aiInlineSuggest,
+      wellnessEnabled,
+      wellnessIntervalMin,
+      wellnessBreakSec,
+      wellnessStrict,
+      wellnessExercises,
+      wellnessSound,
     });
-  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, inlineRun, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight, aiProvider, aiModel, aiInlineSuggest]);
+  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, inlineRun, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight, aiProvider, aiModel, aiInlineSuggest, wellnessEnabled, wellnessIntervalMin, wellnessBreakSec, wellnessStrict, wellnessExercises, wellnessSound]);
 
   // Drop the quick-open cache when excludes change so the next search re-lists with them.
   useEffect(() => {

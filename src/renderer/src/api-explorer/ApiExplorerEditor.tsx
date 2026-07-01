@@ -1,9 +1,8 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Send, Wand2, Loader2, Save, History, X } from 'lucide-react';
+import { Send, Wand2, Loader2, Save, History, X, Check } from 'lucide-react';
 
 import type { HeaderRow, BodyMode, ExecutionResult, HttpMethod, ParamRow, FormRow } from './types';
-import { UNSAFE_METHODS } from './types';
 
 import { cn } from '../lib/cn';
 import { Sidebar } from './Sidebar';
@@ -13,7 +12,7 @@ import { AuthEditor } from './AuthEditor';
 import { ResponseTabs } from './ResponseTabs';
 import { HeadersEditor } from './HeadersEditor';
 import { KeyValueEditor } from './KeyValueEditor';
-import { useApiExplorerStore } from './store';
+import { useApiExplorerStore, selectActiveRequestDirty } from './store';
 import { buildUrl, parseQueryParams, splitUrl } from './http-utils';
 import {
   prettyJson,
@@ -79,6 +78,8 @@ export function ApiExplorerEditor(): React.JSX.Element {
   const requestPaneRatio = useApiExplorerStore((s) => s.requestPaneRatio);
   const variablesHeight = useApiExplorerStore((s) => s.variablesHeight);
   const recentUrls = useApiExplorerStore((s) => s.recentUrls);
+  // True while the loaded saved request has unpersisted edits (drives the autosave + status pill).
+  const isDirty = useApiExplorerStore(selectActiveRequestDirty);
 
   const [requestTab, setRequestTab] = useState<RequestTab>('body');
   const [saveOpen, setSaveOpen] = useState(false);
@@ -91,7 +92,6 @@ export function ApiExplorerEditor(): React.JSX.Element {
   const [notice, setNotice] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ExecutionResult | null>(null);
-  const [confirmRun, setConfirmRun] = useState(false);
   const [urlFocused, setUrlFocused] = useState(false);
   const [urlHighlight, setUrlHighlight] = useState(-1);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -114,6 +114,31 @@ export function ApiExplorerEditor(): React.JSX.Element {
   }, []);
 
   const store = useApiExplorerStore.getState;
+
+  // Autosave: when a saved request is loaded, persist edits onto it after a short idle pause. Each
+  // edit changes a dependency, which resets the timer (debounce). `updateActiveRequest` no-ops when
+  // nothing actually changed, so a load (which sets every field) costs at most a harmless timer.
+  useEffect(() => {
+    if (!activeRequestId) return undefined;
+    const t = setTimeout(() => store().updateActiveRequest(), 800);
+    return () => clearTimeout(t);
+  }, [
+    activeRequestId,
+    method,
+    url,
+    params,
+    auth,
+    headers,
+    bodyMode,
+    bodyText,
+    formRows,
+    query,
+    variables,
+    store,
+  ]);
+
+  // Flush any pending edits when the tab is torn down before the debounce fires.
+  useEffect(() => () => store().updateActiveRequest(), [store]);
 
   // Drag-to-resize: request/response vertical split.
   const mainColRef = useRef<HTMLDivElement>(null);
@@ -246,21 +271,12 @@ export function ApiExplorerEditor(): React.JSX.Element {
         flash('Subscriptions are not supported in the API Explorer.');
         return;
       }
-      if (opType === 'mutation') {
-        setConfirmRun(true);
-        return;
-      }
       void execute();
       return;
     }
 
-    // REST: guard state-changing methods.
-    if (UNSAFE_METHODS.has(method)) {
-      setConfirmRun(true);
-      return;
-    }
     void execute();
-  }, [running, url, isGraphql, query, method, execute, flash]);
+  }, [running, url, isGraphql, query, execute, flash]);
 
   const activeRequest = useMemo(
     () => collections.flatMap((c) => c.requests).find((r) => r.id === activeRequestId) ?? null,
@@ -295,16 +311,6 @@ export function ApiExplorerEditor(): React.JSX.Element {
     setSaveOpen(false);
     flash(`Saved “${saveName.trim() || 'request'}”`);
   }, [saveCollectionId, collections.length, newCollectionName, saveName, store, flash]);
-
-  // Esc cancels the confirm dialog.
-  useEffect(() => {
-    if (!confirmRun) return undefined;
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setConfirmRun(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [confirmRun]);
 
   const insertOperation = useCallback(
     (nextQuery: string, nextVariables: string) => {
@@ -463,8 +469,6 @@ export function ApiExplorerEditor(): React.JSX.Element {
     );
   };
 
-  const confirmLabel = isGraphql ? 'Run mutation?' : `Send ${method} request?`;
-
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg">
       {/* URL bar */}
@@ -512,7 +516,7 @@ export function ApiExplorerEditor(): React.JSX.Element {
             className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 font-mono text-[12.5px] text-fg outline-none transition-colors placeholder:text-faint focus:border-accent/70"
           />
           {showUrlSuggestions ? (
-            <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-auto rounded-lg border border-line bg-surface py-1 shadow-lg">
+            <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-auto rounded-lg border border-line bg-elevated py-1 shadow-lg">
               {urlSuggestions.map((u, i) => (
                 <li key={u}>
                   <div
@@ -558,15 +562,34 @@ export function ApiExplorerEditor(): React.JSX.Element {
           {running ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
           {running ? 'Sending…' : 'Send'}
         </button>
-        <button
-          type="button"
-          onClick={onSaveClick}
-          title={activeRequestId ? 'Update saved request' : 'Save request to a collection'}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-[12.5px] font-semibold text-fg transition-colors hover:border-line-strong"
-        >
-          <Save size={14} />
-          Save
-        </button>
+        {activeRequestId ? (
+          <span
+            title={isDirty ? 'Saving changes…' : 'All changes saved automatically'}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-[12.5px] font-medium text-muted"
+          >
+            {isDirty ? (
+              <>
+                <Loader2 size={13} className="animate-spin text-faint" />
+                Saving…
+              </>
+            ) : (
+              <>
+                <Check size={14} className="text-emerald-400" />
+                Saved
+              </>
+            )}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={onSaveClick}
+            title="Save request to a collection"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-[12.5px] font-semibold text-fg transition-colors hover:border-line-strong"
+          >
+            <Save size={14} />
+            Save
+          </button>
+        )}
         {activeRequestId ? (
           <button
             type="button"
@@ -672,48 +695,6 @@ export function ApiExplorerEditor(): React.JSX.Element {
           </div>
         </div>
       </div>
-
-      {/* Run confirmation (state-changing request) */}
-      {confirmRun
-        ? createPortal(
-            <div
-              className="fixed inset-0 z-[3100] grid place-items-center bg-black/50"
-              onMouseDown={() => setConfirmRun(false)}
-            >
-              <div
-                className="w-[min(420px,92vw)] rounded-xl border border-line-strong bg-elevated p-5 shadow-2xl"
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                <div className="text-[15px] font-semibold text-fg">{confirmLabel}</div>
-                <p className="mt-2 text-[13px] leading-snug text-muted">
-                  You are about to send a state-changing request to{' '}
-                  <span className="font-mono text-fg">{splitUrl(url).base}</span>. This may change
-                  data. Continue?
-                </p>
-                <div className="mt-4 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmRun(false)}
-                    className="rounded-lg border border-line px-3 py-1.5 text-[12.5px] text-fg hover:border-line-strong"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setConfirmRun(false);
-                      void execute();
-                    }}
-                    className="rounded-lg bg-amber-500 px-3 py-1.5 text-[12.5px] font-semibold text-black hover:opacity-90"
-                  >
-                    {isGraphql ? 'Run mutation' : `Send ${method}`}
-                  </button>
-                </div>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
 
       {/* Save-to-collection dialog */}
       {saveOpen

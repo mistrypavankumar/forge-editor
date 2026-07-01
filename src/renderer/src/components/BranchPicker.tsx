@@ -14,6 +14,8 @@ interface BranchPickerProps {
   onSelect: (name: string) => void;
   onCreate: () => void;
   onClose: () => void;
+  /** A failure message (e.g. a failed checkout) to show in the footer while the picker stays open. */
+  error?: string | null;
 }
 
 /** How many recent branches to show before the user searches. */
@@ -29,6 +31,7 @@ export function BranchPicker({
   onSelect,
   onCreate,
   onClose,
+  error,
 }: BranchPickerProps): React.JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x, y });
@@ -134,6 +137,12 @@ export function BranchPicker({
           </p>
         ) : null}
       </div>
+
+      {error ? (
+        <p className="shrink-0 truncate border-t border-line px-3 py-1.5 text-[11px] text-danger" title={error}>
+          {error}
+        </p>
+      ) : null}
 
       <button
         type="button"
