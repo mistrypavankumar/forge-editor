@@ -6,6 +6,19 @@ import type { ReplaceResult, SearchMatch, SearchOptions } from '@shared/ipc-cont
 
 const run = promisify(execFile);
 const MAX_MATCHES = 1000;
+const PREVIEW_LEN = 240;
+const PREVIEW_LEAD = 20;
+
+/**
+ * Anchor the preview window around the match so it's visible even on long lines.
+ * A match far into the line would otherwise be truncated off the right edge,
+ * making the row look like it has no match. Prepends an ellipsis when trimmed.
+ */
+function previewAround(text: string, matchIndex: number): string {
+  if (matchIndex <= PREVIEW_LEAD) return text.slice(0, PREVIEW_LEN);
+  const start = matchIndex - PREVIEW_LEAD;
+  return `…${text.slice(start, start + PREVIEW_LEN)}`;
+}
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -70,7 +83,7 @@ export async function searchInFiles(
         path,
         name: basename(path),
         line: ln,
-        preview: text.slice(0, 240),
+        preview: previewAround(text, m ? m.index : 0),
         col: m ? m.index + 1 : 1,
         length: m ? m[0].length : options.query.length,
       });

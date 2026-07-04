@@ -170,6 +170,18 @@ export async function gitStageAll(rootPath: string): Promise<void> {
   await execGit(rootPath, ['add', '-A']);
 }
 
+export async function gitUnstageAll(rootPath: string): Promise<void> {
+  await execGit(rootPath, ['reset', '-q', 'HEAD', '--']);
+}
+
+// Discard every working-tree change: revert modifications to tracked files (restoring from
+// the index, like single-file discard) and delete untracked files/dirs — mirroring VS Code's
+// "Discard All Changes". Respects .gitignore (no -x), so ignored files are left alone.
+export async function gitDiscardAll(rootPath: string): Promise<void> {
+  await execGit(rootPath, ['checkout', '--', '.']);
+  await execGit(rootPath, ['clean', '-fd']);
+}
+
 export async function gitCommit(rootPath: string, message: string): Promise<void> {
   // Commit staged changes; if nothing is staged, stage everything first (VS Code-style).
   let nothingStaged = false;

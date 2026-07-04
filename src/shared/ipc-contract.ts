@@ -17,6 +17,8 @@ export const IpcChannels = {
   gitUnstage: 'forge:git:unstage',
   gitDiscard: 'forge:git:discard',
   gitStageAll: 'forge:git:stageAll',
+  gitUnstageAll: 'forge:git:unstageAll',
+  gitDiscardAll: 'forge:git:discardAll',
   gitOriginal: 'forge:git:original',
   gitStaged: 'forge:git:staged',
   gitBlame: 'forge:git:blame',
@@ -106,6 +108,8 @@ export const IpcChannels = {
   langRename: 'forge:lang:rename',
   langFormat: 'forge:lang:format',
   langSemanticTokens: 'forge:lang:semanticTokens',
+  langDocSymbols: 'forge:lang:docSymbols',
+  langWorkspaceSymbols: 'forge:lang:workspaceSymbols',
   // Java (jdtls) language-server status, for the status-bar indicator.
   jdtlsGetStatus: 'forge:java:getStatus',
   jdtlsStatus: 'forge:java:status',
@@ -414,6 +418,21 @@ export interface LsLocation {
   endColumn: number;
 }
 
+/** A named declaration surfaced for the quick-open symbol modes (`@` in-file, `#` workspace). */
+export interface LsSymbol {
+  /** Symbol name, e.g. a function/class/interface/const identifier. */
+  name: string;
+  /** TypeScript ScriptElementKind, e.g. 'function' | 'class' | 'interface' | 'method' | 'const'. */
+  kind: string;
+  /** Enclosing declaration name (class for a method, etc.), when the LS reports one. */
+  containerName?: string;
+  /** Absolute file path the symbol is declared in. */
+  file: string;
+  /** 1-based position of the symbol's name. */
+  line: number;
+  column: number;
+}
+
 export interface LsDiagnostic {
   line: number;
   column: number;
@@ -422,6 +441,14 @@ export interface LsDiagnostic {
   severity: 'error' | 'warning' | 'info';
   code: number | string;
   message: string;
+  /**
+   * Set when TypeScript flags the range as unused/unnecessary (e.g. TS6133 "declared but its value
+   * is never read"). The renderer fades the text (Monaco's `Unnecessary` marker tag) instead of
+   * drawing an error squiggle.
+   */
+  reportsUnnecessary?: boolean;
+  /** Set when TypeScript flags the symbol as deprecated; rendered with a strikethrough. */
+  reportsDeprecated?: boolean;
 }
 
 export interface LsHover {
@@ -532,6 +559,13 @@ export interface EditorLanguageApi {
   ) => Promise<Result<LsRenameResult>>;
   formatDocument: (filePath: string) => Promise<Result<LsTextEdit[]>>;
   getSemanticTokens: (filePath: string) => Promise<Result<LsSemanticTokens>>;
+  /** Top-level (and nested) declarations in one file — powers quick-open's `@` symbol mode. */
+  getDocumentSymbols: (filePath: string) => Promise<Result<LsSymbol[]>>;
+  /**
+   * Declarations matching `query` across the project. `filePath` (any open file) anchors which
+   * project/tsconfig to search; omit to use the most-recently-initialized project. `#` mode.
+   */
+  getWorkspaceSymbols: (query: string, filePath?: string) => Promise<Result<LsSymbol[]>>;
 }
 
 // ---- AWS connection switcher ------------------------------------------------
@@ -910,6 +944,8 @@ export interface ForgeApi {
   gitUnstage: (rootPath: string, path: string) => Promise<Result<void>>;
   gitDiscard: (rootPath: string, path: string) => Promise<Result<void>>;
   gitStageAll: (rootPath: string) => Promise<Result<void>>;
+  gitUnstageAll: (rootPath: string) => Promise<Result<void>>;
+  gitDiscardAll: (rootPath: string) => Promise<Result<void>>;
   gitOriginal: (rootPath: string, path: string) => Promise<Result<string | null>>;
   gitStaged: (rootPath: string, path: string) => Promise<Result<string | null>>;
   gitBlame: (rootPath: string, path: string) => Promise<Result<BlameLine[]>>;

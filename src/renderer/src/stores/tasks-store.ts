@@ -23,10 +23,14 @@ function newId(): string {
 
 export interface TasksState {
   pm: string;
+  // A built-in task is "added" only when its id is present here. No entry means the task
+  // isn't shown or runnable — nothing is pre-populated by default; the user opts each one in.
   overrides: Partial<Record<TaskId, string>>;
   custom: CustomTask[];
   setPm: (pm: string) => void;
-  setOverride: (id: TaskId, command: string | null) => void;
+  setOverride: (id: TaskId, command: string) => void;
+  addBuiltin: (id: TaskId) => void;
+  removeBuiltin: (id: TaskId) => void;
   setOverrides: (overrides: Partial<Record<TaskId, string>>) => void;
   addCustom: () => void;
   updateCustom: (id: string, patch: Partial<Pick<CustomTask, 'label' | 'command'>>) => void;
@@ -39,11 +43,15 @@ export const useTasksStore = create<TasksState>((set) => ({
   overrides: {},
   custom: [],
   setPm: (pm) => set({ pm }),
-  setOverride: (id, command) =>
+  // Edit an already-added built-in. Empty is kept (not deleted) so the row stays put while
+  // the user is mid-edit; use removeBuiltin to take a task away.
+  setOverride: (id, command) => set((s) => ({ overrides: { ...s.overrides, [id]: command } })),
+  addBuiltin: (id) =>
+    set((s) => (id in s.overrides ? s : { overrides: { ...s.overrides, [id]: defaultCommand(s.pm, id) } })),
+  removeBuiltin: (id) =>
     set((s) => {
       const overrides = { ...s.overrides };
-      if (command === null || command === '') delete overrides[id];
-      else overrides[id] = command;
+      delete overrides[id];
       return { overrides };
     }),
   setOverrides: (overrides) => set({ overrides }),
@@ -73,23 +81,23 @@ export function defaultCommand(pm: string, id: TaskId): string {
   return `${pm} run ${id}`;
 }
 
-export function commandFor(pm: string, overrides: Partial<Record<TaskId, string>>, id: TaskId): string {
-  return overrides[id] ?? defaultCommand(pm, id);
-}
-
 export interface RunnableTask {
   key: string;
   label: string;
   command: string;
 }
 
-/** Built-in tasks + any custom tasks that have a command. */
+/** Built-in tasks the user has added (with a command) + any custom tasks that have a command. */
 export function runnableTasks(
-  pm: string,
+  _pm: string,
   overrides: Partial<Record<TaskId, string>>,
   custom: CustomTask[],
 ): RunnableTask[] {
-  const builtin = TASKS.map((t) => ({ key: t.id, label: t.label, command: commandFor(pm, overrides, t.id) }));
+  const builtin = TASKS.filter((t) => overrides[t.id]?.trim()).map((t) => ({
+    key: t.id,
+    label: t.label,
+    command: overrides[t.id] as string,
+  }));
   const extra = custom
     .filter((c) => c.command.trim())
     .map((c) => ({ key: c.id, label: c.label.trim() || 'Task', command: c.command }));

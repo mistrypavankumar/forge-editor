@@ -55,6 +55,10 @@ function handle(method: string, args: unknown[]): unknown {
       return languageManager.formatDocument(args[0] as string);
     case 'getSemanticTokens':
       return languageManager.getSemanticTokens(args[0] as string);
+    case 'getDocumentSymbols':
+      return languageManager.getDocumentSymbols(args[0] as string);
+    case 'getWorkspaceSymbols':
+      return languageManager.getWorkspaceSymbols(args[0] as string, args[1] as string | undefined);
     default:
       throw new Error(`Unknown language method: ${method}`);
   }

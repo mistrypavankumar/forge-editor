@@ -5,10 +5,15 @@ export function TaskConfig({ onClose }: { onClose: () => void }): React.JSX.Elem
   const pm = useTasksStore((s) => s.pm);
   const overrides = useTasksStore((s) => s.overrides);
   const setOverride = useTasksStore((s) => s.setOverride);
+  const addBuiltin = useTasksStore((s) => s.addBuiltin);
+  const removeBuiltin = useTasksStore((s) => s.removeBuiltin);
   const custom = useTasksStore((s) => s.custom);
   const addCustom = useTasksStore((s) => s.addCustom);
   const updateCustom = useTasksStore((s) => s.updateCustom);
   const removeCustom = useTasksStore((s) => s.removeCustom);
+
+  const addedBuiltins = TASKS.filter((t) => t.id in overrides);
+  const availableBuiltins = TASKS.filter((t) => !(t.id in overrides));
 
   return (
     <div
@@ -37,18 +42,28 @@ export function TaskConfig({ onClose }: { onClose: () => void }): React.JSX.Elem
         </div>
 
         <div className="flex flex-col gap-3 overflow-auto p-4">
-          {TASKS.map((t) => (
-            <label key={t.id} className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted">
-                {t.label}
-              </span>
+          {addedBuiltins.map((t) => (
+            <div key={t.id} className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted">
+                  {t.label}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`Remove ${t.label} task`}
+                  onClick={() => removeBuiltin(t.id)}
+                  className="flex h-5 w-5 items-center justify-center rounded text-faint hover:bg-surface-3 hover:text-danger"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
               <input
                 value={overrides[t.id] ?? ''}
                 placeholder={defaultCommand(pm, t.id)}
-                onChange={(e) => setOverride(t.id, e.target.value || null)}
+                onChange={(e) => setOverride(t.id, e.target.value)}
                 className="rounded-md border border-line bg-surface-2 px-2.5 py-1.5 font-mono text-[12px] text-fg outline-none focus:border-accent/60 placeholder:text-faint"
               />
-            </label>
+            </div>
           ))}
 
           {custom.length > 0 ? (
@@ -81,6 +96,22 @@ export function TaskConfig({ onClose }: { onClose: () => void }): React.JSX.Elem
             </div>
           ))}
 
+          {availableBuiltins.length > 0 ? (
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-faint">Add:</span>
+              {availableBuiltins.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => addBuiltin(t.id)}
+                  className="flex items-center gap-1 rounded-full border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-muted hover:border-accent/40 hover:text-fg"
+                >
+                  <Plus size={11} /> {t.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <button
             type="button"
             onClick={addCustom}
@@ -90,8 +121,8 @@ export function TaskConfig({ onClose }: { onClose: () => void }): React.JSX.Elem
           </button>
 
           <p className="text-[11px] text-faint">
-            Built-in commands fall back to the auto-detected default if left blank. Changes are saved
-            automatically.
+            Add the built-in tasks you want with the chips above; each is prefilled with the
+            auto-detected default and can be edited. Changes are saved automatically.
           </p>
         </div>
       </div>

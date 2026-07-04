@@ -90,4 +90,11 @@ export function registerLanguageIpc(ipcMain: IpcMain): void {
   ipcMain.handle(IpcChannels.langSemanticTokens, (_e, file: string) =>
     toResult(async () => (isJava(file) ? { data: [] } : languageClient.getSemanticTokens(file))),
   );
+  ipcMain.handle(IpcChannels.langDocSymbols, (_e, file: string) =>
+    // jdtls symbol support isn't wired up; only TS/JS files surface document symbols.
+    toResult(async () => (isJava(file) ? [] : languageClient.getDocumentSymbols(file))),
+  );
+  ipcMain.handle(IpcChannels.langWorkspaceSymbols, (_e, query: string, file?: string) =>
+    toResult(async () => (file && isJava(file) ? [] : languageClient.getWorkspaceSymbols(query, file))),
+  );
 }

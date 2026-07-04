@@ -34,6 +34,8 @@ import {
   scheduleInlineRun,
 } from '../editor/inline-run';
 import { useInlineRunStore } from '../stores/inline-run-store';
+import { useSearchStore } from '../stores/search-store';
+import { buildReplaceDecorations } from '../editor/replace-preview';
 import { setActiveEditor, getActiveEditor } from '../editor/active-editor';
 import { saveAllFiles } from '../lib/save-actions';
 import { useFormatterStore } from '../stores/formatter-store';
@@ -62,12 +64,23 @@ function severityName(level: number): MarkerSeverity {
   return 'info';
 }
 
+/**
+ * TS diagnostic codes that mean "declared but never used" — unused locals, parameters, imports,
+ * labels, destructured elements, and type parameters. These get faded (Unnecessary tag) rather
+ * than squiggled, matching the live Language Service path in language-bridge.ts.
+ */
+const UNUSED_TS_CODES = new Set([
+  'TS6133', 'TS6138', 'TS6192', 'TS6196', 'TS6198', 'TS6199', 'TS6205',
+]);
+
 export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const modelsRef = useRef<Map<string, editor.ITextModel>>(new Map());
   const decoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   const runDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+  // Inline find/replace preview: matched text struck through + the replacement as green ghost text.
+  const replaceDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   // Debugger gutter: breakpoint dots, and the highlight on the paused execution line.
   const bpDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   const dbgLineDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
@@ -95,6 +108,7 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
   const syncTick = useWorkspaceStore((s) => s.syncTick);
   const inlineRunEnabled = useInlineRunStore((s) => s.enabled);
   const inlineRunByPath = useInlineRunStore((s) => s.byPath);
+  const replacePreview = useSearchStore((s) => s.preview);
   const breakpoints = useDebugStore((s) => s.breakpoints);
   const bpVerified = useDebugStore((s) => s.verified);
   const pausedLocation = useDebugStore((s) => s.pausedLocation);
@@ -168,6 +182,8 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     decoRef.current = instance.createDecorationsCollection();
     // Separate collection for the live console.log output (kept apart from the git gutter).
     runDecoRef.current = instance.createDecorationsCollection();
+    // Collection for the inline find/replace preview (old→new decorations).
+    replaceDecoRef.current = instance.createDecorationsCollection();
     // Debugger gutter collections: breakpoint dots and the paused-line highlight.
     bpDecoRef.current = instance.createDecorationsCollection();
     dbgLineDecoRef.current = instance.createDecorationsCollection();
@@ -460,6 +476,22 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     collection.set(buildRunDecorations(getMonaco(), model, state));
   }, [inlineRunEnabled, inlineRunByPath, activePath]);
 
+  // Render the inline find/replace preview for the open file: matched text struck through with the
+  // replacement as green ghost text. Recomputes when the query/replacement changes, the file
+  // changes, or the buffer is edited (`tabs` rebuilds on each keystroke). Clears when no replace
+  // query is live (`replacePreview` null).
+  useEffect(() => {
+    const instance = editorRef.current;
+    const collection = replaceDecoRef.current;
+    if (!instance || !collection) return;
+    const model = instance.getModel();
+    if (!model || !replacePreview) {
+      collection.clear();
+      return;
+    }
+    collection.set(buildReplaceDecorations(getMonaco(), model, replacePreview));
+  }, [replacePreview, activePath, tabs]);
+
   // Kick off a run when the feature is switched on, or when switching to a runnable file.
   useEffect(() => {
     if (!inlineRunEnabled) return;
@@ -522,13 +554,20 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
       const fileDiags = byFile.get(rel) ?? [];
       const markers = fileDiags.map((d) => {
         const word = model.getWordAtPosition({ lineNumber: d.line, column: d.col });
+        const unused = UNUSED_TS_CODES.has(d.code);
         return {
-          severity: d.severity === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning,
+          // Unused code fades (Hint + Unnecessary tag) instead of showing an error/warning squiggle.
+          severity: unused
+            ? monaco.MarkerSeverity.Hint
+            : d.severity === 'error'
+              ? monaco.MarkerSeverity.Error
+              : monaco.MarkerSeverity.Warning,
           message: `${d.message} (${d.code})`,
           startLineNumber: d.line,
           startColumn: word ? word.startColumn : d.col,
           endLineNumber: d.line,
           endColumn: word ? word.endColumn : d.col + 1,
+          tags: unused ? [monaco.MarkerTag.Unnecessary] : undefined,
         };
       });
       monaco.editor.setModelMarkers(model, 'forge-tsc', markers);

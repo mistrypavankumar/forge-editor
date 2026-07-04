@@ -67,9 +67,21 @@ export function scheduleDiagnostics(monaco: typeof monacoNs, model: editor.IText
 }
 
 function toMarkerSeverity(monaco: typeof monacoNs, d: LsDiagnostic): monacoNs.MarkerSeverity {
+  // Unused code (TS6133 and friends) reads as a hint: Monaco fades the text via the Unnecessary
+  // tag and — at Hint severity — draws no colored squiggle, matching the standard "greyed-out
+  // unused symbol" look instead of an alarming red underline.
+  if (d.reportsUnnecessary) return monaco.MarkerSeverity.Hint;
   if (d.severity === 'error') return monaco.MarkerSeverity.Error;
   if (d.severity === 'warning') return monaco.MarkerSeverity.Warning;
   return monaco.MarkerSeverity.Info;
+}
+
+/** Map TS's unused/deprecated hints to Monaco marker tags (fade / strikethrough). */
+function toMarkerTags(monaco: typeof monacoNs, d: LsDiagnostic): monacoNs.MarkerTag[] | undefined {
+  const tags: monacoNs.MarkerTag[] = [];
+  if (d.reportsUnnecessary) tags.push(monaco.MarkerTag.Unnecessary);
+  if (d.reportsDeprecated) tags.push(monaco.MarkerTag.Deprecated);
+  return tags.length ? tags : undefined;
 }
 
 /** Fetch diagnostics for a model from the LS and apply them as inline squiggle markers. */
@@ -97,6 +109,7 @@ export async function refreshDiagnostics(
       startColumn: d.column,
       endLineNumber: d.endLine,
       endColumn: d.endColumn,
+      tags: toMarkerTags(monaco, d),
     })),
   );
 }
