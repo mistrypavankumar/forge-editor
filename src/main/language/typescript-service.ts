@@ -10,6 +10,7 @@ import type {
   LsRenameResult,
   LsSemanticTokens,
   LsSignatureHelp,
+  LsSymbol,
   LsTextEdit,
 } from '@shared/ipc-contract';
 import { Project, fileUnderRoot, toTsPath } from './project-service';
@@ -190,6 +191,10 @@ class LanguageServiceManager {
               : 'info',
         code: d.code,
         message: ts.flattenDiagnosticMessageText(d.messageText, '\n'),
+        // Preserve TS's own "unused" / "deprecated" hints so the editor can fade (rather than
+        // red-squiggle) unused code like TS6133 "declared but its value is never read".
+        reportsUnnecessary: d.reportsUnnecessary ? true : undefined,
+        reportsDeprecated: d.reportsDeprecated ? true : undefined,
       });
     }
     return out;
@@ -430,6 +435,61 @@ class LanguageServiceManager {
         newText: c.newText,
       };
     });
+  }
+
+  /**
+   * Flat list of the declarations in `file` (functions, classes, interfaces, methods, exported
+   * consts, …), walked from TS's navigation tree. Nested members carry their parent as
+   * `containerName`. The tree's synthetic root (the module itself) is skipped.
+   */
+  getDocumentSymbols(file: string): LsSymbol[] {
+    const project = this.projectFor(file);
+    const sf = project.getSourceFile(file);
+    if (!sf) return [];
+    const tree = project.getService().getNavigationTree(toTsPath(file));
+    if (!tree) return [];
+    const out: LsSymbol[] = [];
+    const walk = (node: ts.NavigationTree, container?: string): void => {
+      const span = node.spans[0];
+      if (span && node.text && node.text !== '<global>') {
+        const pos = sf.getLineAndCharacterOfPosition(span.start);
+        out.push({ name: node.text, kind: node.kind, containerName: container, file, line: pos.line + 1, column: pos.character + 1 });
+      }
+      node.childItems?.forEach((child) => walk(child, node.text));
+    };
+    // The root node represents the whole file; its children are the top-level declarations.
+    tree.childItems?.forEach((child) => walk(child, undefined));
+    return out;
+  }
+
+  /**
+   * Project-wide symbol search (TS "navigate to"), ranked by TS's own matcher. `file` anchors which
+   * project to query so a monorepo searches the right program; falls back to the last-initialized
+   * project. Empty query returns nothing (navigateTo needs at least one character).
+   */
+  getWorkspaceSymbols(query: string, file?: string): LsSymbol[] {
+    if (!query.trim()) return [];
+    const project = file
+      ? this.projectFor(file)
+      : this.lastRoot
+        ? this.projects.get(this.lastRoot)
+        : undefined;
+    if (!project) return [];
+    const items = project.getService().getNavigateToItems(query, 100, undefined, false);
+    const out: LsSymbol[] = [];
+    for (const item of items) {
+      const loc = this.spanToLocation(project, item.fileName, item.textSpan);
+      if (!loc) continue;
+      out.push({
+        name: item.name,
+        kind: item.kind,
+        containerName: item.containerName || undefined,
+        file: item.fileName,
+        line: loc.line,
+        column: loc.column,
+      });
+    }
+    return out;
   }
 }
 

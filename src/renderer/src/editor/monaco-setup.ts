@@ -156,6 +156,9 @@ const FORGE_DARK_COLORS: Record<string, string> = {
   'editor.selectionBackground': '#7C5CFF40',
   'editor.inactiveSelectionBackground': '#7C5CFF22',
   'editorCursor.foreground': '#8B73FF',
+  // Unused code (TS6133 etc.) is dimmed rather than squiggled. Monaco reads the alpha channel
+  // here as the render opacity — 0x8c ≈ 55%, so unused symbols visibly fade back.
+  'editorUnnecessaryCode.opacity': '#0000008c',
   // Sticky-scroll pins the enclosing scope, so it must opaquely cover the code beneath
   // it (no bleed-through). Use a near-opaque frosted tint with a soft accent border and
   // a gentle shadow instead of the default hard black edge.
@@ -184,6 +187,8 @@ const FORGE_LIGHT_COLORS: Record<string, string> = {
   'editor.lineHighlightBackground': '#0000000A',
   'editor.selectionBackground': '#6366f133',
   'editorCursor.foreground': '#6366f1',
+  // Unused code fade — light bg needs a touch more opacity (0x99 ≈ 60%) to stay legible.
+  'editorUnnecessaryCode.opacity': '#00000099',
   'editorStickyScroll.background': '#ffffffF2',
   'editorStickyScrollHover.background': '#eef1f6F2',
   'editorStickyScroll.border': '#d2d9e4aa',

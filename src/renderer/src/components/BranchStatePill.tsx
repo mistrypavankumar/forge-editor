@@ -82,6 +82,15 @@ export function BranchStatePill(): React.JSX.Element | null {
     return () => window.removeEventListener('keydown', onKey);
   }, [creating]);
 
+  // Dismiss the create-branch popover and clear its draft. Kept as one callback so every exit path
+  // (backdrop click, right-click, Escape) tears the (invisible, full-screen) backdrop down the same
+  // way — an orphaned backdrop swallows every click/right-click in the whole window. Declared before
+  // the early return below so the hook count stays constant across renders (Rules of Hooks).
+  const cancelCreate = useCallback(() => {
+    setCreating(null);
+    setNewName('');
+  }, []);
+
   if (!rootPath || !branch) return null;
 
   const afterBranchChange = (): void => {
@@ -112,14 +121,6 @@ export function BranchStatePill(): React.JSX.Element | null {
       else setError(res.error.split('\n')[0]);
     });
   };
-
-  // Dismiss the create-branch popover and clear its draft. Kept as one callback so every exit path
-  // (backdrop click, right-click, Escape) tears the (invisible, full-screen) backdrop down the same
-  // way — an orphaned backdrop swallows every click/right-click in the whole window.
-  const cancelCreate = useCallback(() => {
-    setCreating(null);
-    setNewName('');
-  }, []);
 
   // The header arrows always fetch first: that refreshes the remote-tracking ref so a push isn't
   // rejected for being silently behind, and so the rebase-pull replays onto up-to-date commits.

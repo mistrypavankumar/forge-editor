@@ -30,6 +30,8 @@ export const api: ForgeApi = {
   gitUnstage: (rootPath, path) => ipcRenderer.invoke(IpcChannels.gitUnstage, rootPath, path),
   gitDiscard: (rootPath, path) => ipcRenderer.invoke(IpcChannels.gitDiscard, rootPath, path),
   gitStageAll: (rootPath) => ipcRenderer.invoke(IpcChannels.gitStageAll, rootPath),
+  gitUnstageAll: (rootPath) => ipcRenderer.invoke(IpcChannels.gitUnstageAll, rootPath),
+  gitDiscardAll: (rootPath) => ipcRenderer.invoke(IpcChannels.gitDiscardAll, rootPath),
   gitOriginal: (rootPath, path) => ipcRenderer.invoke(IpcChannels.gitOriginal, rootPath, path),
   gitStaged: (rootPath, path) => ipcRenderer.invoke(IpcChannels.gitStaged, rootPath, path),
   gitBlame: (rootPath, path) => ipcRenderer.invoke(IpcChannels.gitBlame, rootPath, path),
@@ -150,6 +152,9 @@ export const api: ForgeApi = {
       ipcRenderer.invoke(IpcChannels.langRename, file, line, col, newName),
     formatDocument: (file) => ipcRenderer.invoke(IpcChannels.langFormat, file),
     getSemanticTokens: (file) => ipcRenderer.invoke(IpcChannels.langSemanticTokens, file),
+    getDocumentSymbols: (file) => ipcRenderer.invoke(IpcChannels.langDocSymbols, file),
+    getWorkspaceSymbols: (query, file) =>
+      ipcRenderer.invoke(IpcChannels.langWorkspaceSymbols, query, file),
   },
   debug: {
     start: (config, breakpoints) => ipcRenderer.invoke(IpcChannels.debugStart, config, breakpoints),

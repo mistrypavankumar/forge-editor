@@ -479,6 +479,20 @@ export function SourceControlPanel(): React.JSX.Element {
     void Promise.resolve(op).then(synced);
   };
 
+  const unstageAll = (): void => {
+    void window.forge.gitUnstageAll(root).then(refresh);
+  };
+
+  const discardAll = (): void => {
+    if (
+      !window.confirm(
+        `Discard all ${unstaged.length} changes? This reverts every modified file and deletes untracked files. This cannot be undone.`,
+      )
+    )
+      return;
+    void window.forge.gitDiscardAll(root).then(synced);
+  };
+
   const locked = isProtectedBranch(branch);
 
   // Ask the local `claude` CLI for a commit message describing the pending changes, and drop it
@@ -626,7 +640,21 @@ export function SourceControlPanel(): React.JSX.Element {
 
         {staged.length > 0 ? (
           <>
-            <GroupHeader title="Staged Changes" count={staged.length} />
+            <GroupHeader
+              title="Staged Changes"
+              count={staged.length}
+              actions={
+                <button
+                  type="button"
+                  aria-label="Unstage all changes"
+                  title="Unstage all changes"
+                  onClick={unstageAll}
+                  className="flex h-4 w-4 items-center justify-center rounded text-faint hover:text-fg"
+                >
+                  <Minus size={13} />
+                </button>
+              }
+            />
             {staged.map((c) => (
               <ChangeRow
                 key={`s-${c.path}`}
@@ -651,15 +679,26 @@ export function SourceControlPanel(): React.JSX.Element {
               title="Changes"
               count={unstaged.length}
               actions={
-                <button
-                  type="button"
-                  aria-label="Stage all changes"
-                  title="Stage all changes"
-                  onClick={() => void window.forge.gitStageAll(root).then(refresh)}
-                  className="flex h-4 w-4 items-center justify-center rounded text-faint hover:text-fg"
-                >
-                  <Plus size={13} />
-                </button>
+                <>
+                  <button
+                    type="button"
+                    aria-label="Discard all changes"
+                    title="Discard all changes"
+                    onClick={discardAll}
+                    className="flex h-4 w-4 items-center justify-center rounded text-faint hover:text-fg"
+                  >
+                    <Undo2 size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Stage all changes"
+                    title="Stage all changes"
+                    onClick={() => void window.forge.gitStageAll(root).then(refresh)}
+                    className="flex h-4 w-4 items-center justify-center rounded text-faint hover:text-fg"
+                  >
+                    <Plus size={13} />
+                  </button>
+                </>
               }
             />
             {unstaged.map((c) => (

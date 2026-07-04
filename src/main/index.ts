@@ -41,6 +41,8 @@ import {
   gitUnstage,
   gitDiscard,
   gitStageAll,
+  gitUnstageAll,
+  gitDiscardAll,
   getBranches,
   checkoutBranch,
   createBranch,
@@ -319,6 +321,12 @@ app.whenReady().then(async () => {
   );
   ipcMain.handle(IpcChannels.gitStageAll, (_e, rootPath: string) =>
     toResult(() => gitStageAll(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.gitUnstageAll, (_e, rootPath: string) =>
+    toResult(() => gitUnstageAll(rootPath)),
+  );
+  ipcMain.handle(IpcChannels.gitDiscardAll, (_e, rootPath: string) =>
+    toResult(() => gitDiscardAll(rootPath)),
   );
   ipcMain.handle(IpcChannels.gitOriginal, (_e, rootPath: string, path: string) =>
     toResult(() => getGitOriginalContent(rootPath, path)),

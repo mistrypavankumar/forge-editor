@@ -6,6 +6,7 @@ import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useNavigatorStore } from '../stores/navigator-store';
 import { useTerminalStore } from '../stores/terminal-store';
+import { usePaletteStore } from '../stores/palette-store';
 import { registerExec, unregisterExec } from '../lib/terminal-exec';
 
 // Single-quote a path for the shell so spaces/specials in the folder name survive
@@ -158,6 +159,16 @@ export function TerminalView({
       });
     };
 
+    // Cmd/Ctrl+click opens the "Go to File" palette seeded with the file name, so paths
+    // that don't resolve against the terminal's cwd — e.g. build errors reported relative
+    // to a monorepo sub-package — can still be found by fuzzy-searching the workspace.
+    const searchPathLink = (token: string): void => {
+      const lc = /:(\d+)(?::(\d+))?$/.exec(token);
+      const rel = lc ? token.slice(0, lc.index) : token;
+      const name = rel.slice(rel.lastIndexOf('/') + 1);
+      usePaletteStore.getState().openPalette('files', name);
+    };
+
     // Only treat a token as a file path when it's absolute, contains a `/`, or ends
     // in a file extension — so plain words, version strings (`v22.18.0`), and counts
     // don't become spurious links. A miss is harmless: the click no-ops if the path
@@ -184,7 +195,10 @@ export function TerminalView({
           links.push({
             text: full,
             range: { start: { x: startX, y }, end: { x: startX + full.length - 1, y } },
-            activate: () => openPathLink(full),
+            activate: (event: MouseEvent) => {
+              if (event.metaKey || event.ctrlKey) searchPathLink(full);
+              else openPathLink(full);
+            },
           });
         }
         callback(links.length > 0 ? links : undefined);

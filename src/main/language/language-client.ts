@@ -9,6 +9,7 @@ import type {
   LsRenameResult,
   LsSemanticTokens,
   LsSignatureHelp,
+  LsSymbol,
   LsTextEdit,
 } from '@shared/ipc-contract';
 
@@ -96,4 +97,7 @@ export const languageClient = {
     call<LsRenameResult>('renameSymbol', [file, line, col, newName]),
   formatDocument: (file: string) => call<LsTextEdit[]>('formatDocument', [file]),
   getSemanticTokens: (file: string) => call<LsSemanticTokens>('getSemanticTokens', [file]),
+  getDocumentSymbols: (file: string) => call<LsSymbol[]>('getDocumentSymbols', [file]),
+  getWorkspaceSymbols: (query: string, file?: string) =>
+    call<LsSymbol[]>('getWorkspaceSymbols', [query, file]),
 };
