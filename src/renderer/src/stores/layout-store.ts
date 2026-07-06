@@ -11,6 +11,8 @@ export type ActivityId =
   | 'settings';
 export type BottomTab = 'terminal' | 'problems' | 'output' | 'tests' | 'debug';
 export type SidebarSide = 'left' | 'right';
+/** Which view the right (assistant) panel shows: conversational Chat or the AI Agent workspace. */
+export type RightMode = 'chat' | 'agent';
 
 export interface LayoutState {
   sidebarVisible: boolean;
@@ -19,6 +21,8 @@ export interface LayoutState {
   sidebarSide: SidebarSide;
   activity: ActivityId;
   bottomTab: BottomTab;
+  /** Right-panel view mode (Chat vs Agent). */
+  rightMode: RightMode;
   settingsOpen: boolean;
   featuresOpen: boolean;
   /** Folder names excluded from global file search (quick open), on top of .gitignore. */
@@ -32,6 +36,7 @@ export interface LayoutState {
   setSidebarSide: (side: SidebarSide) => void;
   setActivity: (id: ActivityId) => void;
   setBottomTab: (tab: BottomTab) => void;
+  setRightMode: (mode: RightMode) => void;
   setSettingsOpen: (open: boolean) => void;
   setFeaturesOpen: (open: boolean) => void;
   setSearchExclude: (folders: string[]) => void;
@@ -68,6 +73,7 @@ export const useLayoutStore = create<LayoutState>((set) => ({
   sidebarSide: 'left',
   activity: 'explorer',
   bottomTab: 'terminal',
+  rightMode: 'chat',
   settingsOpen: false,
   featuresOpen: false,
   searchExclude: DEFAULT_SEARCH_EXCLUDE,
@@ -78,6 +84,7 @@ export const useLayoutStore = create<LayoutState>((set) => ({
   setSidebarSide: (side) => set({ sidebarSide: side }),
   setActivity: (id) => set({ activity: id }),
   setBottomTab: (tab) => set({ bottomTab: tab }),
+  setRightMode: (mode) => set({ rightMode: mode }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   setFeaturesOpen: (open) => set({ featuresOpen: open }),
   setSearchExclude: (folders) => set({ searchExclude: folders }),

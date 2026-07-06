@@ -60,6 +60,19 @@ export function openApiExplorer(): void {
   });
 }
 
+/** Synthetic path backing the single Codebase Map tab. */
+export const CODEMAP_PATH = 'codemap://graph';
+
+/** Open (or focus) the Codebase Map (dependency graph) as an editor tab. */
+export function openCodebaseMap(): void {
+  useEditorStore.getState().openFile({
+    path: CODEMAP_PATH,
+    name: 'Codebase Map',
+    content: '',
+    kind: 'codemap',
+  });
+}
+
 /** Open a read-only side-by-side diff of the staged (index) version against HEAD. */
 export async function openGitStagedDiff(rootPath: string, relPath: string): Promise<void> {
   const filePath = `${rootPath}/${relPath}`;

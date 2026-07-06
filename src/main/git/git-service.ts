@@ -753,6 +753,89 @@ export async function getGitLog(rootPath: string, limit = 50): Promise<GitCommit
   }
 }
 
+/** A commit hash prefix: 4–40 hex chars, the range git accepts for abbreviated lookups. */
+const HASH_PREFIX = /^[0-9a-f]{4,40}$/i;
+
+/**
+ * Search the whole repo's history (every branch, any author) for commits matching `query` — by
+ * commit message, author name/email, or hash prefix. Unlike {@link getGitLog}, this is not scoped
+ * to the current user's refs, so it can surface an old or teammate's commit by hash like `fb2a1ea`.
+ *
+ * git can't OR `--grep` with `--author` in one pass, so we run one query per facet and merge:
+ * message matches (`--grep`), author matches (`--author`), and a direct hash lookup. Results are
+ * deduped by hash and returned newest-first (by committer date).
+ */
+export async function searchGitLog(
+  rootPath: string,
+  query: string,
+  limit = 100,
+): Promise<GitCommit[]> {
+  const q = query.trim();
+  if (!q) return [];
+  try {
+    const remotes = new Set(
+      (await runGit(rootPath, ['remote'])).split('\n').map((r) => r.trim()).filter(Boolean),
+    );
+    // %ct (committer timestamp) is appended only for sorting the merged set; it's stripped below.
+    const fmt = '%h%x00%an%x00%ad%x00%s%x00%D%x00%p%x00%ct';
+    const base = [
+      'log', '--all', '-i', `-n${limit}`, '--date=relative', '--decorate=short',
+      `--pretty=format:${fmt}`,
+    ];
+
+    // Each facet is best-effort: a bad pattern or an unresolvable hash just contributes nothing.
+    const runFacet = async (extra: string[]): Promise<string> => {
+      try {
+        return await runGit(rootPath, [...base, ...extra]);
+      } catch {
+        return '';
+      }
+    };
+
+    const outputs = await Promise.all([
+      runFacet([`--grep=${q}`]),
+      runFacet([`--author=${q}`]),
+      // Direct hash lookup: resolve a prefix to a commit, then log just that one.
+      HASH_PREFIX.test(q)
+        ? (async () => {
+            try {
+              const full = (await runGit(rootPath, ['rev-parse', '--verify', '--quiet', `${q}^{commit}`])).trim();
+              if (!full) return '';
+              return await runGit(rootPath, ['log', '-n1', '--date=relative', '--decorate=short', `--pretty=format:${fmt}`, full]);
+            } catch {
+              return '';
+            }
+          })()
+        : Promise.resolve(''),
+    ]);
+
+    const byHash = new Map<string, { commit: GitCommit; ts: number }>();
+    for (const stdout of outputs) {
+      for (const line of stdout.split('\n').filter(Boolean)) {
+        const [hash, author, date, subject, decoration, parents, ct] = line.split(FIELD_SEP);
+        if (!hash || byHash.has(hash)) continue;
+        byHash.set(hash, {
+          ts: Number(ct) || 0,
+          commit: {
+            hash,
+            author,
+            date,
+            subject: subject ?? '',
+            refs: parseRefs(decoration ?? '', remotes),
+            parents: (parents ?? '').trim().split(' ').filter(Boolean),
+          },
+        });
+      }
+    }
+    return [...byHash.values()]
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, limit)
+      .map((e) => e.commit);
+  } catch {
+    return [];
+  }
+}
+
 /**
  * A cheap signature of every ref tip (HEAD + local branches + remotes), so the renderer can tell
  * when history actually moved (commit/rebase/checkout/pull/fetch/reset) and refresh the graph only
@@ -882,14 +965,15 @@ export async function listProjectFiles(rootPath: string): Promise<string[] | nul
 
 const BLAME_HEADER = /^([0-9a-f]{40}) \d+ (\d+)(?: \d+)?$/;
 
-/** Parse `git blame --porcelain` output into per-line author/time (1-based index). */
+/** Parse `git blame --porcelain` output into per-line author/time/commit (1-based index). */
 function parseBlame(stdout: string): BlameLine[] {
-  const commits = new Map<string, { author: string; time: number }>();
+  const commits = new Map<string, { author: string; time: number; summary: string }>();
   const result: BlameLine[] = [];
   let sha = '';
   let finalLine = 0;
   let author: string | undefined;
   let time: number | undefined;
+  let summary: string | undefined;
 
   for (const line of stdout.split('\n')) {
     const header = BLAME_HEADER.exec(line);
@@ -898,20 +982,23 @@ function parseBlame(stdout: string): BlameLine[] {
       finalLine = Number(header[2]);
       author = undefined;
       time = undefined;
+      summary = undefined;
     } else if (line.startsWith('author ')) {
       author = line.slice('author '.length);
     } else if (line.startsWith('author-time ')) {
       time = Number(line.slice('author-time '.length));
+    } else if (line.startsWith('summary ')) {
+      summary = line.slice('summary '.length);
     } else if (line.startsWith('\t')) {
       // The content line closes a group; commit info is cached per sha (repeats omit it).
       let info = commits.get(sha);
       if (!info) {
-        info = { author: author ?? 'Unknown', time: time ?? 0 };
+        info = { author: author ?? 'Unknown', time: time ?? 0, summary: summary ?? '' };
         commits.set(sha, info);
       }
       result[finalLine - 1] = /^0{40}$/.test(sha)
-        ? { author: 'You', time: null }
-        : { author: info.author, time: info.time };
+        ? { author: 'You', time: null, sha: null, summary: '' }
+        : { author: info.author, time: info.time, sha: sha.slice(0, 8), summary: info.summary };
     }
   }
   return result;

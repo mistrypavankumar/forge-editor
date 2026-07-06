@@ -1,6 +1,7 @@
 import type * as monacoNs from 'monaco-editor';
 import type { editor } from 'monaco-editor';
 import type { LsDiagnostic } from '@shared/ipc-contract';
+import { refreshGraphqlDiagnostics, GRAPHQL_MARKER_OWNER } from './graphql-diagnostics';
 
 /** Marker owner for inline diagnostics from the main-process language backends (TS LS + jdtls). */
 const TS_MARKER_OWNER = 'forge-ts';
@@ -92,8 +93,12 @@ export async function refreshDiagnostics(
   if (model.isDisposed() || !isTsModel(model)) return;
   if (model.getValueLength() > LARGE_FILE_CHARS) {
     monaco.editor.setModelMarkers(model, TS_MARKER_OWNER, []);
+    monaco.editor.setModelMarkers(model, GRAPHQL_MARKER_OWNER, []);
     return;
   }
+  // Validate embedded `gql` templates in the renderer (the TS LS ignores template contents). Cheap
+  // and synchronous, so run it before the awaited LS round-trip for snappy squiggles.
+  refreshGraphqlDiagnostics(monaco, model);
   const res = await window.forge.editorLanguage.getDiagnostics(model.uri.path);
   if (!res.ok || model.isDisposed()) return;
   // The TS LS reports numeric error codes (shown as "TS2345"); jdtls codes aren't TS, so

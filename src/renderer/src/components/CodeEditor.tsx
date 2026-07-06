@@ -41,8 +41,8 @@ import { saveAllFiles } from '../lib/save-actions';
 import { useFormatterStore } from '../stores/formatter-store';
 import type { FormatterId } from '../lib/detect-formatters';
 import { FormatterPicker } from './FormatterPicker';
-import { relativeTime } from '../lib/relative-time';
 import type { BlameLine } from '@shared/ipc-contract';
+import { buildBlameDecoration } from '../editor/blame-inline';
 import { useEditorStore } from '../stores/editor-store';
 import { useThemeStore } from '../stores/theme-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
@@ -52,11 +52,6 @@ import {
   type MarkerInfo,
   type MarkerSeverity,
 } from '../stores/workbench-status-store';
-
-function formatBlame(b: BlameLine | undefined): string | null {
-  if (!b) return null;
-  return b.time == null ? `${b.author} (uncommitted)` : `${b.author} (${relativeTime(b.time)})`;
-}
 
 function severityName(level: number): MarkerSeverity {
   if (level >= 8) return 'error';
@@ -84,6 +79,8 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
   // Debugger gutter: breakpoint dots, and the highlight on the paused execution line.
   const bpDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   const dbgLineDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+  // Inline git blame: the "author, N ago" annotation on the cursor's current line.
+  const blameDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   const peekRef = useRef<DiffPeek | null>(null);
   const hunksRef = useRef<DiffHunk[]>([]);
   const blameRef = useRef<BlameLine[]>([]);
@@ -134,6 +131,17 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     setChangeCount(hunks.length);
     collection.set(hunks.map((h) => hunkToDecoration(h, monaco)));
     if (hunks.length === 0) peekRef.current?.close();
+  }, []);
+
+  // Show who last changed the cursor's current line, as a dim annotation at the end of that line.
+  // Recomputed on cursor move and after blame is (re)fetched; blame data lives in blameRef.
+  const refreshBlame = useCallback(() => {
+    const instance = editorRef.current;
+    const collection = blameDecoRef.current;
+    const model = instance?.getModel();
+    if (!instance || !collection || !model) return;
+    const line = instance.getPosition()?.lineNumber ?? 1;
+    collection.set(buildBlameDecoration(getMonaco(), model, line, blameRef.current[line - 1]));
   }, []);
 
   useEffect(() => {
@@ -187,6 +195,8 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     // Debugger gutter collections: breakpoint dots and the paused-line highlight.
     bpDecoRef.current = instance.createDecorationsCollection();
     dbgLineDecoRef.current = instance.createDecorationsCollection();
+    // Inline git-blame annotation on the cursor's line.
+    blameDecoRef.current = instance.createDecorationsCollection();
     // Publish this editor's live hunks so the global next/prev-change commands can navigate it.
     registerHunkSource(instance, () => hunksRef.current);
     peekRef.current = new DiffPeek(instance, monaco, {
@@ -245,6 +255,20 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
       contextMenuGroupId: '1_modification',
       contextMenuOrder: 1.4,
       run: () => useFormatterStore.getState().setPickerOpen(true),
+    });
+
+    // "Generate Skeleton" — only meaningful for React files; run() shows a friendly message
+    // in the preview modal for anything else, so we can offer it whenever there's a model.
+    instance.addAction({
+      id: 'forge.generateSkeleton',
+      label: 'Generate Skeleton',
+      contextMenuGroupId: '1_modification',
+      contextMenuOrder: 1.5,
+      run: () => {
+        const uri = instance.getModel()?.uri.path ?? '';
+        if (!/\.(tsx|jsx)$/i.test(uri)) return;
+        void commandRegistry.run('forge.generateSkeleton');
+      },
     });
 
     disposables.push(
@@ -311,7 +335,7 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     disposables.push(
       instance.onDidChangeCursorPosition((e) => {
         status.setCursor(e.position.lineNumber, e.position.column);
-        status.setBlame(formatBlame(blameRef.current[e.position.lineNumber - 1]));
+        refreshBlame();
       }),
     );
 
@@ -393,26 +417,27 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     };
   }, [activePath, rootPath, syncTick, recomputeDiff]);
 
-  // Fetch per-line git blame for the active file; show the cursor line's blame
-  // in the status bar. Refetched on workspace sync (after saves/commits).
+  // Fetch per-line git blame for the active file; annotate the cursor's line inline with who last
+  // changed it. Refetched on workspace sync (after saves/commits).
   useEffect(() => {
-    const setBlame = useWorkbenchStatusStore.getState().setBlame;
     if (!activePath || !rootPath || !activePath.startsWith('/')) {
       blameRef.current = [];
-      setBlame(null);
+      refreshBlame();
       return;
     }
     let cancelled = false;
+    // Drop the previous file's blame right away so it can't flash on the newly-opened one.
+    blameRef.current = [];
+    refreshBlame();
     void window.forge.gitBlame(rootPath, activePath).then((res) => {
       if (cancelled) return;
       blameRef.current = res.ok ? res.data : [];
-      const line = editorRef.current?.getPosition()?.lineNumber ?? 1;
-      setBlame(formatBlame(blameRef.current[line - 1]));
+      refreshBlame();
     });
     return () => {
       cancelled = true;
     };
-  }, [activePath, rootPath, syncTick]);
+  }, [activePath, rootPath, syncTick, refreshBlame]);
 
   // Reload non-dirty open buffers when the workspace changes on disk (external
   // edits, discard, checkout). Dirty buffers are left alone to protect unsaved work.

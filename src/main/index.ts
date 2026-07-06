@@ -5,6 +5,8 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import {
   IpcChannels,
   pongOf,
+  type AgentCompleteArgs,
+  type AgentRunCommandArgs,
   type AssistantSendArgs,
   type CompletionArgs,
   type ForgeSettings,
@@ -12,6 +14,7 @@ import {
   type SearchOptions,
   type TerminalCreateArgs,
 } from '@shared/ipc-contract';
+import type { GenerateSkeletonInput } from '@shared/skeleton';
 import { ok, toResult } from '@shared/result';
 import {
   copyEntry,
@@ -52,6 +55,7 @@ import {
   gitFetch,
   getAheadBehind,
   getGitLog,
+  searchGitLog,
   getGitRefsSig,
   getCommitFiles,
   getCommitDetail,
@@ -64,6 +68,14 @@ import {
 } from './git/git-service';
 import { generateCommitMessage } from './ai/commit-message-service';
 import { startAssistant, cancelAssistant } from './ai/assistant-service';
+import { runAgentCompletion, cancelAgent } from './ai/agent-service';
+import { runAgentCommand, cancelAgentCommand } from './agent/command-exec';
+import { buildCodeMap } from './codemap/codemap-service';
+import {
+  detectSkeletonComponents,
+  runGenerateSkeleton,
+  runGenerateSkeletonAi,
+} from './skeleton/skeleton-service';
 import { startCompletion, cancelCompletion } from './ai/completion-service';
 import { resolveAi, resolveCompletionAi } from './ai/ai-config';
 import { aiKeyStatus, setAiKey } from './ai/ai-credentials';
@@ -358,6 +370,11 @@ app.whenReady().then(async () => {
   ipcMain.handle(IpcChannels.gitLog, (_e, rootPath: string, limit?: number) =>
     toResult(() => getGitLog(rootPath, limit)),
   );
+  ipcMain.handle(
+    IpcChannels.gitSearchLog,
+    (_e, rootPath: string, query: string, limit?: number) =>
+      toResult(() => searchGitLog(rootPath, query, limit)),
+  );
   ipcMain.handle(IpcChannels.gitRefsSig, (_e, rootPath: string) =>
     toResult(() => getGitRefsSig(rootPath)),
   );
@@ -408,6 +425,32 @@ app.whenReady().then(async () => {
     }),
   );
   ipcMain.on(IpcChannels.assistantCancel, (_e, id: string) => cancelAssistant(id));
+  ipcMain.handle(IpcChannels.agentComplete, (_e, args: AgentCompleteArgs) =>
+    toResult(async () => {
+      const cfg = await resolveAi(SETTINGS_PATH, AI_CREDENTIALS_PATH);
+      return runAgentCompletion(cfg, args);
+    }),
+  );
+  ipcMain.on(IpcChannels.agentCancel, (_e, id: string) => cancelAgent(id));
+  ipcMain.handle(IpcChannels.agentRunCommand, (_e, args: AgentRunCommandArgs) =>
+    toResult(() => runAgentCommand(args)),
+  );
+  ipcMain.on(IpcChannels.agentCancelCommand, (_e, id: string) => cancelAgentCommand(id));
+  ipcMain.handle(IpcChannels.codemapBuild, (_e, rootPath: string, force?: boolean) =>
+    toResult(() => buildCodeMap(rootPath, SETTINGS_PATH, force)),
+  );
+  ipcMain.handle(IpcChannels.skeletonDetect, (_e, filePath: string, code: string) =>
+    toResult(async () => detectSkeletonComponents(filePath, code)),
+  );
+  ipcMain.handle(IpcChannels.skeletonGenerate, (_e, input: GenerateSkeletonInput) =>
+    toResult(async () => runGenerateSkeleton(input)),
+  );
+  ipcMain.handle(IpcChannels.skeletonGenerateAi, (_e, input: GenerateSkeletonInput) =>
+    toResult(async () => {
+      const cfg = await resolveAi(SETTINGS_PATH, AI_CREDENTIALS_PATH);
+      return runGenerateSkeletonAi(cfg, input);
+    }),
+  );
   ipcMain.handle(IpcChannels.aiCompletion, (_e, args: CompletionArgs) =>
     toResult(async () => {
       const cfg = await resolveCompletionAi(SETTINGS_PATH, AI_CREDENTIALS_PATH);

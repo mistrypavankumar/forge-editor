@@ -1,4 +1,9 @@
 import type { Result } from './result';
+import type {
+  GenerateSkeletonInput,
+  GenerateSkeletonResult,
+  SkeletonComponentInfo,
+} from './skeleton';
 
 export const IpcChannels = {
   ping: 'forge:ping',
@@ -31,6 +36,7 @@ export const IpcChannels = {
   gitFetch: 'forge:git:fetch',
   gitAheadBehind: 'forge:git:aheadBehind',
   gitLog: 'forge:git:log',
+  gitSearchLog: 'forge:git:searchLog',
   gitRefsSig: 'forge:git:refsSig',
   gitCommitFiles: 'forge:git:commitFiles',
   gitCommitDetail: 'forge:git:commitDetail',
@@ -138,6 +144,18 @@ export const IpcChannels = {
   debugState: 'forge:debug:state',
   debugStopped: 'forge:debug:stopped',
   debugOutput: 'forge:debug:output',
+  // AI Agent Workspace Mode: a one-shot "brain" completion (plan / edit) plus a captured-output
+  // command runner. The agent drives tools itself in the renderer; the model only returns text.
+  agentComplete: 'forge:agent:complete',
+  agentCancel: 'forge:agent:cancel',
+  agentRunCommand: 'forge:agent:runCommand',
+  agentCancelCommand: 'forge:agent:cancelCommand',
+  // Codebase Map: static dependency-graph analysis (runs in main, off the render thread).
+  codemapBuild: 'forge:codemap:build',
+  // Generate Skeleton: React component analysis + loading-skeleton generation (runs in main).
+  skeletonDetect: 'forge:skeleton:detect',
+  skeletonGenerate: 'forge:skeleton:generate',
+  skeletonGenerateAi: 'forge:skeleton:generateAi',
 } as const;
 
 export interface DirEntry {
@@ -309,6 +327,10 @@ export interface BlameLine {
   author: string;
   /** Author commit time in epoch seconds, or null for uncommitted local changes. */
   time: number | null;
+  /** Abbreviated commit hash, or null for uncommitted local changes. */
+  sha: string | null;
+  /** Commit subject (first line of the message); empty for uncommitted changes. */
+  summary: string;
 }
 
 export interface SearchMatch {
@@ -656,6 +678,143 @@ export interface CompletionArgs {
   suffix: string;
 }
 
+// ---- AI Agent Workspace Mode -----------------------------------------------
+
+/** Which structured artifact the agent's brain is asked to produce (selects the system prompt). */
+export type AgentPhase = 'plan' | 'edit';
+
+/**
+ * A one-shot agent completion. Unlike the streaming assistant, this resolves with the model's full
+ * reply text (the renderer parses it as JSON). The persona + output contract for each `phase` live
+ * in the main process (see `agent-service.ts`), keeping provider/prompt logic out of the UI.
+ */
+export interface AgentCompleteArgs {
+  /** Correlates with an {@link ForgeApi.agentCancel} call so an in-flight request can be aborted. */
+  id: string;
+  phase: AgentPhase;
+  /** The task plus any workspace context the renderer assembled (file tree, open files, plan). */
+  question: string;
+  /** Bulky read-only grounding (full file contents), kept separate from `question`. */
+  context?: string;
+}
+
+/** A shell command the agent runs to gather a check result (typecheck / lint / test / build). */
+export interface AgentRunCommandArgs {
+  /** Correlates with an {@link ForgeApi.agentCancelCommand} call. */
+  id: string;
+  /** The command line, executed through the user's login shell. */
+  command: string;
+  /** Working directory (normally the workspace root). */
+  cwd: string;
+  /** Hard timeout in ms before the command is killed (default 120000). */
+  timeoutMs?: number;
+}
+
+/** Captured outcome of an {@link AgentRunCommandArgs} run, fed back to the agent as context. */
+export interface AgentCommandResult {
+  command: string;
+  /** Process exit code; null when killed by a signal or the timeout. */
+  exitCode: number | null;
+  /** Captured stdout (tail-trimmed if very large). */
+  stdout: string;
+  /** Captured stderr (tail-trimmed if very large). */
+  stderr: string;
+  /** Wall-clock duration in ms. */
+  durationMs: number;
+  /** True when the run was terminated for exceeding `timeoutMs`. */
+  timedOut: boolean;
+}
+
+// ---- Codebase Map / Dependency Graph ---------------------------------------
+
+/** What a source file primarily is, for grouping/colouring in the map. */
+export type CodeNodeKind =
+  | 'component'
+  | 'hook'
+  | 'module'
+  | 'next-page'
+  | 'next-layout'
+  | 'next-route'
+  | 'next-special'
+  | 'graphql'
+  | 'test'
+  | 'style'
+  | 'config'
+  | 'other';
+
+export type RiskLevel = 'low' | 'medium' | 'high';
+
+export type GqlOpType = 'query' | 'mutation' | 'subscription' | 'fragment';
+
+/** A GraphQL operation or fragment found in a `.graphql` file or a `gql`/`graphql` template. */
+export interface GqlOperation {
+  name: string;
+  type: GqlOpType;
+}
+
+/** One file in the dependency graph. Edges are stored as `dependsOn` / `usedBy` (workspace-relative). */
+export interface CodeNode {
+  /** Absolute path. */
+  path: string;
+  /** Workspace-relative path (stable id used by edges). */
+  rel: string;
+  /** Basename. */
+  name: string;
+  kind: CodeNodeKind;
+  /** Exported symbol names (`default` for a default export). */
+  exports: string[];
+  /** Detected React component names. */
+  components: string[];
+  /** Detected hook names (use…). */
+  hooks: string[];
+  /** GraphQL operations/fragments defined in this file. */
+  gqlOps: GqlOperation[];
+  /** Next.js route path this file serves, when it's a route/page/layout. */
+  route?: string;
+  /** Internal files this file imports (relative paths). */
+  dependsOn: string[];
+  /** Internal files that import this file (relative paths). */
+  usedBy: string[];
+  /** Bare npm package specifiers imported (deduped). */
+  externalDeps: string[];
+  /**
+   * Exported names never imported by name anywhere — a conservative "possibly unused exports"
+   * signal. Empty when name-level usage couldn't be tracked (namespace / star re-exports).
+   */
+  unusedExports: string[];
+  /** Line count. */
+  loc: number;
+  risk: RiskLevel;
+  /** Human-readable reasons behind `risk`. */
+  riskReasons: string[];
+  /** True when nothing imports this file and it isn't an entrypoint (page/route/test/config/index). */
+  unused: boolean;
+}
+
+export interface CodeMapStats {
+  files: number;
+  edges: number;
+  components: number;
+  gqlOps: number;
+  cycles: number;
+  unused: number;
+}
+
+/** The full dependency graph of the workspace's source files. */
+export interface CodeMap {
+  root: string;
+  nodes: CodeNode[];
+  /** Circular-dependency groups (each a list of relative paths forming the cycle). */
+  cycles: string[][];
+  stats: CodeMapStats;
+  /** epoch ms the map was produced. */
+  generatedAt: number;
+  /** True when the scan was capped (very large repo). */
+  truncated: boolean;
+  /** Wall-clock build time in ms. */
+  durationMs: number;
+}
+
 /** The AI backend used by the assistant + commit-message features. `claude-cli` needs no API key. */
 export type AiProvider = 'claude-cli' | 'anthropic' | 'openai';
 
@@ -961,6 +1120,15 @@ export interface ForgeApi {
   gitAheadBehind: (rootPath: string) => Promise<Result<GitAheadBehind>>;
   gitLog: (rootPath: string, limit?: number) => Promise<Result<GitCommit[]>>;
   /**
+   * Search the entire repo's history (all branches) for commits whose message, author, or
+   * hash matches `query`. Returns newest-first, deduped, capped at `limit` (default 100).
+   */
+  gitSearchLog: (
+    rootPath: string,
+    query: string,
+    limit?: number,
+  ) => Promise<Result<GitCommit[]>>;
+  /**
    * A cheap signature of all ref tips (HEAD + branches + remotes). Changes whenever history moves
    * — commit, rebase, checkout, pull, fetch, reset — so the renderer can re-fetch the commit log
    * only when it actually changed, instead of on every status poll.
@@ -1015,6 +1183,45 @@ export interface ForgeApi {
   requestCompletion: (args: CompletionArgs) => Promise<Result<string>>;
   /** Abort the in-flight completion with this id (e.g. when the user keeps typing). */
   cancelCompletion: (id: string) => void;
+  /**
+   * Run a single agent-brain completion (plan or edit phase). Resolves with the model's full reply
+   * text for the renderer to parse. Uses the configured AI provider; cancel with
+   * {@link ForgeApi.agentCancel}. Errors (or a cancel) surface as `Result` failures.
+   */
+  agentComplete: (args: AgentCompleteArgs) => Promise<Result<string>>;
+  /** Cancel an in-flight {@link ForgeApi.agentComplete} by id (kills the underlying process/stream). */
+  agentCancel: (id: string) => void;
+  /**
+   * Run a shell command in the workspace and capture its stdout/stderr/exit for the agent to read.
+   * Runs through a login shell (full PATH) with the active AWS profile injected. Cancel with
+   * {@link ForgeApi.agentCancelCommand}.
+   */
+  agentRunCommand: (args: AgentRunCommandArgs) => Promise<Result<AgentCommandResult>>;
+  /** Kill an in-flight {@link ForgeApi.agentRunCommand} by id. */
+  agentCancelCommand: (id: string) => void;
+  /**
+   * Build (or return a cached) dependency graph of the workspace's source files: imports/exports,
+   * React components, hooks, GraphQL operations, Next.js routes, circular deps, unused files, and a
+   * per-file risk level. Runs in the main process; incremental (only changed files are re-parsed).
+   * Pass `force` to bypass the cache after edits.
+   */
+  codemapBuild: (rootPath: string, force?: boolean) => Promise<Result<CodeMap>>;
+  /**
+   * List the React components declared in a file (name + default-export flag + line). Used to drive
+   * the "which component?" picker for Generate Skeleton. Syntactic parse in the main process.
+   */
+  skeletonDetect: (filePath: string, code: string) => Promise<Result<SkeletonComponentInfo[]>>;
+  /**
+   * Generate a loading skeleton for a component. Static-analysis mode (MVP): parses the file, picks
+   * the target component, and returns matching skeleton TSX plus imports/warnings for the preview.
+   */
+  skeletonGenerate: (input: GenerateSkeletonInput) => Promise<Result<GenerateSkeletonResult>>;
+  /**
+   * Generate a loading skeleton using the configured AI model ("Improve with AI"). Unlike static
+   * analysis, this infers the structure of composed/props-driven children (stat cards, data tables)
+   * instead of collapsing them to a single block. Network-bound; still preview-first in the UI.
+   */
+  skeletonGenerateAi: (input: GenerateSkeletonInput) => Promise<Result<GenerateSkeletonResult>>;
   /** Which AI providers currently have an API key saved (the key itself is never returned). */
   aiKeyStatus: () => Promise<Result<AiKeyStatus>>;
   /** Save (or clear, with an empty string) an API provider's key in the credentials file. */

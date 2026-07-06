@@ -11,8 +11,11 @@ export interface OpenFile {
   filePath?: string;
   /** When set, the tab renders as a side-by-side diff: `original` (left) vs `content` (right). */
   original?: string;
-  /** Tab kind. Defaults to a normal file; `api-explorer` renders the API Explorer in the tab. */
-  kind?: 'file' | 'api-explorer';
+  /**
+   * Tab kind. Defaults to a normal file; `api-explorer` renders the API Explorer, `codemap` renders
+   * the Codebase Map dependency graph.
+   */
+  kind?: 'file' | 'api-explorer' | 'codemap';
 }
 
 /**
@@ -60,7 +63,7 @@ export interface EditorState {
     readOnly?: boolean;
     filePath?: string;
     original?: string;
-    kind?: 'file' | 'api-explorer';
+    kind?: 'file' | 'api-explorer' | 'codemap';
   }) => void;
   closeFile: (path: string, groupId?: string) => void;
   setActive: (path: string, groupId?: string) => void;

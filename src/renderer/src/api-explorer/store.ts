@@ -18,6 +18,11 @@ import { DEFAULT_QUERY, DEFAULT_ENDPOINT, DEFAULT_VARIABLES } from './templates'
 
 const MAX_HISTORY = 50;
 
+/** Left-sidebar tab. */
+export type SidebarTab = 'collections' | 'history' | 'schema';
+/** Request-section tab. */
+export type RequestTab = 'params' | 'auth' | 'headers' | 'body';
+
 const DEFAULT_AUTH: AuthConfig = { type: 'none', apiKeyIn: 'header' };
 
 let seq = 0;
@@ -105,6 +110,10 @@ export interface ApiExplorerState {
   requestPaneRatio: number;
   /** Height in px of the GraphQL variables editor. */
   variablesHeight: number;
+  /** Selected left-sidebar tab (Collections / History / Schema). */
+  sidebarTab: SidebarTab;
+  /** Selected request tab (Params / Auth / Headers / Body). */
+  requestTab: RequestTab;
 
   setMethod: (method: HttpMethod) => void;
   setUrl: (url: string) => void;
@@ -145,6 +154,8 @@ export interface ApiExplorerState {
 
   setRequestPaneRatio: (ratio: number) => void;
   setVariablesHeight: (height: number) => void;
+  setSidebarTab: (tab: SidebarTab) => void;
+  setRequestTab: (tab: RequestTab) => void;
 }
 
 export const useApiExplorerStore = create<ApiExplorerState>()(
@@ -166,6 +177,8 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
       activeRequestId: null,
       requestPaneRatio: 0.5,
       variablesHeight: 120,
+      sidebarTab: 'collections',
+      requestTab: 'body',
 
       setMethod: (method) => set({ method }),
       setUrl: (url) => set({ url }),
@@ -350,10 +363,12 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
       setRequestPaneRatio: (ratio) =>
         set({ requestPaneRatio: Math.max(0.15, Math.min(0.85, ratio)) }),
       setVariablesHeight: (height) => set({ variablesHeight: Math.max(60, Math.min(600, height)) }),
+      setSidebarTab: (sidebarTab) => set({ sidebarTab }),
+      setRequestTab: (requestTab) => set({ requestTab }),
     }),
     {
       name: 'forge:api-explorer',
-      version: 3,
+      version: 4,
       // Persist everything EXCEPT in-memory secrets and transient UI state.
       partialize: (s) => ({
         method: s.method,
@@ -377,6 +392,8 @@ export const useApiExplorerStore = create<ApiExplorerState>()(
         activeRequestId: s.activeRequestId,
         requestPaneRatio: s.requestPaneRatio,
         variablesHeight: s.variablesHeight,
+        sidebarTab: s.sidebarTab,
+        requestTab: s.requestTab,
       }),
       // v1 stored `endpoint`; map it onto `url` so saved endpoints survive the upgrade.
       // v2→v3 made the explorer REST-first: drop the old GraphQL-default method/bodyMode so
