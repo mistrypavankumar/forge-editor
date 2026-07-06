@@ -5,6 +5,7 @@ const TABS: { id: NavigatorTab; label: string }[] = [
   { id: 'changes', label: 'Changes' },
   { id: 'map', label: 'Map' },
   { id: 'structure', label: 'Structure' },
+  { id: 'insight', label: 'Insight' },
 ];
 
 export function NavigatorTabs(): React.JSX.Element {

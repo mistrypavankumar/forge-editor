@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Lock, SplitSquareHorizontal, Copy, Check, SquareTerminal } from 'lucide-react';
+import { X, Lock, SplitSquareHorizontal, Copy, Check, SquareTerminal, LayoutTemplate } from 'lucide-react';
 import { useEditorStore } from '../stores/editor-store';
+import { commandRegistry } from '../commands/command-registry';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { FileTypeIcon } from './file-icon';
 import { ContextMenu } from './ui/ContextMenu';
@@ -43,10 +44,18 @@ export function EditorTabs({ groupId = 'main' }: { groupId?: string }): React.JS
 
   const copy = (text: string): void => void navigator.clipboard?.writeText(text);
 
-  const copyRelative = (path: string): void => {
-    copy(relativeTo(path, rootPath));
-    setCopiedPath(path);
-    window.setTimeout(() => setCopiedPath((p) => (p === path ? null : p)), 1200);
+  /**
+   * The real file path to copy for a tab. Synthetic views (git diffs) use a scheme URI as their tab
+   * `path` (e.g. `git-commit://<hash>/<abs>`) while their on-disk path lives in `filePath`. Prefer
+   * `filePath` so Copy Path / Copy Relative Path yield the actual file, not the internal URI.
+   */
+  const pathFor = (tabPath: string): string =>
+    tabs.find((t) => t.path === tabPath)?.filePath ?? tabPath;
+
+  const copyRelative = (tabPath: string): void => {
+    copy(relativeTo(pathFor(tabPath), rootPath));
+    setCopiedPath(tabPath);
+    window.setTimeout(() => setCopiedPath((p) => (p === tabPath ? null : p)), 1200);
   };
 
   return (
@@ -118,6 +127,22 @@ export function EditorTabs({ groupId = 'main' }: { groupId?: string }): React.JS
         })}
       </div>
 
+      {(() => {
+        const activeTab = tabs.find((t) => t.path === activePath);
+        if (!activeTab || !/\.(tsx|jsx)$/i.test(activeTab.name)) return null;
+        return (
+          <button
+            type="button"
+            aria-label="Generate Skeleton"
+            title="Generate loading skeleton for this component"
+            onClick={() => void commandRegistry.run('forge.generateSkeleton')}
+            className="flex w-8 shrink-0 items-center justify-center text-faint hover:bg-surface-2 hover:text-fg"
+          >
+            <LayoutTemplate size={14} />
+          </button>
+        );
+      })()}
+
       <button
         type="button"
         aria-label="Split editor right"
@@ -140,10 +165,10 @@ export function EditorTabs({ groupId = 'main' }: { groupId?: string }): React.JS
             { label: 'Close Saved', onSelect: () => closeSaved(groupId) },
             { label: 'Close All', onSelect: () => closeAll(groupId) },
             { label: 'Split Right', dividerAfter: true, onSelect: () => splitRight(menu.path) },
-            { label: 'Copy Path', onSelect: () => copy(menu.path) },
+            { label: 'Copy Path', onSelect: () => copy(pathFor(menu.path)) },
             {
               label: 'Copy Relative Path',
-              onSelect: () => copy(relativeTo(menu.path, rootPath)),
+              onSelect: () => copy(relativeTo(pathFor(menu.path), rootPath)),
             },
           ]}
         />

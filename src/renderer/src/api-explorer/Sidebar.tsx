@@ -7,9 +7,7 @@ import { cn } from '../lib/cn';
 import { SchemaTree } from './SchemaTree';
 import { Collections } from './Collections';
 import { formatTime } from './graphql-utils';
-import { useApiExplorerStore } from './store';
-
-type SidebarTab = 'collections' | 'history' | 'schema';
+import { useApiExplorerStore, type SidebarTab } from './store';
 
 function HistoryList({
   search,
@@ -118,7 +116,8 @@ export function Sidebar({
   headers?: Record<string, string>;
   onInsertOperation: (query: string, variables: string) => void;
 }): React.JSX.Element {
-  const [tab, setTab] = useState<SidebarTab>('collections');
+  const tab = useApiExplorerStore((s) => s.sidebarTab);
+  const setTab = useApiExplorerStore((s) => s.setSidebarTab);
   const [search, setSearch] = useState('');
   const loadHistory = useApiExplorerStore((s) => s.loadHistory);
   const clearHistory = useApiExplorerStore((s) => s.clearHistory);

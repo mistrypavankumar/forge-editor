@@ -2,7 +2,8 @@ import { commandRegistry } from './command-registry';
 import { useEditorStore } from '../stores/editor-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
-import { openFolderDialog, openFileDialog, openApiExplorer } from '../lib/workspace-actions';
+import { openFolderDialog, openFileDialog, openApiExplorer, openCodebaseMap } from '../lib/workspace-actions';
+import { useNavigatorStore } from '../stores/navigator-store';
 import { newFile } from '../lib/fs-actions';
 import { formatActiveFile, maybeFormatOnSave } from '../lib/format-actions';
 import { saveAllFiles } from '../lib/save-actions';
@@ -268,6 +269,23 @@ export function registerCoreCommands(): void {
     title: 'Open API Explorer',
     category: 'View',
     run: () => openApiExplorer(),
+  });
+  commandRegistry.register({
+    id: 'workbench.openCodebaseMap',
+    title: 'Open Codebase Map',
+    category: 'View',
+    run: () => openCodebaseMap(),
+  });
+  commandRegistry.register({
+    id: 'workbench.showFileInsight',
+    title: 'Show File Insight (dependencies & risk)',
+    category: 'View',
+    run: () => {
+      const l = useLayoutStore.getState();
+      l.setActivity('explorer');
+      l.setPanelVisible('sidebar', true);
+      useNavigatorStore.getState().setTab('insight');
+    },
   });
   commandRegistry.register({
     id: 'workbench.checkProblems',

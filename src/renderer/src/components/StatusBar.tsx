@@ -3,7 +3,6 @@ import {
   TriangleAlert,
   Sparkles,
   GitBranch,
-  GitCommitVertical,
   Lock,
   Cloud,
   Check,
@@ -84,7 +83,6 @@ export function StatusBar(): React.JSX.Element {
   const markers = useWorkbenchStatusStore((s) => s.markers);
   const cursor = useWorkbenchStatusStore((s) => s.cursor);
   const language = useWorkbenchStatusStore((s) => s.language);
-  const blame = useWorkbenchStatusStore((s) => s.blame);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const branch = useWorkspaceStore((s) => s.branch);
   const setBottomTab = useLayoutStore((s) => s.setBottomTab);
@@ -162,12 +160,6 @@ export function StatusBar(): React.JSX.Element {
           {awsValid ? <Check size={12} /> : <Cloud size={12} />}
           AWS: {awsActive ? `profile:${awsActive}` : 'No connection'}
         </Segment>
-        {blame ? (
-          <Segment className="text-faint">
-            <GitCommitVertical size={12} />
-            {blame}
-          </Segment>
-        ) : null}
         {language === 'java' ? (
           <Segment className={JAVA_STATUS[javaStatus].className} title={JAVA_STATUS[javaStatus].title}>
             {javaStatus === 'starting' ? (

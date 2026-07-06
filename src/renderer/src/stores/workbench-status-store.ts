@@ -17,23 +17,18 @@ export interface WorkbenchStatusState {
   cursor: { line: number; column: number };
   language: string;
   markers: MarkerInfo[];
-  /** Git blame for the current line ("author (time ago)"), or null. */
-  blame: string | null;
   setCursor: (line: number, column: number) => void;
   setLanguage: (language: string) => void;
   setMarkers: (markers: MarkerInfo[]) => void;
-  setBlame: (blame: string | null) => void;
 }
 
 export const useWorkbenchStatusStore = create<WorkbenchStatusState>((set) => ({
   cursor: { line: 1, column: 1 },
   language: 'plaintext',
   markers: [],
-  blame: null,
   setCursor: (line, column) => set({ cursor: { line, column } }),
   setLanguage: (language) => set({ language }),
   setMarkers: (markers) => set({ markers }),
-  setBlame: (blame) => set({ blame }),
 }));
 
 export function markerCounts(markers: MarkerInfo[]): {

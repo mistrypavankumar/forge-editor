@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { RefreshCw, GitCommitVertical, GitBranch, Cloud, CircleDot, Tag, FileDiff, Plus, Minus, Undo2, FileSymlink, ChevronRight, ChevronDown, Lock, Sparkles, Loader2, Copy, Check, ExternalLink, Clock } from 'lucide-react';
+import { RefreshCw, GitCommitVertical, GitBranch, Cloud, CircleDot, Tag, FileDiff, Plus, Minus, Undo2, FileSymlink, ChevronRight, ChevronDown, Lock, Sparkles, Loader2, Copy, Check, ExternalLink, Clock, Search, X } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { openFilePath, openGitStagedDiff, openGitCommitDiff } from '../lib/workspace-actions';
@@ -304,6 +304,11 @@ export function SourceControlPanel(): React.JSX.Element {
   const [changes, setChanges] = useState<GitChange[]>([]);
   const [commits, setCommits] = useState<GitCommit[]>([]);
   const [showHistory, setShowHistory] = useState(true);
+  // Repo-wide commit search. `commitSearch` is the raw input; `searchResults` is null when not
+  // searching (show the normal graph) and an array (possibly empty) once a query has run.
+  const [commitSearch, setCommitSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<GitCommit[] | null>(null);
+  const [searching, setSearching] = useState(false);
   const [message, setMessage] = useState('');
   const [committing, setCommitting] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -404,6 +409,31 @@ export function SourceControlPanel(): React.JSX.Element {
       if (changed) refreshLog();
     });
   }, [refreshChanges, refreshLog, rootPath, syncTick]);
+
+  // Debounced repo-wide commit search. An empty query clears results (back to the graph); a
+  // non-empty one queries the whole history after a short pause so typing doesn't spawn a git call
+  // per keystroke. A stale flag drops out-of-order responses.
+  useEffect(() => {
+    const term = commitSearch.trim();
+    if (!term || !rootPath) {
+      setSearchResults(null);
+      setSearching(false);
+      return;
+    }
+    let stale = false;
+    setSearching(true);
+    const timer = window.setTimeout(() => {
+      void window.forge.gitSearchLog(rootPath, term, 100).then((res) => {
+        if (stale) return;
+        setSearchResults(res.ok ? res.data : []);
+        setSearching(false);
+      });
+    }, 250);
+    return () => {
+      stale = true;
+      window.clearTimeout(timer);
+    };
+  }, [commitSearch, rootPath]);
 
   const graph = useMemo(() => computeGitGraph(commits), [commits]);
   const graphWidth = PAD_X + graph.lanes * LANE_W + 4;
@@ -761,6 +791,126 @@ export function SourceControlPanel(): React.JSX.Element {
             ) : null}
           </div>
           {showHistory ? (
+            <div className="shrink-0 px-3 pb-1.5">
+              <div className="flex items-center gap-1.5 rounded-md border border-line bg-surface-2 px-2 py-1 focus-within:border-accent/60">
+                <Search size={12} className="shrink-0 text-faint" />
+                <input
+                  value={commitSearch}
+                  onChange={(e) => setCommitSearch(e.target.value)}
+                  placeholder="Search all history — message, author, or hash"
+                  spellCheck={false}
+                  className="w-full bg-transparent text-[12px] text-fg outline-none placeholder:text-faint"
+                />
+                {commitSearch ? (
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    title="Clear"
+                    onClick={() => setCommitSearch('')}
+                    className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-faint hover:bg-surface-3 hover:text-fg"
+                  >
+                    <X size={12} />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+          {showHistory && searchResults !== null ? (
+            <div className="relative min-h-0 flex-1 overflow-auto pb-2">
+              {searching && searchResults.length === 0 ? (
+                <div className="flex items-center gap-2 px-3 py-6 text-[12px] text-faint">
+                  <Loader2 size={13} className="animate-spin" /> Searching history…
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="px-3 py-6 text-[12px] text-faint">
+                  No commits match “{commitSearch.trim()}”.
+                </div>
+              ) : (
+                searchResults.map((c) => {
+                  const isHead = c.refs.some((r) => r.kind === 'head');
+                  const isOpen = c.hash === openCommit;
+                  return (
+                    <div key={c.hash}>
+                      <div
+                        onClick={() => toggleCommit(c.hash)}
+                        onMouseEnter={(e) => openHover(c, e.currentTarget)}
+                        onMouseLeave={closeHover}
+                        className={cn(
+                          'group flex cursor-pointer items-center gap-2 px-3 hover:bg-surface-2',
+                          isOpen && 'bg-surface-2',
+                        )}
+                        style={{ height: ROW_H }}
+                      >
+                        <span className="shrink-0 font-mono text-[11px] text-faint">{c.hash}</span>
+                        <span
+                          className={cn(
+                            'min-w-0 truncate text-[13px]',
+                            isHead ? 'font-semibold text-fg' : 'text-fg/85',
+                          )}
+                        >
+                          {c.subject}
+                        </span>
+                        {c.refs.map((ref) => {
+                          const { icon: Icon, cls } = REF_STYLE[ref.kind];
+                          return (
+                            <span
+                              key={`${ref.kind}:${ref.name}`}
+                              title={ref.name}
+                              className={cn(
+                                'flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium',
+                                cls,
+                              )}
+                            >
+                              <Icon size={10} />
+                              <span className="max-w-[200px] truncate">{ref.name}</span>
+                            </span>
+                          );
+                        })}
+                        <span className="ml-auto shrink-0 truncate text-[11px] text-faint">
+                          {c.author} · {c.date}
+                        </span>
+                        <FileDiff
+                          size={13}
+                          className={cn(
+                            'shrink-0 text-faint transition-opacity',
+                            isOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                          )}
+                        />
+                      </div>
+                      {isOpen
+                        ? commitFiles.map((f) => {
+                            const dir = f.path.includes('/')
+                              ? f.path.slice(0, f.path.lastIndexOf('/'))
+                              : '';
+                            return (
+                              <div
+                                key={f.path}
+                                onClick={() => void openGitCommitDiff(root, c.hash, f.path, f.status)}
+                                className="flex cursor-pointer items-center gap-2 pr-3 hover:bg-surface-2"
+                                style={{ paddingLeft: 24, height: FILE_ROW_H }}
+                                title={f.path}
+                              >
+                                <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                                  <ModernFileIcon name={f.name} size={14} />
+                                </span>
+                                <span className="shrink-0 truncate text-[12px] text-muted">
+                                  {f.name}
+                                </span>
+                                {dir ? (
+                                  <span className="min-w-0 truncate text-[11px] text-faint">
+                                    {dir}
+                                  </span>
+                                ) : null}
+                              </div>
+                            );
+                          })
+                        : null}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : showHistory ? (
             <div className="relative min-h-0 flex-1 overflow-auto pb-2">
                 {/* Commit graph: coloured lanes + curved branch/merge connectors, drawn once
                     behind the rows. Rows are padded left to clear it. */}

@@ -12,7 +12,7 @@ import { AuthEditor } from './AuthEditor';
 import { ResponseTabs } from './ResponseTabs';
 import { HeadersEditor } from './HeadersEditor';
 import { KeyValueEditor } from './KeyValueEditor';
-import { useApiExplorerStore, selectActiveRequestDirty } from './store';
+import { useApiExplorerStore, selectActiveRequestDirty, type RequestTab } from './store';
 import { buildUrl, parseQueryParams, splitUrl } from './http-utils';
 import {
   prettyJson,
@@ -23,8 +23,6 @@ import {
   detectOperationType,
   extractOperationName,
 } from './graphql-utils';
-
-type RequestTab = 'params' | 'auth' | 'headers' | 'body';
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -81,7 +79,8 @@ export function ApiExplorerEditor(): React.JSX.Element {
   // True while the loaded saved request has unpersisted edits (drives the autosave + status pill).
   const isDirty = useApiExplorerStore(selectActiveRequestDirty);
 
-  const [requestTab, setRequestTab] = useState<RequestTab>('body');
+  const requestTab = useApiExplorerStore((s) => s.requestTab);
+  const setRequestTab = useApiExplorerStore((s) => s.setRequestTab);
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveName, setSaveName] = useState('');
   const [saveCollectionId, setSaveCollectionId] = useState('__new__');

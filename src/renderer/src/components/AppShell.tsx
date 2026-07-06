@@ -45,6 +45,7 @@ import { useAwsStore } from '../stores/aws-store';
 import { GitUserPicker } from './GitUserPicker';
 import { useGitUserStore } from '../stores/git-user-store';
 import { SettingsView } from './SettingsView';
+import { SkeletonPreview } from './SkeletonPreview';
 import { FeaturesView } from './FeaturesView';
 import { WellnessBreakOverlay } from './WellnessBreakOverlay';
 import { useWellnessBreaks } from '../settings/use-wellness-breaks';
@@ -450,6 +451,7 @@ export function AppShell(): React.JSX.Element {
       <GitUserPicker />
       <SettingsView />
       <FeaturesView />
+      <SkeletonPreview />
       <WellnessBreakOverlay />
       {menu ? (
         <ContextMenu

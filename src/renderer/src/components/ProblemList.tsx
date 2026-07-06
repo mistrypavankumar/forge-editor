@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  CircleX, TriangleAlert, Info, CircleCheck, RefreshCw, ChevronDown, ChevronRight,
+  CircleX, TriangleAlert, Info, CircleCheck, RefreshCw, ChevronDown, ChevronRight, Copy, Check,
 } from 'lucide-react';
 import { useWorkbenchStatusStore, type MarkerSeverity } from '../stores/workbench-status-store';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
@@ -21,6 +21,32 @@ function SeverityIcon({ severity }: { severity: MarkerSeverity }): React.JSX.Ele
   if (severity === 'error') return <CircleX size={14} className="text-danger" />;
   if (severity === 'warning') return <TriangleAlert size={14} className="text-warning" />;
   return <Info size={14} className="text-info" />;
+}
+
+// Hover-revealed button that copies the problem text plus its file location to the clipboard.
+function CopyProblemButton({ text, copyKey }: { text: string; copyKey: string }): React.JSX.Element {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      title="Copy problem and file"
+      aria-label="Copy problem and file"
+      onClick={(e) => {
+        e.stopPropagation();
+        void navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1200);
+        });
+      }}
+      className={cn(
+        'shrink-0 rounded p-1 text-faint opacity-0 transition-opacity hover:bg-surface-3 hover:text-fg group-hover:opacity-100',
+        copied && 'opacity-100',
+      )}
+      data-copy-key={copyKey}
+    >
+      {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
+    </button>
+  );
 }
 
 export function ProblemList(): React.JSX.Element {
@@ -97,24 +123,30 @@ export function ProblemList(): React.JSX.Element {
       return (
         <div className="h-full overflow-auto py-1">
           {markers.map((m) => {
+            const location = `${m.file}:${m.line}:${m.col}`;
+            const copyText = `${m.message}${m.code ? ` (${m.code})` : ''}\n${location}`;
             return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => openMarker(m.path, m.file, m.line, m.col)}
-                className="flex w-full items-start gap-2.5 px-3 py-1.5 text-left hover:bg-surface-2"
-              >
-                <span className="mt-0.5 shrink-0">
-                  <SeverityIcon severity={m.severity} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] leading-snug text-muted">{m.message}</p>
-                  <p className="mt-0.5 text-[11px] text-faint">
-                    {m.file}:{m.line}:{m.col}
-                    {m.code ? <span className="ml-2 font-mono">{m.code}</span> : null}
-                  </p>
+              <div key={m.id} className="group flex items-start hover:bg-surface-2">
+                <button
+                  type="button"
+                  onClick={() => openMarker(m.path, m.file, m.line, m.col)}
+                  className="flex min-w-0 flex-1 items-start gap-2.5 py-1.5 pl-3 text-left"
+                >
+                  <span className="mt-0.5 shrink-0">
+                    <SeverityIcon severity={m.severity} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] leading-snug text-muted">{m.message}</p>
+                    <p className="mt-0.5 text-[11px] text-faint">
+                      {location}
+                      {m.code ? <span className="ml-2 font-mono">{m.code}</span> : null}
+                    </p>
+                  </div>
+                </button>
+                <div className="mt-1 pr-2">
+                  <CopyProblemButton text={copyText} copyKey={m.id} />
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -147,26 +179,36 @@ export function ProblemList(): React.JSX.Element {
                 </span>
               </button>
               {!isCollapsed
-                ? list.map((d, i) => (
-                    <button
-                      key={`${file}:${d.line}:${d.col}:${i}`}
-                      type="button"
-                      onClick={() => openDiagnostic(d)}
-                      className="flex w-full items-start gap-2.5 py-1 pl-8 pr-3 text-left hover:bg-surface-2"
-                    >
-                      <span className="mt-0.5 shrink-0">
-                        <SeverityIcon severity={d.severity} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[12.5px] leading-snug text-muted" title={d.message}>
-                          {d.message}
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-faint">
-                          [Ln {d.line}, Col {d.col}] <span className="ml-1 font-mono">{d.code}</span>
-                        </p>
+                ? list.map((d, i) => {
+                    const copyText = `${d.message}${d.code ? ` (${d.code})` : ''}\n${d.file}:${d.line}:${d.col}`;
+                    return (
+                      <div
+                        key={`${file}:${d.line}:${d.col}:${i}`}
+                        className="group flex items-start hover:bg-surface-2"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => openDiagnostic(d)}
+                          className="flex min-w-0 flex-1 items-start gap-2.5 py-1 pl-8 text-left"
+                        >
+                          <span className="mt-0.5 shrink-0">
+                            <SeverityIcon severity={d.severity} />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[12.5px] leading-snug text-muted" title={d.message}>
+                              {d.message}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-faint">
+                              [Ln {d.line}, Col {d.col}] <span className="ml-1 font-mono">{d.code}</span>
+                            </p>
+                          </div>
+                        </button>
+                        <div className="mt-1 pr-2">
+                          <CopyProblemButton text={copyText} copyKey={`${file}:${d.line}:${d.col}:${i}`} />
+                        </div>
                       </div>
-                    </button>
-                  ))
+                    );
+                  })
                 : null}
             </div>
           );

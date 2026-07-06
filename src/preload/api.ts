@@ -45,6 +45,8 @@ export const api: ForgeApi = {
   gitFetch: (rootPath) => ipcRenderer.invoke(IpcChannels.gitFetch, rootPath),
   gitAheadBehind: (rootPath) => ipcRenderer.invoke(IpcChannels.gitAheadBehind, rootPath),
   gitLog: (rootPath, limit) => ipcRenderer.invoke(IpcChannels.gitLog, rootPath, limit),
+  gitSearchLog: (rootPath, query, limit) =>
+    ipcRenderer.invoke(IpcChannels.gitSearchLog, rootPath, query, limit),
   gitRefsSig: (rootPath) => ipcRenderer.invoke(IpcChannels.gitRefsSig, rootPath),
   gitCommitFiles: (rootPath, hash) => ipcRenderer.invoke(IpcChannels.gitCommitFiles, rootPath, hash),
   gitCommitDetail: (rootPath, hash) =>
@@ -72,6 +74,14 @@ export const api: ForgeApi = {
   },
   requestCompletion: (args) => ipcRenderer.invoke(IpcChannels.aiCompletion, args),
   cancelCompletion: (id) => ipcRenderer.send(IpcChannels.aiCompletionCancel, id),
+  agentComplete: (args) => ipcRenderer.invoke(IpcChannels.agentComplete, args),
+  agentCancel: (id) => ipcRenderer.send(IpcChannels.agentCancel, id),
+  agentRunCommand: (args) => ipcRenderer.invoke(IpcChannels.agentRunCommand, args),
+  agentCancelCommand: (id) => ipcRenderer.send(IpcChannels.agentCancelCommand, id),
+  codemapBuild: (rootPath, force) => ipcRenderer.invoke(IpcChannels.codemapBuild, rootPath, force),
+  skeletonDetect: (filePath, code) => ipcRenderer.invoke(IpcChannels.skeletonDetect, filePath, code),
+  skeletonGenerate: (input) => ipcRenderer.invoke(IpcChannels.skeletonGenerate, input),
+  skeletonGenerateAi: (input) => ipcRenderer.invoke(IpcChannels.skeletonGenerateAi, input),
   aiKeyStatus: () => ipcRenderer.invoke(IpcChannels.aiKeyStatus),
   aiSetKey: (provider, key) => ipcRenderer.invoke(IpcChannels.aiSetKey, provider, key),
   search: (rootPath, options) => ipcRenderer.invoke(IpcChannels.search, rootPath, options),

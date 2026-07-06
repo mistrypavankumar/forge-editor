@@ -75,7 +75,7 @@ const GROUPS: Group[] = [
     title: 'Diff & Git insights',
     features: [
       { name: 'Change gutter & peek', desc: 'See and revert per-line changes against HEAD.' },
-      { name: 'Inline blame', desc: 'Who last changed the current line, in the status bar.' },
+      { name: 'Inline blame', desc: 'Who last changed the current line, shown at the end of the line.' },
       { name: 'Side-by-side diff', desc: 'Compare working tree vs. staged/HEAD.' },
     ],
   },

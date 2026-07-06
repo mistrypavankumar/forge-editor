@@ -3,6 +3,8 @@ import { NavigatorTabs } from './NavigatorTabs';
 import { ChangesView } from './ChangesView';
 import { ProjectMapView } from './ProjectMapView';
 import { StructureTreeView } from './StructureTreeView';
+import { FileInsightPanel } from './FileInsightPanel';
+import { ErrorBoundary } from './ui/ErrorBoundary';
 import { cn } from '../lib/cn';
 
 export function ProjectNavigator(): React.JSX.Element {
@@ -41,6 +43,11 @@ export function ProjectNavigator(): React.JSX.Element {
         {tab === 'changes' ? <ChangesView /> : null}
         {tab === 'map' ? <ProjectMapView /> : null}
         {tab === 'structure' ? <StructureTreeView /> : null}
+        {tab === 'insight' ? (
+          <ErrorBoundary label="File Insight">
+            <FileInsightPanel />
+          </ErrorBoundary>
+        ) : null}
       </div>
     </div>
   );
