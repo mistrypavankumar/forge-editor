@@ -42,7 +42,7 @@ import { useFormatterStore } from '../stores/formatter-store';
 import type { FormatterId } from '../lib/detect-formatters';
 import { FormatterPicker } from './FormatterPicker';
 import type { BlameLine } from '@shared/ipc-contract';
-import { buildBlameDecoration } from '../editor/blame-inline';
+import { relativeTime } from '../lib/relative-time';
 import { useEditorStore } from '../stores/editor-store';
 import { useThemeStore } from '../stores/theme-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
@@ -57,6 +57,12 @@ function severityName(level: number): MarkerSeverity {
   if (level >= 8) return 'error';
   if (level >= 4) return 'warning';
   return 'info';
+}
+
+/** "author (time ago)" for the status bar; uncommitted local edits read "author (uncommitted)". */
+function formatBlame(b: BlameLine | undefined): string | null {
+  if (!b) return null;
+  return b.time == null ? `${b.author} (uncommitted)` : `${b.author} (${relativeTime(b.time)})`;
 }
 
 /**
@@ -79,8 +85,6 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
   // Debugger gutter: breakpoint dots, and the highlight on the paused execution line.
   const bpDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   const dbgLineDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
-  // Inline git blame: the "author, N ago" annotation on the cursor's current line.
-  const blameDecoRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   const peekRef = useRef<DiffPeek | null>(null);
   const hunksRef = useRef<DiffHunk[]>([]);
   const blameRef = useRef<BlameLine[]>([]);
@@ -133,15 +137,11 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     if (hunks.length === 0) peekRef.current?.close();
   }, []);
 
-  // Show who last changed the cursor's current line, as a dim annotation at the end of that line.
+  // Show who last changed the cursor's current line in the status bar (bottom-right).
   // Recomputed on cursor move and after blame is (re)fetched; blame data lives in blameRef.
   const refreshBlame = useCallback(() => {
-    const instance = editorRef.current;
-    const collection = blameDecoRef.current;
-    const model = instance?.getModel();
-    if (!instance || !collection || !model) return;
-    const line = instance.getPosition()?.lineNumber ?? 1;
-    collection.set(buildBlameDecoration(getMonaco(), model, line, blameRef.current[line - 1]));
+    const line = editorRef.current?.getPosition()?.lineNumber ?? 1;
+    useWorkbenchStatusStore.getState().setBlame(formatBlame(blameRef.current[line - 1]));
   }, []);
 
   useEffect(() => {
@@ -195,8 +195,6 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     // Debugger gutter collections: breakpoint dots and the paused-line highlight.
     bpDecoRef.current = instance.createDecorationsCollection();
     dbgLineDecoRef.current = instance.createDecorationsCollection();
-    // Inline git-blame annotation on the cursor's line.
-    blameDecoRef.current = instance.createDecorationsCollection();
     // Publish this editor's live hunks so the global next/prev-change commands can navigate it.
     registerHunkSource(instance, () => hunksRef.current);
     peekRef.current = new DiffPeek(instance, monaco, {
@@ -417,8 +415,8 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     };
   }, [activePath, rootPath, syncTick, recomputeDiff]);
 
-  // Fetch per-line git blame for the active file; annotate the cursor's line inline with who last
-  // changed it. Refetched on workspace sync (after saves/commits).
+  // Fetch per-line git blame for the active file; show the cursor line's blame in the status bar.
+  // Refetched on workspace sync (after saves/commits).
   useEffect(() => {
     if (!activePath || !rootPath || !activePath.startsWith('/')) {
       blameRef.current = [];
