@@ -3,6 +3,7 @@ import {
   TriangleAlert,
   Sparkles,
   GitBranch,
+  GitCommitVertical,
   Lock,
   Cloud,
   Check,
@@ -83,6 +84,7 @@ export function StatusBar(): React.JSX.Element {
   const markers = useWorkbenchStatusStore((s) => s.markers);
   const cursor = useWorkbenchStatusStore((s) => s.cursor);
   const language = useWorkbenchStatusStore((s) => s.language);
+  const blame = useWorkbenchStatusStore((s) => s.blame);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const branch = useWorkspaceStore((s) => s.branch);
   const setBottomTab = useLayoutStore((s) => s.setBottomTab);
@@ -197,6 +199,12 @@ export function StatusBar(): React.JSX.Element {
           {inlineEnabled ? (inlineRunning ? 'Inline: running…' : `Inline: ${inlineLogCount}`) : 'Inline'}
         </Segment>
         <FormatterSegment />
+        {blame ? (
+          <Segment className="text-faint" title="Last change to the current line">
+            <GitCommitVertical size={12} />
+            {blame}
+          </Segment>
+        ) : null}
         <Segment className="uppercase">{language}</Segment>
         <Segment>
           Ln {cursor.line}, Col {cursor.column}

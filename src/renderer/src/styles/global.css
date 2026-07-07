@@ -498,14 +498,6 @@ body {
   border-left-color: color-mix(in srgb, var(--danger) 65%, transparent);
 }
 
-/* Inline git blame: a dim "author, N ago" annotation at the end of the cursor's line, GitLens-style.
-   Deliberately faint so it reads as metadata, never competing with the code. */
-.forge-blame-inline {
-  color: color-mix(in srgb, var(--fg) 38%, transparent);
-  font-style: italic;
-  font-size: 0.9em;
-}
-
 /* Inline find/replace preview (mirrors the Search panel's per-line preview): the matched text is
    struck through in red (old), immediately followed by the replacement rendered in green (new). */
 .forge-replace-old {
