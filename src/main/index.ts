@@ -478,6 +478,7 @@ app.whenReady().then(async () => {
     buildAppMenu();
   });
   ipcMain.on(IpcChannels.newWindow, () => createWindow());
+  ipcMain.on(IpcChannels.windowReload, (e) => e.sender.reload());
   ipcMain.on(IpcChannels.windowReport, (e, rootPath: string | null, name: string) => {
     windowWorkspaces.set(e.sender.id, { rootPath, name });
     broadcastWindows();

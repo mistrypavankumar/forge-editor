@@ -315,6 +315,12 @@ export function registerCoreCommands(): void {
     run: () => window.forge.newWindow(),
   });
   commandRegistry.register({
+    id: 'workbench.action.reloadWindow',
+    title: 'Reload Window',
+    category: 'Developer',
+    run: () => window.forge.reloadWindow(),
+  });
+  commandRegistry.register({
     id: 'file.openFile',
     title: 'Open File…',
     category: 'File',

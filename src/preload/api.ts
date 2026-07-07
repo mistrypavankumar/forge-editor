@@ -105,6 +105,7 @@ export const api: ForgeApi = {
   },
   syncMenuState: (autoSave) => ipcRenderer.send(IpcChannels.menuSyncState, autoSave),
   newWindow: () => ipcRenderer.send(IpcChannels.newWindow),
+  reloadWindow: () => ipcRenderer.send(IpcChannels.windowReload),
   reportWindow: (rootPath, name) => ipcRenderer.send(IpcChannels.windowReport, rootPath, name),
   listWindows: () => ipcRenderer.invoke(IpcChannels.windowList),
   focusWindow: (id) => ipcRenderer.send(IpcChannels.windowFocus, id),
