@@ -12,6 +12,8 @@ const SYNC_DEBOUNCE_MS = 300;
 export const LARGE_FILE_CHARS = 500_000;
 
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+/** Paths whose buffer is currently registered with the main-process LS (open document). */
+const registeredPaths = new Set<string>();
 
 function isTsModel(model: editor.ITextModel): boolean {
   return LANG_IDS.has(model.getLanguageId());
@@ -22,15 +24,23 @@ export function initLanguageProject(rootPath: string): void {
   void window.forge.editorLanguage.initializeProject(rootPath);
 }
 
-/** Register a freshly created model as an open document and run a first diagnostics pass. */
+/**
+ * Register a model as an open document and run a first diagnostics pass. Idempotent: calling it for
+ * an already-registered path is a no-op, so a tab that adopts a model pre-created for a go-to-def
+ * preview (see monaco-providers `ensureModelsFor`) still gets registered exactly once.
+ */
 export function openLanguageDocument(monaco: typeof monacoNs, model: editor.ITextModel): void {
   if (!isTsModel(model)) return;
-  window.forge.editorLanguage.openDocument(model.uri.path, model.getValue());
+  const path = model.uri.path;
+  if (registeredPaths.has(path)) return;
+  registeredPaths.add(path);
+  window.forge.editorLanguage.openDocument(path, model.getValue());
   void refreshDiagnostics(monaco, model);
 }
 
 /** Stop tracking a closed buffer and clear its inline markers. */
 export function closeLanguageDocument(path: string): void {
+  registeredPaths.delete(path);
   window.forge.editorLanguage.closeDocument(path);
   const timer = debounceTimers.get(path);
   if (timer) {

@@ -10,6 +10,7 @@ import type {
   LsDiagnostic,
   LsHover,
   LsLocation,
+  LsSymbol,
 } from '@shared/ipc-contract';
 import { LspClient } from './lsp-client';
 
@@ -33,6 +34,26 @@ function resolveJdtlsCommand(): string | null {
 function toLspPosition(line: number, column: number): Json {
   return { line: line - 1, character: column - 1 };
 }
+
+/**
+ * LSP SymbolKind (numeric) → the ScriptElementKind-style strings the renderer already uses for
+ * TS document symbols, so quick-open and the CodeLens provider treat Java and TS symbols alike.
+ */
+const LSP_SYMBOL_KIND: Record<number, string> = {
+  4: 'module', // Package
+  5: 'class',
+  6: 'method',
+  7: 'property',
+  8: 'field',
+  9: 'constructor',
+  10: 'enum',
+  11: 'interface',
+  12: 'function',
+  13: 'var',
+  14: 'const',
+  22: 'enum member',
+  23: 'class', // Struct
+};
 
 function rangeToLocation(file: string, range: Json): LsLocation {
   return {
@@ -223,6 +244,45 @@ class JdtlsService {
       context: { includeDeclaration: false },
     });
     return this.toLocations(res);
+  }
+
+  async getImplementations(file: string, line: number, column: number): Promise<LsLocation[]> {
+    const res = await this.query('textDocument/implementation', file, line, column);
+    return this.toLocations(res);
+  }
+
+  /** Flatten jdtls' hierarchical DocumentSymbol[] into the renderer's flat LsSymbol[]. */
+  async getDocumentSymbols(file: string): Promise<LsSymbol[]> {
+    const ok = await this.ensureStarted();
+    if (!ok || !this.client) return [];
+    this.sendDidOpen(file);
+    let res: Json;
+    try {
+      res = await this.client.request('textDocument/documentSymbol', {
+        textDocument: { uri: this.uri(file) },
+      });
+    } catch {
+      return [];
+    }
+    if (!Array.isArray(res)) return [];
+    const out: LsSymbol[] = [];
+    const walk = (node: Json, container?: string): void => {
+      // Hierarchical DocumentSymbol (has selectionRange); fall back to flat SymbolInformation.
+      const sel = node.selectionRange ?? node.location?.range ?? node.range;
+      if (node.name && sel) {
+        out.push({
+          name: node.name,
+          kind: LSP_SYMBOL_KIND[node.kind] ?? 'var',
+          containerName: container ?? node.containerName,
+          file,
+          line: sel.start.line + 1,
+          column: sel.start.character + 1,
+        });
+      }
+      if (Array.isArray(node.children)) for (const c of node.children) walk(c, node.name);
+    };
+    for (const node of res) walk(node, undefined);
+    return out;
   }
 
   private toLocations(res: Json): LsLocation[] {

@@ -107,6 +107,7 @@ export const IpcChannels = {
   langDiagnostics: 'forge:lang:diagnostics',
   langDefinition: 'forge:lang:definition',
   langReferences: 'forge:lang:references',
+  langImplementations: 'forge:lang:implementations',
   langHover: 'forge:lang:hover',
   langCompletions: 'forge:lang:completions',
   langCompletionDetails: 'forge:lang:completionDetails',
@@ -557,6 +558,12 @@ export interface EditorLanguageApi {
   getDiagnostics: (filePath: string) => Promise<Result<LsDiagnostic[]>>;
   getDefinition: (filePath: string, line: number, column: number) => Promise<Result<LsLocation[]>>;
   getReferences: (filePath: string, line: number, column: number) => Promise<Result<LsLocation[]>>;
+  /** Implementations of an interface/abstract member (or overrides) at a position. */
+  getImplementations: (
+    filePath: string,
+    line: number,
+    column: number,
+  ) => Promise<Result<LsLocation[]>>;
   getHover: (filePath: string, line: number, column: number) => Promise<Result<LsHover | null>>;
   getCompletions: (filePath: string, line: number, column: number) => Promise<Result<LsCompletions>>;
   /** Resolve a completion item's docs and any extra edits (auto-import) when it's focused. */

@@ -79,6 +79,8 @@ export const languageClient = {
     call<LsLocation[]>('getDefinition', [file, line, col]),
   getReferences: (file: string, line: number, col: number) =>
     call<LsLocation[]>('getReferences', [file, line, col]),
+  getImplementations: (file: string, line: number, col: number) =>
+    call<LsLocation[]>('getImplementations', [file, line, col]),
   getHover: (file: string, line: number, col: number) =>
     call<LsHover | null>('getHover', [file, line, col]),
   getCompletions: (file: string, line: number, col: number) =>
