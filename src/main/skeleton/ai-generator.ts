@@ -55,7 +55,12 @@ const SKELETON_SYSTEM = [
   'Respond with ONLY a single fenced ```json code block, no prose before or after, matching exactly:',
   '{"code": string, "importsToAdd": string[], "fileImports": string, "notes": string[]}',
   '- "code": the COMPLETE skeleton component source, e.g. "export function FooSkeleton() { return (…); }".',
-  '- "importsToAdd": for MUI only, the named imports from \'@mui/material\' the skeleton uses (always',
+  // NOTE: keep this phrased so it does NOT contain an `import … from '…'`-shaped substring.
+  // electron-vite's esm-shim plugin locates the *last* static-import match in the bundled main
+  // chunk and injects the __dirname/__filename/require shim after it; a string literal that looks
+  // like an import makes it land inside this template, leaving __dirname undefined at runtime
+  // (createWindow then throws and no window ever opens in the packaged app).
+  '- "importsToAdd": for MUI only, the named \'@mui/material\' components the skeleton uses (always',
   '  include "Skeleton"); otherwise an empty array. Used to merge into an existing import on insert.',
   '- "fileImports": a complete, ready-to-paste import block for a NEW standalone file (React plus',
   '  whatever the skeleton references). Empty string if none are needed.',
