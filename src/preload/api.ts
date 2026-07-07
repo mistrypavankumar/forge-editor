@@ -151,6 +151,8 @@ export const api: ForgeApi = {
     getDiagnostics: (file) => ipcRenderer.invoke(IpcChannels.langDiagnostics, file),
     getDefinition: (file, line, col) => ipcRenderer.invoke(IpcChannels.langDefinition, file, line, col),
     getReferences: (file, line, col) => ipcRenderer.invoke(IpcChannels.langReferences, file, line, col),
+    getImplementations: (file, line, col) =>
+      ipcRenderer.invoke(IpcChannels.langImplementations, file, line, col),
     getHover: (file, line, col) => ipcRenderer.invoke(IpcChannels.langHover, file, line, col),
     getCompletions: (file, line, col) =>
       ipcRenderer.invoke(IpcChannels.langCompletions, file, line, col),

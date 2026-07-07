@@ -29,6 +29,12 @@ function handle(method: string, args: unknown[]): unknown {
       return languageManager.getDefinition(args[0] as string, args[1] as number, args[2] as number);
     case 'getReferences':
       return languageManager.getReferences(args[0] as string, args[1] as number, args[2] as number);
+    case 'getImplementations':
+      return languageManager.getImplementations(
+        args[0] as string,
+        args[1] as number,
+        args[2] as number,
+      );
     case 'getHover':
       return languageManager.getHover(args[0] as string, args[1] as number, args[2] as number);
     case 'getCompletions':

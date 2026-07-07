@@ -8,6 +8,7 @@ import { useEditorStore } from '../stores/editor-store';
 import { useAiStore } from '../stores/ai-store';
 import { openFilePath } from '../lib/workspace-actions';
 import { importSpecForName, moduleSpecAtColumn, localDeclarationLine } from '../lib/go-to-definition';
+import { languageFor } from './language';
 import { REACT_SNIPPETS } from './react-snippets';
 import { JAVA_SNIPPETS } from './java-snippets';
 
@@ -35,6 +36,23 @@ interface ResolveContext {
 }
 type ForgeCompletion = languages.CompletionItem & { __forge?: ResolveContext };
 
+// Declaration kinds that get a CodeLens. USAGE_KINDS get a "N usages" lens; the subset in
+// IMPL_KINDS also get a "N implementations" lens (interfaces, classes, and overridable members).
+// Kinds are the ScriptElementKind-style strings shared by the TS LS and the jdtls symbol mapping.
+const USAGE_KINDS = new Set([
+  'class', 'interface', 'enum', 'method', 'function', 'constructor', 'property', 'field', 'getter', 'setter',
+]);
+const IMPL_KINDS = new Set(['class', 'interface', 'method', 'getter', 'setter']);
+
+/** Context stashed on a CodeLens so resolveCodeLens knows what to count and where to peek. */
+interface LensContext {
+  file: string;
+  line: number;
+  column: number;
+  kind: 'usages' | 'impls';
+}
+type ForgeLens = languages.CodeLens & { __ctx?: LensContext };
+
 /** Compare two absolute paths ignoring slash direction (Monaco URIs vs TS forward-slash paths). */
 function samePath(a: string, b: string): boolean {
   return a.replace(/\\/g, '/') === b.replace(/\\/g, '/');
@@ -46,6 +64,33 @@ function toRange(monaco: typeof monacoNs, loc: LsLocation): monacoNs.IRange {
 
 function toMonacoLocation(monaco: typeof monacoNs, loc: LsLocation): languages.Location {
   return { uri: monaco.Uri.file(loc.file), range: toRange(monaco, loc) };
+}
+
+/**
+ * Go-to-definition / references land on files that may not be open, so no Monaco model exists for
+ * them. The standalone editor's peek/hover preview eagerly calls `createModelReference`, which
+ * throws "Model not found" for an unregistered URI. Pre-create a model per unique target file (from
+ * disk, deduped by URI) so the preview resolves. Monaco keys models by URI, so a later tab-open in
+ * CodeEditor reuses the same instance rather than creating a duplicate.
+ */
+async function ensureModelsFor(
+  monaco: typeof monacoNs,
+  locs: readonly languages.Location[],
+): Promise<void> {
+  const missing = new Set<string>();
+  for (const l of locs) {
+    const p = l.uri.path;
+    if (p.startsWith('/') && !monaco.editor.getModel(l.uri)) missing.add(p);
+  }
+  await Promise.all(
+    [...missing].map(async (p) => {
+      const res = await window.forge.readFile(p);
+      // Re-check under the await: a concurrent request (or a tab open) may have created it.
+      if (!res.ok || monaco.editor.getModel(monaco.Uri.file(p))) return;
+      const name = p.slice(p.lastIndexOf('/') + 1);
+      monaco.editor.createModel(res.data, languageFor(name), monaco.Uri.file(p));
+    }),
+  );
 }
 
 /** Map a TS ScriptElementKind to the closest Monaco completion-item kind. */
@@ -160,8 +205,14 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
   monaco.languages.registerDefinitionProvider(FEATURE_SELECTOR, {
     async provideDefinition(model, position) {
       const res = await lang.getDefinition(fileOf(model), position.lineNumber, position.column);
-      if (res.ok && res.data.length > 0) return res.data.map((l) => toMonacoLocation(monaco, l));
-      return fallbackDefinition(monaco, model, position);
+      const def =
+        res.ok && res.data.length > 0
+          ? res.data.map((l) => toMonacoLocation(monaco, l))
+          : await fallbackDefinition(monaco, model, position);
+      if (!def) return null;
+      const locs = Array.isArray(def) ? def : [def];
+      await ensureModelsFor(monaco, locs);
+      return locs;
     },
   });
 
@@ -169,7 +220,63 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
     async provideReferences(model, position) {
       const res = await lang.getReferences(fileOf(model), position.lineNumber, position.column);
       if (!res.ok) return [];
-      return res.data.map((l) => toMonacoLocation(monaco, l));
+      const locs = res.data.map((l) => toMonacoLocation(monaco, l));
+      await ensureModelsFor(monaco, locs);
+      return locs;
+    },
+  });
+
+  // CodeLens: an IntelliJ/VS Code-style "N usages" / "N implementations" line above each
+  // declaration. Declarations come from the document-symbol backend (TS LS or jdtls); counts are
+  // resolved lazily per visible lens via getReferences/getImplementations, so a file with many
+  // declarations never fans out into hundreds of eager reference queries. Clicking a lens opens
+  // Monaco's references peek (editor.action.showReferences) populated with the matching locations.
+  monaco.languages.registerCodeLensProvider(FEATURE_SELECTOR, {
+    async provideCodeLenses(model) {
+      if (model.getValueLength() > LARGE_FILE_CHARS) return { lenses: [], dispose() {} };
+      const res = await lang.getDocumentSymbols(fileOf(model));
+      if (!res.ok) return { lenses: [], dispose() {} };
+      const lineCount = model.getLineCount();
+      const lenses: ForgeLens[] = [];
+      for (const sym of res.data) {
+        if (!USAGE_KINDS.has(sym.kind) || sym.line < 1 || sym.line > lineCount) continue;
+        // Anchor reference/implementation queries on the identifier: the document-symbol position
+        // can point at the start of the declaration span, so find the name on that line instead.
+        const idx = model.getLineContent(sym.line).indexOf(sym.name);
+        const column = idx >= 0 ? idx + 1 : sym.column;
+        const range = new monaco.Range(sym.line, 1, sym.line, 1);
+        const ctx = { file: sym.file, line: sym.line, column };
+        lenses.push({ range, __ctx: { ...ctx, kind: 'usages' } });
+        if (IMPL_KINDS.has(sym.kind)) lenses.push({ range, __ctx: { ...ctx, kind: 'impls' } });
+      }
+      return { lenses, dispose() {} };
+    },
+    async resolveCodeLens(model, codeLens) {
+      const ctx = (codeLens as ForgeLens).__ctx;
+      if (!ctx) return codeLens;
+      const res = await (ctx.kind === 'usages'
+        ? lang.getReferences(ctx.file, ctx.line, ctx.column)
+        : lang.getImplementations(ctx.file, ctx.line, ctx.column));
+      // Drop the declaration itself so counts read like an IDE ("usages", not "occurrences").
+      // The TS LS includes the declaration in references; jdtls already excludes it.
+      const locs = (res.ok ? res.data : []).filter(
+        (l) => !(samePath(l.file, ctx.file) && l.line === ctx.line),
+      );
+      const noun = ctx.kind === 'usages' ? 'usage' : 'implementation';
+      const monacoLocs = locs.map((l) => toMonacoLocation(monaco, l));
+      // Preview panes in the references peek call createModelReference on each target; make sure a
+      // model exists so expanding a hit in an unopened file doesn't throw "Model not found".
+      await ensureModelsFor(monaco, monacoLocs);
+      codeLens.command = {
+        id: 'editor.action.showReferences',
+        // An implementation lens with nothing to show (e.g. a concrete class) renders blank.
+        title:
+          ctx.kind === 'impls' && locs.length === 0
+            ? ''
+            : `${locs.length} ${locs.length === 1 ? noun : `${noun}s`}`,
+        arguments: [model.uri, new monaco.Position(ctx.line, ctx.column), monacoLocs],
+      };
+      return codeLens;
     },
   });
 

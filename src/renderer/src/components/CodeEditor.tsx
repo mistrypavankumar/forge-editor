@@ -387,8 +387,9 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
       const existing = monaco.editor.getModel(uri);
       model = existing ?? monaco.editor.createModel(tab.content, languageFor(tab.name), uri);
       modelsRef.current.set(activePath, model);
-      // Register a newly created buffer with the Language Service and run a first diagnostics pass.
-      if (!existing) openLanguageDocument(monaco, model);
+      // Register the buffer with the Language Service (idempotent). Also covers models pre-created
+      // for a go-to-definition preview, which exist in Monaco but were never LS-registered.
+      openLanguageDocument(monaco, model);
     }
     instance.setModel(model);
     instance.updateOptions({ readOnly: tab.readOnly ?? false });
@@ -415,18 +416,19 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     };
   }, [activePath, rootPath, syncTick, recomputeDiff]);
 
-  // Fetch per-line git blame for the active file; show the cursor line's blame in the status bar.
-  // Refetched on workspace sync (after saves/commits).
+  // Drop the previous file's blame right away on a file switch so it can't flash on the
+  // newly-opened one. Keyed only on the file (not syncTick), so a resync never blanks the bar.
   useEffect(() => {
-    if (!activePath || !rootPath || !activePath.startsWith('/')) {
-      blameRef.current = [];
-      refreshBlame();
-      return;
-    }
-    let cancelled = false;
-    // Drop the previous file's blame right away so it can't flash on the newly-opened one.
     blameRef.current = [];
     refreshBlame();
+  }, [activePath, rootPath, refreshBlame]);
+
+  // Fetch per-line git blame for the active file; show the cursor line's blame in the status bar.
+  // Refetched on workspace sync (after saves/commits) WITHOUT clearing first, so the bar holds the
+  // previous value until fresh data arrives instead of blinking to empty every sync tick.
+  useEffect(() => {
+    if (!activePath || !rootPath || !activePath.startsWith('/')) return;
+    let cancelled = false;
     void window.forge.gitBlame(rootPath, activePath).then((res) => {
       if (cancelled) return;
       blameRef.current = res.ok ? res.data : [];

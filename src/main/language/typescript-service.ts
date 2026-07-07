@@ -222,6 +222,19 @@ class LanguageServiceManager {
       .filter((l): l is LsLocation => l !== null);
   }
 
+  getImplementations(file: string, line: number, column: number): LsLocation[] {
+    const project = this.projectFor(file);
+    const sf = project.getSourceFile(file);
+    if (!sf) return [];
+    const impls = project
+      .getService()
+      .getImplementationAtPosition(toTsPath(file), this.offsetAt(sf, line, column));
+    if (!impls) return [];
+    return impls
+      .map((i) => this.spanToLocation(project, i.fileName, i.textSpan))
+      .filter((l): l is LsLocation => l !== null);
+  }
+
   getHover(file: string, line: number, column: number): LsHover | null {
     const project = this.projectFor(file);
     const sf = project.getSourceFile(file);

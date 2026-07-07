@@ -52,6 +52,13 @@ export function registerLanguageIpc(ipcMain: IpcMain): void {
         : languageClient.getReferences(file, line, col),
     ),
   );
+  ipcMain.handle(IpcChannels.langImplementations, (_e, file: string, line: number, col: number) =>
+    toResult(() =>
+      isJava(file)
+        ? jdtlsService.getImplementations(file, line, col)
+        : languageClient.getImplementations(file, line, col),
+    ),
+  );
   ipcMain.handle(IpcChannels.langHover, (_e, file: string, line: number, col: number) =>
     toResult(() =>
       isJava(file) ? jdtlsService.getHover(file, line, col) : languageClient.getHover(file, line, col),
@@ -91,8 +98,11 @@ export function registerLanguageIpc(ipcMain: IpcMain): void {
     toResult(async () => (isJava(file) ? { data: [] } : languageClient.getSemanticTokens(file))),
   );
   ipcMain.handle(IpcChannels.langDocSymbols, (_e, file: string) =>
-    // jdtls symbol support isn't wired up; only TS/JS files surface document symbols.
-    toResult(async () => (isJava(file) ? [] : languageClient.getDocumentSymbols(file))),
+    toResult(async () =>
+      isJava(file)
+        ? jdtlsService.getDocumentSymbols(file)
+        : languageClient.getDocumentSymbols(file),
+    ),
   );
   ipcMain.handle(IpcChannels.langWorkspaceSymbols, (_e, query: string, file?: string) =>
     toResult(async () => (file && isJava(file) ? [] : languageClient.getWorkspaceSymbols(query, file))),

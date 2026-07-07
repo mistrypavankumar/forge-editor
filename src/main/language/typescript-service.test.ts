@@ -101,6 +101,28 @@ describe('TypeScript language service', () => {
     const diags = languageManager.getDiagnostics(bPath);
     expect(diags.some((d) => d.code === 2322)).toBe(false);
   });
+
+  it('finds references to a symbol across files (powers the "N usages" CodeLens)', () => {
+    const at = locate(A, 'greet', 1); // the declaration
+    const refs = languageManager.getReferences(aPath, at.line, at.col + 1);
+    // Declaration in a.ts + the two call sites in b.ts and c.ts.
+    expect(refs.some((r) => r.file.endsWith('b.ts'))).toBe(true);
+    expect(refs.some((r) => r.file.endsWith('c.ts'))).toBe(true);
+  });
+
+  it('finds implementations of an interface (powers the "N implementations" CodeLens)', () => {
+    const iface = 'export interface Shape { area(): number; }\n';
+    const impl = "import type { Shape } from './shape';\nexport class Circle implements Shape { area(): number { return 1; } }\n";
+    const shapePath = join(dir, 'src', 'shape.ts');
+    const circlePath = join(dir, 'src', 'circle.ts');
+    writeFileSync(shapePath, iface);
+    writeFileSync(circlePath, impl);
+    languageManager.openDocument(shapePath, iface);
+    languageManager.openDocument(circlePath, impl);
+    const at = locate(iface, 'Shape', 1);
+    const impls = languageManager.getImplementations(shapePath, at.line, at.col + 1);
+    expect(impls.some((l) => l.file.endsWith('circle.ts'))).toBe(true);
+  });
 });
 
 // Regression: a monorepo whose alias-defining tsconfig lives in the app folder, not the opened root.
