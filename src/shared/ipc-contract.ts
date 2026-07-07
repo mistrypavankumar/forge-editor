@@ -69,6 +69,7 @@ export const IpcChannels = {
   // A file the OS asked us to open (Finder "Open With", dock/taskbar drop, or a CLI arg).
   openPath: 'forge:file:openPath',
   newWindow: 'forge:window:new',
+  windowReload: 'forge:window:reload',
   // Title-bar window switcher: track each window's open repo and switch between windows.
   windowReport: 'forge:window:report',
   windowList: 'forge:window:list',
@@ -1252,6 +1253,8 @@ export interface ForgeApi {
   syncMenuState: (autoSave: boolean) => void;
   /** Open a fresh, empty editor window where the user can open a folder. */
   newWindow: () => void;
+  /** Reload this window's renderer (VSCode-style "Developer: Reload Window"). */
+  reloadWindow: () => void;
   /** Report this window's current workspace to the main process (drives the window switcher). */
   reportWindow: (rootPath: string | null, name: string) => void;
   /** List every open Forge window (id, open folder, focused) for the title-bar switcher. */
