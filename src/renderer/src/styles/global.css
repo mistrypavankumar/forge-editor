@@ -339,6 +339,19 @@ body {
   border-left: 9px solid var(--warning);
 }
 
+/* Inline reference hints ("N usages" / "M implementations") rendered at the end of a declaration
+   line. Monaco's default inlay-hint styling paints a rounded chip meant for type badges; render
+   these as plain dim text that brightens to a link color on hover, like IntelliJ's counts. */
+.monaco-editor .inlayHints {
+  background: transparent !important;
+  color: var(--muted) !important;
+  font-style: normal;
+  cursor: pointer;
+}
+.monaco-editor .inlayHints:hover {
+  color: var(--info) !important;
+}
+
 /* Inline git diff peek (opened by clicking a change in the gutter) */
 /* Monaco paints `.view-lines` (the text layer) above `.view-zones`, and its full-height box —
    which includes the vertical gap a view zone occupies — eats pointer events even where it's

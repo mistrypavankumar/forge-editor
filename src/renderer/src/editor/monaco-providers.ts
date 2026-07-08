@@ -1,6 +1,6 @@
 import type * as monacoNs from 'monaco-editor';
 import type { editor, languages, Position } from 'monaco-editor';
-import type { LsLocation } from '@shared/ipc-contract';
+import type { LsLocation, LsSymbol } from '@shared/ipc-contract';
 import { SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS } from '@shared/ipc-contract';
 import { LARGE_FILE_CHARS } from './language-bridge';
 import { useWorkspaceStore } from '../stores/workspace-store';
@@ -36,31 +36,42 @@ interface ResolveContext {
 }
 type ForgeCompletion = languages.CompletionItem & { __forge?: ResolveContext };
 
-// Declaration kinds that get a CodeLens. USAGE_KINDS get a "N usages" lens; the subset in
-// IMPL_KINDS also get a "N implementations" lens (interfaces, classes, and overridable members).
-// Kinds are the ScriptElementKind-style strings shared by the TS LS and the jdtls symbol mapping.
+// Declaration kinds that get an inline reference hint. USAGE_KINDS get a "N usages" hint; the
+// subset in IMPL_KINDS also get a "N implementations" hint (interfaces, classes, and overridable
+// members). Kinds are the ScriptElementKind-style strings shared by the TS LS and the jdtls symbol
+// mapping.
 const USAGE_KINDS = new Set([
   'class', 'interface', 'enum', 'method', 'function', 'constructor', 'property', 'field', 'getter', 'setter',
 ]);
 const IMPL_KINDS = new Set(['class', 'interface', 'method', 'getter', 'setter']);
 
-// Cap the number of "N usages"/"N implementations" lenses per file. A giant nested-object literal
-// (e.g. a path→permission map) has thousands of `property` symbols, one lens each — and the
-// byte-based LARGE_FILE_CHARS guard never trips because such files are byte-small but symbol-huge.
-// Every visible lens fires an uncancellable project-wide getReferences at the single language
-// worker plus a synchronous createModel burst on the renderer thread, which janks the UI so Cmd+F
-// and the context menu appear frozen until reload. Above this many declarations, skip CodeLens
-// entirely — it's both prohibitively expensive and near-useless on files that dense.
-const MAX_CODE_LENSES = 500;
+// Cap the number of inline reference hints resolved per provide pass. Monaco only asks for hints in
+// the visible range, so a pass can't fan out across a whole file — but a giant nested-object literal
+// (e.g. a path→permission map) can still pack hundreds of `property` declarations into one
+// screenful, and each hint fires an uncancellable project-wide getReferences at the single language
+// worker. Above this many visible declarations, skip hints for the pass rather than jank the UI
+// (the freeze that made Cmd+F and the context menu appear frozen until reload).
+const MAX_INLAY_HINTS = 200;
 
-/** Context stashed on a CodeLens so resolveCodeLens knows what to count and where to peek. */
-interface LensContext {
-  file: string;
-  line: number;
-  column: number;
-  kind: 'usages' | 'impls';
+/** Resolved reference/implementation locations for one declaration (the declaration itself excluded). */
+interface HintCounts {
+  usageLocs: LsLocation[];
+  implLocs: LsLocation[];
 }
-type ForgeLens = languages.CodeLens & { __ctx?: LensContext };
+type ForgeHint = languages.InlayHint & { __locs?: languages.Location[] };
+
+// Per-model cache of resolved counts, keyed by model URI and invalidated when the content version
+// changes. Monaco re-requests hints on every scroll; without this, revisiting a line would refire
+// its getReferences/getImplementations. An edit bumps the version, which drops the stale map.
+const countsCache = new Map<string, { version: number; byLine: Map<number, HintCounts> }>();
+
+function countsFor(uri: string, version: number): Map<number, HintCounts> {
+  const entry = countsCache.get(uri);
+  if (entry && entry.version === version) return entry.byLine;
+  const byLine = new Map<number, HintCounts>();
+  countsCache.set(uri, { version, byLine });
+  return byLine;
+}
 
 /** Compare two absolute paths ignoring slash direction (Monaco URIs vs TS forward-slash paths). */
 function samePath(a: string, b: string): boolean {
@@ -73,6 +84,78 @@ function toRange(monaco: typeof monacoNs, loc: LsLocation): monacoNs.IRange {
 
 function toMonacoLocation(monaco: typeof monacoNs, loc: LsLocation): languages.Location {
   return { uri: monaco.Uri.file(loc.file), range: toRange(monaco, loc) };
+}
+
+/**
+ * Fetch (or reuse the cached) reference/implementation locations for a declaration, always dropping
+ * the declaration itself so counts read like an IDE ("usages", not "occurrences"). The TS LS
+ * includes the declaration in references; jdtls already excludes it. Implementations are only
+ * queried for IMPL_KINDS. Results are memoized per line for the current model version.
+ */
+async function resolveHintCounts(
+  byLine: Map<number, HintCounts>,
+  file: string,
+  sym: LsSymbol,
+  column: number,
+): Promise<HintCounts> {
+  const cached = byLine.get(sym.line);
+  if (cached) return cached;
+  const notSelf = (l: LsLocation) => !(samePath(l.file, file) && l.line === sym.line);
+  const refRes = await lang.getReferences(file, sym.line, column);
+  const usageLocs = (refRes.ok ? refRes.data : []).filter(notSelf);
+  let implLocs: LsLocation[] = [];
+  if (IMPL_KINDS.has(sym.kind)) {
+    const implRes = await lang.getImplementations(file, sym.line, column);
+    implLocs = (implRes.ok ? implRes.data : []).filter(notSelf);
+  }
+  const counts: HintCounts = { usageLocs, implLocs };
+  byLine.set(sym.line, counts);
+  return counts;
+}
+
+/**
+ * Build the trailing inlay hint for one declaration: a clickable "N usages" label part, plus an
+ * "M implementations" part for impl-eligible kinds that actually have implementations (a concrete
+ * class with none is left off entirely). Each part opens Monaco's references peek on click; the
+ * union of target locations is stashed on `__locs` for resolveInlayHint to pre-create models for.
+ */
+function buildHint(
+  monaco: typeof monacoNs,
+  model: editor.ITextModel,
+  sym: LsSymbol,
+  column: number,
+  counts: HintCounts,
+): ForgeHint {
+  const anchor = new monaco.Position(sym.line, column);
+  const usageLocs = counts.usageLocs.map((l) => toMonacoLocation(monaco, l));
+  const parts: languages.InlayHintLabelPart[] = [
+    {
+      label: `${usageLocs.length} ${usageLocs.length === 1 ? 'usage' : 'usages'}`,
+      command: {
+        id: 'editor.action.showReferences',
+        title: 'usages',
+        arguments: [model.uri, anchor, usageLocs],
+      },
+    },
+  ];
+  const implLocs = counts.implLocs.map((l) => toMonacoLocation(monaco, l));
+  if (IMPL_KINDS.has(sym.kind) && implLocs.length > 0) {
+    parts.push({
+      // Leading spaces separate the two counts; Monaco renders adjacent parts as one run.
+      label: `   ${implLocs.length} ${implLocs.length === 1 ? 'implementation' : 'implementations'}`,
+      command: {
+        id: 'editor.action.showReferences',
+        title: 'implementations',
+        arguments: [model.uri, anchor, implLocs],
+      },
+    });
+  }
+  return {
+    label: parts,
+    position: { lineNumber: sym.line, column: model.getLineMaxColumn(sym.line) },
+    paddingLeft: true,
+    __locs: [...usageLocs, ...implLocs],
+  };
 }
 
 /**
@@ -235,62 +318,50 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
     },
   });
 
-  // CodeLens: an IntelliJ/VS Code-style "N usages" / "N implementations" line above each
-  // declaration. Declarations come from the document-symbol backend (TS LS or jdtls); counts are
-  // resolved lazily per visible lens via getReferences/getImplementations, so a file with many
-  // declarations never fans out into hundreds of eager reference queries. Clicking a lens opens
-  // Monaco's references peek (editor.action.showReferences) populated with the matching locations.
-  monaco.languages.registerCodeLensProvider(FEATURE_SELECTOR, {
-    async provideCodeLenses(model) {
-      if (model.getValueLength() > LARGE_FILE_CHARS) return { lenses: [], dispose() {} };
+  // Inline reference hints, IntelliJ-style: a dim "N usages" / "M implementations" rendered at the
+  // end of each declaration line (not on a CodeLens line above it). Declarations come from the
+  // document-symbol backend (TS LS or jdtls); counts resolve via getReferences/getImplementations.
+  // Monaco requests hints only for the visible range, so the reference fan-out is bounded to
+  // on-screen declarations and cached per line until the next edit. Clicking a hint opens Monaco's
+  // references peek (editor.action.showReferences) populated with the matching locations.
+  monaco.languages.registerInlayHintsProvider(FEATURE_SELECTOR, {
+    async provideInlayHints(model, range, token) {
+      if (model.getValueLength() > LARGE_FILE_CHARS) return { hints: [], dispose() {} };
       const res = await lang.getDocumentSymbols(fileOf(model));
-      if (!res.ok) return { lenses: [], dispose() {} };
+      if (!res.ok || token.isCancellationRequested) return { hints: [], dispose() {} };
+      const file = fileOf(model);
       const lineCount = model.getLineCount();
-      const lenses: ForgeLens[] = [];
+      const visible: LsSymbol[] = [];
       for (const sym of res.data) {
         if (!USAGE_KINDS.has(sym.kind) || sym.line < 1 || sym.line > lineCount) continue;
-        // Anchor reference/implementation queries on the identifier: the document-symbol position
-        // can point at the start of the declaration span, so find the name on that line instead.
-        const idx = model.getLineContent(sym.line).indexOf(sym.name);
-        const column = idx >= 0 ? idx + 1 : sym.column;
-        const range = new monaco.Range(sym.line, 1, sym.line, 1);
-        const ctx = { file: sym.file, line: sym.line, column };
-        lenses.push({ range, __ctx: { ...ctx, kind: 'usages' } });
-        if (IMPL_KINDS.has(sym.kind)) lenses.push({ range, __ctx: { ...ctx, kind: 'impls' } });
-        // Bail early on symbol-dense files before the resolve fan-out can jank the UI.
-        if (lenses.length > MAX_CODE_LENSES) return { lenses: [], dispose() {} };
+        if (sym.line < range.startLineNumber || sym.line > range.endLineNumber) continue;
+        visible.push(sym);
+        // Too many declarations on one screen (a symbol-dense literal) — skip the pass before the
+        // resolve fan-out can jank the UI.
+        if (visible.length > MAX_INLAY_HINTS) return { hints: [], dispose() {} };
       }
-      return { lenses, dispose() {} };
-    },
-    async resolveCodeLens(model, codeLens, token) {
-      const ctx = (codeLens as ForgeLens).__ctx;
-      if (!ctx) return codeLens;
-      const res = await (ctx.kind === 'usages'
-        ? lang.getReferences(ctx.file, ctx.line, ctx.column)
-        : lang.getImplementations(ctx.file, ctx.line, ctx.column));
-      // The user scrolled this lens out of view (or closed the file) while the worker was busy —
-      // drop the result instead of building models/commands for a lens Monaco no longer wants.
-      if (token.isCancellationRequested) return codeLens;
-      // Drop the declaration itself so counts read like an IDE ("usages", not "occurrences").
-      // The TS LS includes the declaration in references; jdtls already excludes it.
-      const locs = (res.ok ? res.data : []).filter(
-        (l) => !(samePath(l.file, ctx.file) && l.line === ctx.line),
+      const byLine = countsFor(model.uri.toString(), model.getVersionId());
+      const hints = await Promise.all(
+        visible.map(async (sym) => {
+          // Anchor reference/implementation queries on the identifier: the document-symbol position
+          // can point at the start of the declaration span, so find the name on that line instead.
+          const idx = model.getLineContent(sym.line).indexOf(sym.name);
+          const column = idx >= 0 ? idx + 1 : sym.column;
+          const counts = await resolveHintCounts(byLine, file, sym, column);
+          // The user scrolled/edited while a worker was busy — drop the pass' results.
+          if (token.isCancellationRequested) return null;
+          return buildHint(monaco, model, sym, column, counts);
+        }),
       );
-      const noun = ctx.kind === 'usages' ? 'usage' : 'implementation';
-      const monacoLocs = locs.map((l) => toMonacoLocation(monaco, l));
-      // Preview panes in the references peek call createModelReference on each target; make sure a
-      // model exists so expanding a hit in an unopened file doesn't throw "Model not found".
-      await ensureModelsFor(monaco, monacoLocs);
-      codeLens.command = {
-        id: 'editor.action.showReferences',
-        // An implementation lens with nothing to show (e.g. a concrete class) renders blank.
-        title:
-          ctx.kind === 'impls' && locs.length === 0
-            ? ''
-            : `${locs.length} ${locs.length === 1 ? noun : `${noun}s`}`,
-        arguments: [model.uri, new monaco.Position(ctx.line, ctx.column), monacoLocs],
-      };
-      return codeLens;
+      return { hints: hints.filter((h): h is ForgeHint => h !== null), dispose() {} };
+    },
+    // Peek preview panes call createModelReference on each target; make sure a model exists so
+    // expanding a hit in an unopened file doesn't throw "Model not found". Deferred to hover so the
+    // (disk-reading) model creation happens only for a hint the user actually interacts with.
+    async resolveInlayHint(hint) {
+      const locs = (hint as ForgeHint).__locs;
+      if (locs && locs.length) await ensureModelsFor(monaco, locs);
+      return hint;
     },
   });
 
