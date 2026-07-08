@@ -44,6 +44,15 @@ const USAGE_KINDS = new Set([
 ]);
 const IMPL_KINDS = new Set(['class', 'interface', 'method', 'getter', 'setter']);
 
+// Cap the number of "N usages"/"N implementations" lenses per file. A giant nested-object literal
+// (e.g. a path→permission map) has thousands of `property` symbols, one lens each — and the
+// byte-based LARGE_FILE_CHARS guard never trips because such files are byte-small but symbol-huge.
+// Every visible lens fires an uncancellable project-wide getReferences at the single language
+// worker plus a synchronous createModel burst on the renderer thread, which janks the UI so Cmd+F
+// and the context menu appear frozen until reload. Above this many declarations, skip CodeLens
+// entirely — it's both prohibitively expensive and near-useless on files that dense.
+const MAX_CODE_LENSES = 500;
+
 /** Context stashed on a CodeLens so resolveCodeLens knows what to count and where to peek. */
 interface LensContext {
   file: string;
@@ -248,15 +257,20 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
         const ctx = { file: sym.file, line: sym.line, column };
         lenses.push({ range, __ctx: { ...ctx, kind: 'usages' } });
         if (IMPL_KINDS.has(sym.kind)) lenses.push({ range, __ctx: { ...ctx, kind: 'impls' } });
+        // Bail early on symbol-dense files before the resolve fan-out can jank the UI.
+        if (lenses.length > MAX_CODE_LENSES) return { lenses: [], dispose() {} };
       }
       return { lenses, dispose() {} };
     },
-    async resolveCodeLens(model, codeLens) {
+    async resolveCodeLens(model, codeLens, token) {
       const ctx = (codeLens as ForgeLens).__ctx;
       if (!ctx) return codeLens;
       const res = await (ctx.kind === 'usages'
         ? lang.getReferences(ctx.file, ctx.line, ctx.column)
         : lang.getImplementations(ctx.file, ctx.line, ctx.column));
+      // The user scrolled this lens out of view (or closed the file) while the worker was busy —
+      // drop the result instead of building models/commands for a lens Monaco no longer wants.
+      if (token.isCancellationRequested) return codeLens;
       // Drop the declaration itself so counts read like an IDE ("usages", not "occurrences").
       // The TS LS includes the declaration in references; jdtls already excludes it.
       const locs = (res.ok ? res.data : []).filter(
