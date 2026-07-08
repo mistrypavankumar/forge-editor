@@ -36,7 +36,7 @@ import {
 import { useInlineRunStore } from '../stores/inline-run-store';
 import { useSearchStore } from '../stores/search-store';
 import { buildReplaceDecorations } from '../editor/replace-preview';
-import { setActiveEditor, getActiveEditor } from '../editor/active-editor';
+import { setActiveEditor, registerEditor, unregisterEditor } from '../editor/active-editor';
 import { saveAllFiles } from '../lib/save-actions';
 import { useFormatterStore } from '../stores/formatter-store';
 import type { FormatterId } from '../lib/detect-formatters';
@@ -184,6 +184,9 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     });
     editorRef.current = instance;
+    // Register in the live-editor set so it can serve as the fallback active editor even before
+    // it's ever focused (keeps Cmd+F / Go to Line / Format working without clicking in first).
+    registerEditor(instance);
     // Become the active editor on mount if this is the focused group; thereafter, focus drives it
     // (so commands like save/format/reveal target whichever split pane the user is editing).
     if (useEditorStore.getState().activeGroupId === groupId) setActiveEditor(instance);
@@ -362,7 +365,7 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
       peekRef.current?.dispose();
       disposables.forEach((d) => d.dispose());
       unregisterHunkSource(instance);
-      if (getActiveEditor() === instance) setActiveEditor(null);
+      unregisterEditor(instance);
       instance.dispose();
     };
   }, [updateContent, recomputeDiff]);

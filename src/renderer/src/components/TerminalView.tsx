@@ -129,9 +129,20 @@ export function TerminalView({
       }),
     );
 
+    // Fuzzy "Go to File" palette seeded with the file name — the fallback for paths that
+    // don't resolve against the terminal's cwd (e.g. build errors reported relative to a
+    // monorepo sub-package), so they can still be found by searching the workspace.
+    const searchPathLink = (token: string): void => {
+      const lc = /:(\d+)(?::(\d+))?$/.exec(token);
+      const rel = lc ? token.slice(0, lc.index) : token;
+      const name = rel.slice(rel.lastIndexOf('/') + 1);
+      usePaletteStore.getState().openPalette('files', name);
+    };
+
     // File paths: clicking opens the file (or scopes the folder) in-editor. Handles
     // both absolute paths and relative ones (e.g. ripgrep output like
-    // `packages/foo/bar.ts:42`), resolving the latter against the terminal's root.
+    // `packages/foo/bar.ts:42`), resolving the latter against the terminal's root. If the
+    // path can't be resolved against the terminal cwd, fall back to the fuzzy palette.
     const openPathLink = (token: string): void => {
       const lc = /:(\d+)(?::(\d+))?$/.exec(token);
       const rel = lc ? token.slice(0, lc.index) : token;
@@ -154,19 +165,13 @@ export function TerminalView({
             ws.setChildren(path, dr.data);
             ws.setScope(path);
             useNavigatorStore.getState().setTab('structure');
+            return;
           }
+          // Neither a readable file nor a directory at the resolved path — fuzzy-search
+          // the workspace by file name instead (monorepo-relative paths land here).
+          searchPathLink(token);
         });
       });
-    };
-
-    // Cmd/Ctrl+click opens the "Go to File" palette seeded with the file name, so paths
-    // that don't resolve against the terminal's cwd — e.g. build errors reported relative
-    // to a monorepo sub-package — can still be found by fuzzy-searching the workspace.
-    const searchPathLink = (token: string): void => {
-      const lc = /:(\d+)(?::(\d+))?$/.exec(token);
-      const rel = lc ? token.slice(0, lc.index) : token;
-      const name = rel.slice(rel.lastIndexOf('/') + 1);
-      usePaletteStore.getState().openPalette('files', name);
     };
 
     // Only treat a token as a file path when it's absolute, contains a `/`, or ends
@@ -195,10 +200,9 @@ export function TerminalView({
           links.push({
             text: full,
             range: { start: { x: startX, y }, end: { x: startX + full.length - 1, y } },
-            activate: (event: MouseEvent) => {
-              if (event.metaKey || event.ctrlKey) searchPathLink(full);
-              else openPathLink(full);
-            },
+            // Both plain-click and Cmd/Ctrl+click open the file directly (VSCode-style),
+            // falling back to the fuzzy palette when the path can't be resolved.
+            activate: () => openPathLink(full),
           });
         }
         callback(links.length > 0 ? links : undefined);

@@ -9,6 +9,8 @@ const require = createRequire(import.meta.url);
 const pty = require('node-pty') as typeof import('node-pty');
 
 const sessions = new Map<string, IPty>();
+/** webContents id of the window that owns each session, so we can reap on window close. */
+const owners = new Map<string, number>();
 /** Per-session foreground-process pollers (drive the task "running" indicator). */
 const pollers = new Map<string, ReturnType<typeof setInterval>>();
 const BUSY_POLL_MS = 400;
@@ -52,6 +54,7 @@ function stopPoller(id: string): void {
 
 export function createTerminal(sender: WebContents, args: TerminalCreateArgs): void {
   sessions.get(args.id)?.kill();
+  owners.set(args.id, sender.id);
   flow.set(args.id, { unacked: 0, paused: false });
 
   const proc = pty.spawn(defaultShell(), shellArgs(), {
@@ -87,6 +90,7 @@ export function createTerminal(sender: WebContents, args: TerminalCreateArgs): v
     // re-create (e.g. React StrictMode remount) may have replaced it already.
     if (sessions.get(args.id) === proc) {
       sessions.delete(args.id);
+      owners.delete(args.id);
       flow.delete(args.id);
       stopPoller(args.id);
       if (!sender.isDestroyed()) {
@@ -154,6 +158,14 @@ export function resizeTerminal(id: string, cols: number, rows: number): void {
 export function killTerminal(id: string): void {
   sessions.get(id)?.kill();
   sessions.delete(id);
+  owners.delete(id);
   flow.delete(id);
   stopPoller(id);
+}
+
+/** Kill every pty owned by a window (call when that window closes) to avoid orphaned shells. */
+export function killTerminalsForWindow(webContentsId: number): void {
+  for (const [id, owner] of [...owners]) {
+    if (owner === webContentsId) killTerminal(id);
+  }
 }
