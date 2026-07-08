@@ -18,6 +18,7 @@ import { useNavigatorStore } from '../stores/navigator-store';
 import { useKeybindings } from '../keybindings/use-keybindings';
 import { useKeybindingsStore } from '../stores/keybindings-store';
 import { useSettingsPersistence } from '../settings/use-settings-persistence';
+import { useSessionPersistence } from '../settings/use-session-persistence';
 import { useAutoSave } from '../settings/use-auto-save';
 import { useAutoFormat } from '../settings/use-auto-format';
 import { useAutoDiagnostics } from '../settings/use-auto-diagnostics';
@@ -150,6 +151,7 @@ export function AppShell(): React.JSX.Element {
   const keybindingOverrides = useKeybindingsStore((s) => s.overrides);
   useKeybindings(keybindingOverrides);
   useSettingsPersistence();
+  useSessionPersistence();
   useAutoSave();
   useAutoFormat();
   useAutoDiagnostics();
