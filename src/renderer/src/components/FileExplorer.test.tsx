@@ -19,6 +19,8 @@ beforeEach(() => {
     })),
     readFile: vi.fn(async () => ({ ok: true, data: 'file body' })),
     readDirectory: vi.fn(async () => ({ ok: true, data: [] })),
+    // applyFolder fires restoreSession, which reads persisted per-folder tabs.
+    loadSettings: vi.fn(async () => ({ ok: true, data: {} })),
   };
 });
 
