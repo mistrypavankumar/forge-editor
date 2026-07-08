@@ -838,6 +838,17 @@ export interface RecentEntry {
   name: string;
 }
 
+/**
+ * A saved editor layout for one workspace: which files are open in each view column and which is
+ * active. Persisted per workspace folder so reopening a folder (including after a window reload)
+ * restores its tabs. Only real on-disk files are captured — synthetic tabs (API Explorer, Codebase
+ * Map) and read-only diff views are skipped.
+ */
+export interface EditorSession {
+  groups: { id: string; paths: string[]; activePath: string | null }[];
+  activeGroupId: string;
+}
+
 /** One open Forge window, for the title-bar window switcher. */
 export interface OpenWindowInfo {
   /** webContents id — a stable handle to focus the window. */
@@ -916,6 +927,11 @@ export interface ForgeSettings {
   wellnessExercises?: string[];
   /** Play a gentle chime when a wellness break begins. */
   wellnessSound?: boolean;
+  /**
+   * Saved editor layout per workspace folder (absolute path → session). Restored when that folder
+   * is reopened — notably after "Reload Window" — so open tabs survive a reload.
+   */
+  sessions?: Record<string, EditorSession>;
 }
 
 /** Outcome of running a formatter CLI against a file. */

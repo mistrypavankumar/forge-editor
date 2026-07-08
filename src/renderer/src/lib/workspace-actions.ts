@@ -1,8 +1,8 @@
 import { useWorkspaceStore } from '../stores/workspace-store';
-import { useEditorStore } from '../stores/editor-store';
+import { useEditorStore, MAIN_GROUP, type OpenFile } from '../stores/editor-store';
 import { useRecentsStore } from '../stores/recents-store';
 import { isImagePath } from './is-image';
-import type { DirEntry, GitChange } from '@shared/ipc-contract';
+import type { DirEntry, GitChange, EditorSession } from '@shared/ipc-contract';
 
 function base(p: string): string {
   const parts = p.split('/').filter(Boolean);
@@ -12,6 +12,64 @@ function base(p: string): string {
 function applyFolder(rootPath: string, tree: DirEntry[]): void {
   useWorkspaceStore.getState().setWorkspace(rootPath, tree);
   useRecentsStore.getState().addRecent({ type: 'folder', path: rootPath, name: base(rootPath) });
+  // Reopen the tabs this folder had last time — the key half of surviving a window reload.
+  void restoreSession(rootPath);
+}
+
+/**
+ * Reopen the saved editor tabs for `folder`. Runs when a folder is (re)opened — chiefly after a
+ * window reload, where the renderer starts blank but the main process re-sends the folder. Only
+ * applies when the editor has no real files open yet, so opening a different folder mid-session
+ * never wipes the tabs you're already working in. Files that no longer exist are silently dropped.
+ */
+export async function restoreSession(folder: string): Promise<void> {
+  if (useEditorStore.getState().tabs.some((t) => t.path.startsWith('/'))) return;
+  const res = await window.forge.loadSettings();
+  const session = res.ok ? res.data.sessions?.[folder] : undefined;
+  if (!session) return;
+
+  // Unique on-disk paths across all view columns, in first-seen order.
+  const paths: string[] = [];
+  for (const g of session.groups) {
+    for (const p of g.paths) if (p.startsWith('/') && !paths.includes(p)) paths.push(p);
+  }
+  if (paths.length === 0) return;
+
+  const loaded = new Map<string, OpenFile>();
+  await Promise.all(
+    paths.map(async (path) => {
+      const name = base(path);
+      // Images render from raw bytes; keep parity with openFilePath and skip the text read.
+      if (isImagePath(name)) {
+        loaded.set(path, { path, name, content: '', dirty: false, kind: 'file' });
+        return;
+      }
+      const r = await window.forge.readFile(path);
+      if (r.ok) loaded.set(path, { path, name, content: r.data, dirty: false, kind: 'file' });
+    }),
+  );
+  if (loaded.size === 0) return;
+  // A folder-open (e.g. from a dialog) may have raced ahead and opened files; don't clobber those.
+  if (useEditorStore.getState().tabs.some((t) => t.path.startsWith('/'))) return;
+
+  // Rebuild the columns, keeping only files that still loaded, and drop now-empty columns.
+  let groups = session.groups
+    .map((g) => {
+      const kept = g.paths.filter((p) => loaded.has(p));
+      const active = g.activePath && kept.includes(g.activePath) ? g.activePath : (kept[kept.length - 1] ?? null);
+      return { id: g.id, paths: kept, activePath: active };
+    })
+    .filter((g) => g.paths.length > 0);
+  if (groups.length === 0) return;
+  // Guarantee a `main` column exists (the store assumes one); promote the first if it was dropped.
+  if (!groups.some((g) => g.id === MAIN_GROUP)) {
+    groups = groups.map((g, i) => (i === 0 ? { ...g, id: MAIN_GROUP } : g));
+  }
+  const activeGroupId = groups.some((g) => g.id === session.activeGroupId)
+    ? session.activeGroupId
+    : groups[0].id;
+  const activePath = (groups.find((g) => g.id === activeGroupId) ?? groups[0]).activePath;
+  useEditorStore.setState({ tabs: [...loaded.values()], groups, activeGroupId, activePath });
 }
 
 function applyFile(path: string, name: string, content: string, record: boolean): void {

@@ -235,8 +235,13 @@ function createWindow(initialFolder?: string): void {
   win.webContents.on('did-finish-load', () => {
     // Deliver any files the OS queued for us (Open With / CLI args) once the UI can receive them.
     flushPendingFiles(win);
-    // A window opened to show a specific folder (from the switcher's recents) loads it now.
-    if (initialFolder) win.webContents.send(IpcChannels.openFolderInWindow, initialFolder);
+    // Restore this window's folder. `did-finish-load` fires on every load, including a reload —
+    // and because the main process outlives a renderer reload, `windowWorkspaces` still holds the
+    // folder this window had before reloading. Prefer that (so a reload keeps the same workspace);
+    // fall back to `initialFolder` for a switcher-opened window's very first load, when nothing has
+    // been reported yet. The renderer reopens the folder's saved tabs once the folder loads.
+    const folder = windowWorkspaces.get(winId)?.rootPath ?? initialFolder;
+    if (folder) win.webContents.send(IpcChannels.openFolderInWindow, folder);
   });
 
   if (process.env.ELECTRON_RENDERER_URL) {
