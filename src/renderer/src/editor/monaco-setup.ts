@@ -137,6 +137,26 @@ const DIFF_LIGHT: Record<string, string> = {
   'diffEditor.diagonalFill': '#d0d0d8',
 };
 
+// Inline reference hints ("N usages" / "M implementations") at the end of a declaration line.
+// Monaco styles inlay hints purely from these theme colors — the per-hint DOM class is generated
+// dynamically, so app CSS can't reach it. Render them as plain dim text with a transparent
+// background (no chip) so they read like IntelliJ's counts. The `inlayHints.padding` editor option
+// stays off (its default), so there's no rounded padding either. `kind` is left unset on our hints,
+// which uses the plain `editorInlayHint.foreground/background` pair; the type variants are set too
+// for safety.
+const INLAY_HINT_DARK: Record<string, string> = {
+  'editorInlayHint.foreground': '#7d8799',
+  'editorInlayHint.background': '#00000000',
+  'editorInlayHint.typeForeground': '#7d8799',
+  'editorInlayHint.typeBackground': '#00000000',
+};
+const INLAY_HINT_LIGHT: Record<string, string> = {
+  'editorInlayHint.foreground': '#8a8a94',
+  'editorInlayHint.background': '#00000000',
+  'editorInlayHint.typeForeground': '#8a8a94',
+  'editorInlayHint.typeBackground': '#00000000',
+};
+
 const FORGE_DARK_COLORS: Record<string, string> = {
   // Transparent so the editor host's translucent `bg-bg` (and the window vibrancy behind
   // it) shows through — matching the frosted-glass look of the rest of the chrome.
@@ -356,23 +376,23 @@ export function getMonaco(): typeof monaco {
 
     monaco.editor.defineTheme('forge-dark', {
       base: 'vs-dark', inherit: true, rules: buildRules(DARK_PLUS),
-      colors: { ...DIFF_DARK, ...FORGE_DARK_COLORS },
+      colors: { ...DIFF_DARK, ...INLAY_HINT_DARK, ...FORGE_DARK_COLORS },
     });
     monaco.editor.defineTheme('forge-light', {
       base: 'vs', inherit: true, rules: buildRules(LIGHT_PLUS),
-      colors: { ...DIFF_LIGHT, ...FORGE_LIGHT_COLORS },
+      colors: { ...DIFF_LIGHT, ...INLAY_HINT_LIGHT, ...FORGE_LIGHT_COLORS },
     });
     // Original minimal look: base vs-dark token colors, Forge chrome.
     monaco.editor.defineTheme('forge-minimal-dark', {
-      base: 'vs-dark', inherit: true, rules: [], colors: { ...DIFF_DARK, ...FORGE_DARK_COLORS },
+      base: 'vs-dark', inherit: true, rules: [], colors: { ...DIFF_DARK, ...INLAY_HINT_DARK, ...FORGE_DARK_COLORS },
     });
     monaco.editor.defineTheme('github-dark', {
       base: 'vs-dark', inherit: true, rules: buildRules(GITHUB_DARK),
-      colors: { ...DIFF_DARK, ...GITHUB_DARK_COLORS },
+      colors: { ...DIFF_DARK, ...INLAY_HINT_DARK, ...GITHUB_DARK_COLORS },
     });
     monaco.editor.defineTheme('monokai', {
       base: 'vs-dark', inherit: true, rules: buildRules(MONOKAI),
-      colors: { ...DIFF_DARK, ...MONOKAI_COLORS },
+      colors: { ...DIFF_DARK, ...INLAY_HINT_DARK, ...MONOKAI_COLORS },
     });
     configured = true;
   }
