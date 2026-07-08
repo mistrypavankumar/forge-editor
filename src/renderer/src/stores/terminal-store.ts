@@ -16,13 +16,20 @@ export interface TerminalGroup {
 
 let sSeq = 0;
 let gSeq = 0;
+// Session ids cross into the main process, whose pty `sessions` map is a single
+// global shared by every window. A per-renderer counter resets to 0 in each new
+// window, so `term-1` from a second window would collide with the first window's
+// `term-1` — createTerminal() would kill the first window's pty and hijack the id,
+// freezing that terminal (and any task writing into it). Mix in a per-renderer
+// random namespace so ids are unique across windows; sSeq still drives the title.
+const nsPrefix = Math.random().toString(36).slice(2, 8);
 function makeSession(title?: string, taskKey?: string): TerminalSession {
   sSeq += 1;
-  return { id: `term-${sSeq}`, title: title ?? `zsh ${sSeq}`, taskKey };
+  return { id: `term-${nsPrefix}-${sSeq}`, title: title ?? `zsh ${sSeq}`, taskKey };
 }
 function makeGroupId(): string {
   gSeq += 1;
-  return `grp-${gSeq}`;
+  return `grp-${nsPrefix}-${gSeq}`;
 }
 
 const s0 = makeSession();

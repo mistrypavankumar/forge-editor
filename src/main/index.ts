@@ -88,13 +88,14 @@ import { registerEditorIntegrationIpc } from './ipc/editor-integration-ipc';
 import { registerApiRequestIpc } from './ipc/api-request-ipc';
 import { registerDebugIpc } from './debug/debug-ipc';
 import { setActiveProfile } from './aws/aws-service';
-import { watchWorkspace } from './fs/watcher';
+import { watchWorkspace, stopWatchingForWindow } from './fs/watcher';
 import {
   createTerminal,
   writeTerminal,
   ackTerminal,
   resizeTerminal,
   killTerminal,
+  killTerminalsForWindow,
 } from './terminal/command-runner';
 
 const SETTINGS_PATH = join(homedir(), '.forge', 'settings.json');
@@ -226,6 +227,8 @@ function createWindow(initialFolder?: string): void {
   win.on('blur', broadcastWindows);
   win.on('closed', () => {
     windowWorkspaces.delete(winId);
+    stopWatchingForWindow(winId);
+    killTerminalsForWindow(winId);
     broadcastWindows();
   });
 
