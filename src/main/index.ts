@@ -87,6 +87,7 @@ import { registerAwsIpc } from './ipc/aws-ipc';
 import { registerEditorIntegrationIpc } from './ipc/editor-integration-ipc';
 import { registerApiRequestIpc } from './ipc/api-request-ipc';
 import { registerBrowserIpc } from './ipc/browser-ipc';
+import { registerCaptureIpc } from './ipc/capture-ipc';
 import { registerDebugIpc } from './debug/debug-ipc';
 import { setActiveProfile } from './aws/aws-service';
 import { watchWorkspace, stopWatchingForWindow } from './fs/watcher';
@@ -581,6 +582,7 @@ app.whenReady().then(async () => {
   registerEditorIntegrationIpc(ipcMain);
   registerApiRequestIpc(ipcMain);
   registerBrowserIpc(ipcMain);
+  registerCaptureIpc(ipcMain);
   registerDebugIpc(ipcMain);
   // Restore the active AWS connection so new terminals get AWS_PROFILE from the first launch.
   void readSettings(SETTINGS_PATH).then((s) => setActiveProfile(s.awsProfile ?? null, s.awsRegion ?? null));

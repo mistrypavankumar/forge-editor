@@ -49,6 +49,7 @@ import { SettingsView } from './SettingsView';
 import { SkeletonPreview } from './SkeletonPreview';
 import { FeaturesView } from './FeaturesView';
 import { WellnessBreakOverlay } from './WellnessBreakOverlay';
+import { AnnotationOverlay } from './AnnotationOverlay';
 import { useWellnessBreaks } from '../settings/use-wellness-breaks';
 import { ContextMenu } from './ui/ContextMenu';
 
@@ -341,6 +342,7 @@ export function AppShell(): React.JSX.Element {
         <SettingsView />
         <FeaturesView />
         <WellnessBreakOverlay />
+        <AnnotationOverlay />
       </div>
     );
   }
@@ -455,6 +457,7 @@ export function AppShell(): React.JSX.Element {
       <FeaturesView />
       <SkeletonPreview />
       <WellnessBreakOverlay />
+      <AnnotationOverlay />
       {menu ? (
         <ContextMenu
           x={menu.x}

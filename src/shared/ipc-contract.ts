@@ -98,6 +98,9 @@ export const IpcChannels = {
   terminalExit: 'forge:terminal:exit',
   terminalBusy: 'forge:terminal:busy',
   openExternal: 'forge:shell:openExternal',
+  // Screenshot markup: capture a region of the window to a PNG, and put a PNG on the clipboard.
+  capturePage: 'forge:capture:page',
+  clipboardWriteImage: 'forge:capture:clipboardImage',
   // Generic HTTP request (API Explorer) — performed in main to bypass renderer CORS.
   apiRequest: 'forge:api:request',
   // TypeScript Language Service (real IDE intelligence).
@@ -1455,6 +1458,18 @@ export interface ForgeApi {
   resizeTerminal: (id: string, cols: number, rows: number) => void;
   killCommand: (id: string) => Promise<Result<void>>;
   openExternal: (url: string) => Promise<Result<void>>;
+  /**
+   * Capture a rectangular region of this window (device-independent pixels) to a PNG data URL.
+   * Used by the annotation/screenshot markup overlay to freeze the active editor pane.
+   */
+  capturePage: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => Promise<Result<string>>;
+  /** Write a PNG (data URL) to the system clipboard as an image, for pasting into other apps. */
+  clipboardWriteImage: (dataUrl: string) => Promise<Result<void>>;
   /** Run an HTTP request from the main process (no renderer CORS). Used by the API Explorer. */
   apiRequest: (req: ApiHttpRequest) => Promise<Result<ApiHttpResponse>>;
   /** Probe candidate localhost ports; reports which are accepting connections (dev-server detection). */
