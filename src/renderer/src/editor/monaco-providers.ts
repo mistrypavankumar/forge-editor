@@ -39,9 +39,11 @@ type ForgeCompletion = languages.CompletionItem & { __forge?: ResolveContext };
 // Declaration kinds that get an inline reference hint. USAGE_KINDS get a "N usages" hint; the
 // subset in IMPL_KINDS also get a "N implementations" hint (interfaces, classes, and overridable
 // members). Kinds are the ScriptElementKind-style strings shared by the TS LS and the jdtls symbol
-// mapping.
+// mapping. Data members (`property`, `field`) are intentionally excluded: they clutter object and
+// JSX literals with mostly-noise counts (e.g. every `sx` style key). Hints are reserved for
+// components, functions, classes, and other callable/overridable declarations.
 const USAGE_KINDS = new Set([
-  'class', 'interface', 'enum', 'method', 'function', 'constructor', 'property', 'field', 'getter', 'setter',
+  'class', 'interface', 'enum', 'method', 'function', 'constructor', 'getter', 'setter',
 ]);
 const IMPL_KINDS = new Set(['class', 'interface', 'method', 'getter', 'setter']);
 
@@ -63,12 +65,15 @@ type ForgeHint = languages.InlayHint & { __locs?: languages.Location[] };
 // Per-model cache of resolved counts, keyed by model URI and invalidated when the content version
 // changes. Monaco re-requests hints on every scroll; without this, revisiting a line would refire
 // its getReferences/getImplementations. An edit bumps the version, which drops the stale map.
-const countsCache = new Map<string, { version: number; byLine: Map<number, HintCounts> }>();
+// Inner map is keyed by `line:column` (not line alone): two eligible declarations can share a line
+// (e.g. `export interface A {} export class B {}`), and a line-only key would serve the second the
+// first's counts.
+const countsCache = new Map<string, { version: number; byLine: Map<string, HintCounts> }>();
 
-function countsFor(uri: string, version: number): Map<number, HintCounts> {
+function countsFor(uri: string, version: number): Map<string, HintCounts> {
   const entry = countsCache.get(uri);
   if (entry && entry.version === version) return entry.byLine;
-  const byLine = new Map<number, HintCounts>();
+  const byLine = new Map<string, HintCounts>();
   countsCache.set(uri, { version, byLine });
   return byLine;
 }
@@ -76,6 +81,22 @@ function countsFor(uri: string, version: number): Map<number, HintCounts> {
 /** Compare two absolute paths ignoring slash direction (Monaco URIs vs TS forward-slash paths). */
 function samePath(a: string, b: string): boolean {
   return a.replace(/\\/g, '/') === b.replace(/\\/g, '/');
+}
+
+/** Escape a string for literal use inside a RegExp. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * 1-based column of `name` on `lineText`, matched at an identifier boundary so a bare substring —
+ * an earlier lookalike token, or `name` embedded in a longer identifier — doesn't misplace the
+ * reference-query anchor. Returns `fallback` when the name isn't found on the line. `$`/`_` count as
+ * identifier chars (so `$foo` / `_foo` anchor correctly).
+ */
+function identifierColumn(lineText: string, name: string, fallback: number): number {
+  const m = new RegExp(`(?<![$\\w])${escapeRegExp(name)}(?![$\\w])`).exec(lineText);
+  return m ? m.index + 1 : fallback;
 }
 
 function toRange(monaco: typeof monacoNs, loc: LsLocation): monacoNs.IRange {
@@ -93,23 +114,26 @@ function toMonacoLocation(monaco: typeof monacoNs, loc: LsLocation): languages.L
  * queried for IMPL_KINDS. Results are memoized per line for the current model version.
  */
 async function resolveHintCounts(
-  byLine: Map<number, HintCounts>,
+  byLine: Map<string, HintCounts>,
   file: string,
   sym: LsSymbol,
   column: number,
 ): Promise<HintCounts> {
-  const cached = byLine.get(sym.line);
+  const key = `${sym.line}:${column}`;
+  const cached = byLine.get(key);
   if (cached) return cached;
   const notSelf = (l: LsLocation) => !(samePath(l.file, file) && l.line === sym.line);
-  const refRes = await lang.getReferences(file, sym.line, column);
+  // References and (for impl-eligible kinds) implementations are independent LS round-trips — run
+  // them concurrently rather than one after the other.
+  const wantImpl = IMPL_KINDS.has(sym.kind);
+  const [refRes, implRes] = await Promise.all([
+    lang.getReferences(file, sym.line, column),
+    wantImpl ? lang.getImplementations(file, sym.line, column) : Promise.resolve(null),
+  ]);
   const usageLocs = (refRes.ok ? refRes.data : []).filter(notSelf);
-  let implLocs: LsLocation[] = [];
-  if (IMPL_KINDS.has(sym.kind)) {
-    const implRes = await lang.getImplementations(file, sym.line, column);
-    implLocs = (implRes.ok ? implRes.data : []).filter(notSelf);
-  }
+  const implLocs = implRes && implRes.ok ? implRes.data.filter(notSelf) : [];
   const counts: HintCounts = { usageLocs, implLocs };
-  byLine.set(sym.line, counts);
+  byLine.set(key, counts);
   return counts;
 }
 
@@ -343,14 +367,19 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
       const byLine = countsFor(model.uri.toString(), model.getVersionId());
       const hints = await Promise.all(
         visible.map(async (sym) => {
-          // Anchor reference/implementation queries on the identifier: the document-symbol position
-          // can point at the start of the declaration span, so find the name on that line instead.
-          const idx = model.getLineContent(sym.line).indexOf(sym.name);
-          const column = idx >= 0 ? idx + 1 : sym.column;
-          const counts = await resolveHintCounts(byLine, file, sym, column);
-          // The user scrolled/edited while a worker was busy — drop the pass' results.
-          if (token.isCancellationRequested) return null;
-          return buildHint(monaco, model, sym, column, counts);
+          try {
+            // Anchor reference/implementation queries on the identifier: the document-symbol
+            // position can point at the start of the declaration span, so find the name on that
+            // line instead (at an identifier boundary, not a bare substring).
+            const column = identifierColumn(model.getLineContent(sym.line), sym.name, sym.column);
+            const counts = await resolveHintCounts(byLine, file, sym, column);
+            // The user scrolled/edited while a worker was busy — drop the pass' results.
+            if (token.isCancellationRequested) return null;
+            return buildHint(monaco, model, sym, column, counts);
+          } catch {
+            // One declaration's LS query failed — drop just its hint, keep the rest of the pass.
+            return null;
+          }
         }),
       );
       return { hints: hints.filter((h): h is ForgeHint => h !== null), dispose() {} };
