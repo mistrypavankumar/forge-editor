@@ -9,6 +9,8 @@ import {
   Play,
   Copy,
   FileCode2,
+  Route,
+  Network,
   Loader2,
 } from 'lucide-react';
 import type { BrowserInspectorSelection, CodeNode } from '@shared/ipc-contract';
@@ -26,7 +28,7 @@ import {
   DEFAULT_DEV_PORTS,
   type BrowserController,
 } from './store';
-import { matchComponents, matchRouteFile, resolveSourceFile, type ComponentMatch } from './resolver';
+import { matchComponents, matchRouteFile, componentUsages, resolveSourceFile } from './resolver';
 
 /** Minimal typing for the Electron <webview> element (only the members we use). */
 interface WebviewElement extends HTMLElement {
@@ -58,18 +60,7 @@ function normalizeUrl(input: string): string {
 export function BrowserView(): React.JSX.Element {
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const store = useBrowserStore();
-  const {
-    url,
-    inspectMode,
-    selection,
-    matches,
-    message,
-    devServers,
-    loading,
-    canGoBack,
-    canGoForward,
-    currentUrl,
-  } = store;
+  const { url, inspectMode, devServers, loading, canGoBack, canGoForward, currentUrl } = store;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const webviewRef = useRef<WebviewElement | null>(null);
@@ -104,26 +95,39 @@ export function BrowserView(): React.JSX.Element {
       const s = useBrowserStore.getState();
       s.setMatches([]);
       s.setMessage(null);
+      s.setResolved(null);
+      s.setUsages([]);
+      const nodes = await ensureNodes();
+
+      // Always surface the route file for the current URL + component usages, for the panel actions
+      // (independent of which strategy opens the primary source).
+      const routeFile = nodes ? matchRouteFile(sel.routePath ?? sel.url, nodes) : null;
+      s.setRouteFile(routeFile);
+      const name = sel.react?.componentName;
+      if (name && nodes) s.setUsages(componentUsages(name, nodes));
+
+      const open = (path: string, line: number, column: number, rel?: string): void => {
+        s.setResolved({ path, line, column, rel });
+        openAt(path, line, column);
+      };
 
       // 1. Build-time metadata (data-forge-*).
       const metaFile = resolveSourceFile(sel.forgeMetadata?.sourceFile, root);
       if (metaFile) {
-        openAt(metaFile, sel.forgeMetadata?.line ?? 1, sel.forgeMetadata?.column ?? 1);
+        open(metaFile, sel.forgeMetadata?.line ?? 1, sel.forgeMetadata?.column ?? 1);
         return;
       }
       // 2. React fiber source (dev builds).
       const fiberFile = resolveSourceFile(sel.react?.source?.fileName, root);
       if (fiberFile) {
-        openAt(fiberFile, sel.react?.source?.lineNumber ?? 1, sel.react?.source?.columnNumber ?? 1);
+        open(fiberFile, sel.react?.source?.lineNumber ?? 1, sel.react?.source?.columnNumber ?? 1);
         return;
       }
-      const nodes = await ensureNodes();
       // 3. Component name → project index.
-      const name = sel.react?.componentName;
       if (name && nodes) {
         const found = matchComponents(name, nodes);
         if (found.length === 1) {
-          openAt(found[0].path, found[0].line, found[0].column);
+          open(found[0].path, found[0].line, found[0].column, found[0].rel);
           return;
         }
         if (found.length > 1) {
@@ -133,13 +137,10 @@ export function BrowserView(): React.JSX.Element {
         }
       }
       // 4. URL → Next.js route file.
-      if (nodes) {
-        const route = matchRouteFile(sel.routePath ?? sel.url, nodes);
-        if (route) {
-          s.setMessage(`No exact component match — opened the route file for ${route.route}.`);
-          openAt(route.path, route.line, route.column);
-          return;
-        }
+      if (routeFile) {
+        s.setMessage(`No exact component match — opened the route file for ${routeFile.route}.`);
+        open(routeFile.path, routeFile.line, routeFile.column, routeFile.rel);
+        return;
       }
       // 5. Give up gracefully.
       const hint = name
@@ -191,9 +192,20 @@ export function BrowserView(): React.JSX.Element {
     webviewRef.current = wv;
 
     const setNav = useBrowserStore.getState().setNav;
-    const onStart = (): void => setNav({ loading: true });
+    const onStart = (): void => {
+      useBrowserStore.getState().setLoadError(null);
+      setNav({ loading: true });
+    };
     const onStop = (): void =>
       setNav({ loading: false, canGoBack: wv.canGoBack(), canGoForward: wv.canGoForward() });
+    const onFail = (e: Event): void => {
+      const ev = e as Event & { errorCode: number; errorDescription: string; validatedURL?: string };
+      // -3 is ABORTED (e.g. a redirect or a superseded navigation) — not a real failure.
+      if (ev.errorCode === -3) return;
+      useBrowserStore
+        .getState()
+        .setLoadError(`${ev.errorDescription || 'Failed to load'}${ev.validatedURL ? ` — ${ev.validatedURL}` : ''}`);
+    };
     const onNavigate = (e: Event): void => {
       const url = (e as Event & { url?: string }).url;
       if (url) {
@@ -216,6 +228,7 @@ export function BrowserView(): React.JSX.Element {
 
     wv.addEventListener('did-start-loading', onStart);
     wv.addEventListener('did-stop-loading', onStop);
+    wv.addEventListener('did-fail-load', onFail);
     wv.addEventListener('did-navigate', onNavigate);
     wv.addEventListener('did-navigate-in-page', onNavigate);
     wv.addEventListener('dom-ready', onDomReady);
@@ -238,6 +251,7 @@ export function BrowserView(): React.JSX.Element {
       registerBrowserController(null);
       wv.removeEventListener('did-start-loading', onStart);
       wv.removeEventListener('did-stop-loading', onStop);
+      wv.removeEventListener('did-fail-load', onFail);
       wv.removeEventListener('did-navigate', onNavigate);
       wv.removeEventListener('did-navigate-in-page', onNavigate);
       wv.removeEventListener('dom-ready', onDomReady);
@@ -291,7 +305,7 @@ export function BrowserView(): React.JSX.Element {
   };
 
   const running = devServers.filter((d) => d.running);
-  const details = selection ?? store.hover;
+  const loadError = store.loadError;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg">
@@ -391,14 +405,22 @@ export function BrowserView(): React.JSX.Element {
               Preparing browser…
             </div>
           ) : null}
+          {loadError ? (
+            <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center p-3">
+              <div className="pointer-events-auto flex items-center gap-2 rounded-md bg-bg/95 px-3 py-2 text-xs text-warning ring-1 ring-line">
+                <span>{loadError}</span>
+                <button
+                  type="button"
+                  onClick={() => webviewRef.current?.reload()}
+                  className="rounded px-1.5 py-0.5 text-accent hover:bg-surface"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
-        <InspectorPanel
-          details={details}
-          matches={matches}
-          message={message}
-          inspectMode={inspectMode}
-          onOpenMatch={(m) => openAt(m.path, m.line, m.column)}
-        />
+        <InspectorPanel inspectMode={inspectMode} openAt={openAt} />
       </div>
     </div>
   );
@@ -430,22 +452,28 @@ function ToolbarButton({
 }
 
 function InspectorPanel({
-  details,
-  matches,
-  message,
   inspectMode,
-  onOpenMatch,
+  openAt,
 }: {
-  details: BrowserInspectorSelection | null;
-  matches: ComponentMatch[];
-  message: string | null;
   inspectMode: boolean;
-  onOpenMatch: (m: ComponentMatch) => void;
+  openAt: (path: string, line: number, column: number) => void;
 }): React.JSX.Element {
-  const component =
-    details?.forgeMetadata?.component || details?.react?.componentName || 'Unknown';
+  const selection = useBrowserStore((s) => s.selection);
+  const hover = useBrowserStore((s) => s.hover);
+  const matches = useBrowserStore((s) => s.matches);
+  const message = useBrowserStore((s) => s.message);
+  const resolved = useBrowserStore((s) => s.resolved);
+  const routeFile = useBrowserStore((s) => s.routeFile);
+  const usages = useBrowserStore((s) => s.usages);
+  const [showUsages, setShowUsages] = useState(false);
+
+  // Collapse the usages list whenever a new element is selected.
+  useEffect(() => setShowUsages(false), [selection]);
+
+  const details = selection ?? hover;
+  const component = details?.forgeMetadata?.component || details?.react?.componentName || 'Unknown';
   const file =
-    details?.forgeMetadata?.sourceFile || details?.react?.source?.fileName || null;
+    resolved?.path || details?.forgeMetadata?.sourceFile || details?.react?.source?.fileName || null;
   const copy = (text: string): void => void navigator.clipboard?.writeText(text);
 
   return (
@@ -485,7 +513,7 @@ function InspectorPanel({
               <div className="mb-1 text-faint">Parent components</div>
               <div className="flex flex-col gap-0.5">
                 {details.react.ownerChain.map((name, i) => (
-                  <div key={`${name}-${i}`} className="pl-2 text-fg" style={{ paddingLeft: 8 + i * 8 }}>
+                  <div key={`${name}-${i}`} className="text-fg" style={{ paddingLeft: 8 + i * 8 }}>
                     {name}
                   </div>
                 ))}
@@ -494,6 +522,55 @@ function InspectorPanel({
           ) : null}
         </div>
       )}
+
+      {/* Actions */}
+      {inspectMode && details ? (
+        <div className="flex flex-col gap-1 border-t border-line px-3 py-2">
+          <Action
+            icon={<FileCode2 size={13} />}
+            label="Open Source"
+            disabled={!resolved}
+            onClick={() => resolved && openAt(resolved.path, resolved.line, resolved.column)}
+          />
+          <Action
+            icon={<Route size={13} />}
+            label="Open Route File"
+            disabled={!routeFile}
+            onClick={() => routeFile && openAt(routeFile.path, routeFile.line, routeFile.column)}
+          />
+          <Action
+            icon={<Network size={13} />}
+            label={`Show Component Usage${usages.length ? ` (${usages.length})` : ''}`}
+            disabled={!usages.length}
+            onClick={() => setShowUsages((v) => !v)}
+          />
+          <Action
+            icon={<Copy size={13} />}
+            label="Copy Component Path"
+            disabled={!file}
+            onClick={() => file && copy(file)}
+          />
+        </div>
+      ) : null}
+
+      {showUsages && usages.length ? (
+        <div className="border-t border-line px-3 py-2">
+          <div className="mb-1.5 text-faint">Used by {usages.length} file(s):</div>
+          <div className="flex flex-col gap-1">
+            {usages.map((u) => (
+              <button
+                key={u.path}
+                type="button"
+                onClick={() => openAt(u.path, 1, 1)}
+                className="flex items-center gap-1.5 rounded px-1.5 py-1 text-left text-fg hover:bg-bg"
+              >
+                <FileCode2 size={13} className="shrink-0 text-faint" />
+                <span className="truncate">{u.rel}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {message ? <div className="border-t border-line px-3 py-2 text-warning">{message}</div> : null}
 
@@ -505,7 +582,7 @@ function InspectorPanel({
               <button
                 key={m.path}
                 type="button"
-                onClick={() => onOpenMatch(m)}
+                onClick={() => openAt(m.path, m.line, m.column)}
                 className="flex items-center gap-1.5 rounded px-1.5 py-1 text-left text-fg hover:bg-bg"
               >
                 <FileCode2 size={13} className="shrink-0 text-accent" />
@@ -516,6 +593,30 @@ function InspectorPanel({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function Action({
+  icon,
+  label,
+  disabled,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="flex items-center gap-2 rounded px-1.5 py-1 text-left text-fg transition-colors hover:bg-bg disabled:pointer-events-none disabled:opacity-30"
+    >
+      <span className="text-accent">{icon}</span>
+      {label}
+    </button>
   );
 }
 

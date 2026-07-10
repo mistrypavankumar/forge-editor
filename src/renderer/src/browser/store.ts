@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { BrowserInspectorSelection, DevServerStatus } from '@shared/ipc-contract';
-import type { ComponentMatch } from './resolver';
+import type { ComponentMatch, RouteMatch, SourceLocation } from './resolver';
 
 /** Candidate dev-server ports probed on panel open (Next.js, Vite, CRA, common alternates). */
 export const DEFAULT_DEV_PORTS = [3000, 3001, 5173, 5174, 8080];
@@ -20,8 +20,16 @@ export interface BrowserState {
   hover: BrowserInspectorSelection | null;
   /** Component picker candidates when a click matched more than one source file. */
   matches: ComponentMatch[];
+  /** The source file resolved for the current selection (drives the Open Source / Copy actions). */
+  resolved: (SourceLocation & { rel?: string }) | null;
+  /** The Next.js route file for the current URL (drives Open Route File), independent of the click. */
+  routeFile: RouteMatch | null;
+  /** Files that use the selected component (drives Show Component Usage). */
+  usages: { rel: string; path: string }[];
   /** Human-readable status/among the inspector (e.g. "No matching source found"). */
   message: string | null;
+  /** A webview load failure (e.g. dev server not up yet). */
+  loadError: string | null;
   devServers: DevServerStatus[];
 
   setUrl: (url: string) => void;
@@ -31,7 +39,11 @@ export interface BrowserState {
   setSelection: (s: BrowserInspectorSelection | null) => void;
   setHover: (s: BrowserInspectorSelection | null) => void;
   setMatches: (m: ComponentMatch[]) => void;
+  setResolved: (r: (SourceLocation & { rel?: string }) | null) => void;
+  setRouteFile: (r: RouteMatch | null) => void;
+  setUsages: (u: { rel: string; path: string }[]) => void;
   setMessage: (m: string | null) => void;
+  setLoadError: (m: string | null) => void;
   setDevServers: (d: DevServerStatus[]) => void;
 }
 
@@ -45,7 +57,11 @@ export const useBrowserStore = create<BrowserState>((set) => ({
   selection: null,
   hover: null,
   matches: [],
+  resolved: null,
+  routeFile: null,
+  usages: [],
   message: null,
+  loadError: null,
   devServers: [],
 
   setUrl: (url) => set({ url }),
@@ -55,7 +71,11 @@ export const useBrowserStore = create<BrowserState>((set) => ({
   setSelection: (selection) => set({ selection }),
   setHover: (hover) => set({ hover }),
   setMatches: (matches) => set({ matches }),
+  setResolved: (resolved) => set({ resolved }),
+  setRouteFile: (routeFile) => set({ routeFile }),
+  setUsages: (usages) => set({ usages }),
   setMessage: (message) => set({ message }),
+  setLoadError: (loadError) => set({ loadError }),
   setDevServers: (devServers) => set({ devServers }),
 }));
 
