@@ -197,6 +197,12 @@ export function SettingsView(): React.JSX.Element | null {
   const wellnessStrict = useWellnessStore((s) => s.strict);
   const wellnessExercises = useWellnessStore((s) => s.exercises);
   const wellnessSound = useWellnessStore((s) => s.sound);
+  // Select only the preference fields (not the event arrays) so capture activity doesn't re-render Settings.
+  const bdEnabled = useBrowserDebugStore((s) => s.enabled);
+  const bdConfig = useBrowserDebugStore((s) => s.config);
+  const bdRedact = useBrowserDebugStore((s) => s.redactSensitiveHeaders);
+  const bdMaxEvents = useBrowserDebugStore((s) => s.maxEvents);
+  const bdAllowExternal = useBrowserDebugStore((s) => s.allowExternalCapture);
   const [keyStatus, setKeyStatus] = useState<AiKeyStatus | null>(null);
   const [keyDraft, setKeyDraft] = useState('');
   const [keySaving, setKeySaving] = useState(false);
@@ -438,12 +444,6 @@ export function SettingsView(): React.JSX.Element | null {
   const fieldCls =
     'w-60 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[12px] text-fg outline-none transition-colors placeholder:text-faint focus:border-accent/70';
 
-  // Select only the preference fields (not the event arrays) so capture activity doesn't re-render Settings.
-  const bdEnabled = useBrowserDebugStore((s) => s.enabled);
-  const bdConfig = useBrowserDebugStore((s) => s.config);
-  const bdRedact = useBrowserDebugStore((s) => s.redactSensitiveHeaders);
-  const bdMaxEvents = useBrowserDebugStore((s) => s.maxEvents);
-  const bdAllowExternal = useBrowserDebugStore((s) => s.allowExternalCapture);
   const bd = useBrowserDebugStore.getState();
   const browserDebug = (
     <div className="flex flex-col gap-4">
