@@ -10,6 +10,7 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { DiffView } from './DiffView';
 import { ApiExplorerEditor } from '../api-explorer';
 import { CodebaseMapView } from './CodebaseMapView';
+import { BrowserView } from '../browser';
 
 /** One editor column: its tab strip, breadcrumbs, code editor, and preview/diff overlays. */
 export function EditorGroupView({ groupId }: { groupId: string }): React.JSX.Element {
@@ -21,7 +22,9 @@ export function EditorGroupView({ groupId }: { groupId: string }): React.JSX.Ele
   const activeTab = tabs.find((t) => t.path === activePath);
   const showApiExplorer = !!activeTab && activeTab.kind === 'api-explorer';
   const showCodemap = !!activeTab && activeTab.kind === 'codemap';
-  const showDiff = !!activeTab && !showApiExplorer && !showCodemap && activeTab.original !== undefined;
+  const showBrowser = !!activeTab && activeTab.kind === 'browser';
+  const showDiff =
+    !!activeTab && !showApiExplorer && !showCodemap && !showBrowser && activeTab.original !== undefined;
   // Images render in the image viewer (from raw bytes), never the text editor or binary guard.
   const showImage = !!activeTab && !showDiff && isImagePath(activeTab.name);
   // Don't feed undecodable bytes to Monaco — diffs are always git text, so only guard plain tabs.
@@ -39,6 +42,10 @@ export function EditorGroupView({ groupId }: { groupId: string }): React.JSX.Ele
       ) : showCodemap ? (
         <div className="min-h-0 flex-1">
           <CodebaseMapView />
+        </div>
+      ) : showBrowser ? (
+        <div className="min-h-0 flex-1">
+          <BrowserView />
         </div>
       ) : (
         <>

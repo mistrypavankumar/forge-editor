@@ -146,6 +146,19 @@ export function openCodebaseMap(): void {
   });
 }
 
+/** Synthetic path backing the single embedded Browser tab. */
+export const BROWSER_PATH = 'browser://view';
+
+/** Open (or focus) the embedded Browser + component inspector as an editor tab. */
+export function openBrowser(): void {
+  useEditorStore.getState().openFile({
+    path: BROWSER_PATH,
+    name: 'Browser',
+    content: '',
+    kind: 'browser',
+  });
+}
+
 /** Open a read-only side-by-side diff of the staged (index) version against HEAD. */
 export async function openGitStagedDiff(rootPath: string, relPath: string): Promise<void> {
   const filePath = `${rootPath}/${relPath}`;

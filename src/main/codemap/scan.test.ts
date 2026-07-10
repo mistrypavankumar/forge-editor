@@ -42,6 +42,10 @@ describe('parseSource', () => {
     expect(p.components).toContain('SupplierList');
     expect(p.hooks).toContain('useSuppliers');
     expect(p.components).not.toContain('CONFIG');
+    // componentDetails carries the 1-based declaration position for click-to-open.
+    const detail = p.componentDetails.find((c) => c.name === 'SupplierList');
+    expect(detail).toBeDefined();
+    expect(detail?.line).toBe(2); // leading newline puts the export on line 2
   });
 
   it('extracts gql from tagged templates', () => {
@@ -79,7 +83,7 @@ describe('nextInfo', () => {
 });
 
 describe('classifyKind', () => {
-  const empty = { imports: [], exports: [], components: [], hooks: [], gqlOps: [] };
+  const empty = { imports: [], exports: [], components: [], componentDetails: [], hooks: [], gqlOps: [] };
   it('classifies by extension and content', () => {
     expect(classifyKind('a.graphql', empty)).toBe('graphql');
     expect(classifyKind('a.test.ts', empty)).toBe('test');

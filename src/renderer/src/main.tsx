@@ -7,6 +7,7 @@ import { registerThemeCommands } from './commands/theme-commands';
 import { registerDebugCommands } from './commands/debug-commands';
 import { registerAgentCommands } from './commands/agent-commands';
 import { registerSkeletonCommands } from './commands/skeleton-commands';
+import { registerBrowserCommands } from './commands/browser-commands';
 import { initDebugStore } from './stores/debug-store';
 // Inter is the UI font for all chrome (everything except the code editor, which uses mono).
 import '@fontsource/inter/400.css';
@@ -27,6 +28,7 @@ registerThemeCommands();
 registerDebugCommands();
 registerAgentCommands();
 registerSkeletonCommands();
+registerBrowserCommands();
 // Bind the main-process debug session's events into the store for the app's lifetime.
 initDebugStore();
 

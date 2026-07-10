@@ -24,7 +24,12 @@ export default defineConfig({
   preload: {
     build: {
       rollupOptions: {
-        input: resolve(__dirname, 'src/preload/index.ts'),
+        // Two preloads: the main window bridge, and the embedded browser's guest <webview>
+        // inspector preload (loaded by file:// URL, resolved in main via browserPreloadPath).
+        input: {
+          index: resolve(__dirname, 'src/preload/index.ts'),
+          'webview-preload': resolve(__dirname, 'src/preload/webview-preload.ts'),
+        },
         // Sandboxed Electron preloads must be CommonJS; emit an unambiguous .cjs.
         output: { format: 'cjs', entryFileNames: '[name].cjs' },
       },

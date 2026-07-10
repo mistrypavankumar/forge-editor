@@ -1,6 +1,6 @@
 import ts from 'typescript';
 import { dirname, isAbsolute, resolve as resolvePath } from 'node:path';
-import type { CodeNodeKind, GqlOperation } from '@shared/ipc-contract';
+import type { CodeNodeKind, ComponentLoc, GqlOperation } from '@shared/ipc-contract';
 import { tsPathCandidates } from '../navigation/resolve-import';
 import { extractGqlOperations } from './graphql';
 
@@ -26,6 +26,8 @@ export interface ParsedFile {
   /** Exported symbol names (`default` for the default export). */
   exports: string[];
   components: string[];
+  /** Component names paired with the 1-based position of their declaration (for click-to-open). */
+  componentDetails: ComponentLoc[];
   hooks: string[];
   gqlOps: GqlOperation[];
 }
@@ -71,9 +73,16 @@ export function parseSource(fileName: string, text: string): ParsedFile {
   const sf = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, scriptKind(fileName));
   const imports: ParsedImport[] = [];
   const exportNames = new Set<string>();
+  // Declaration position per exported name (1-based); 'default' holds the default export's position.
+  const positions = new Map<string, { line: number; column: number }>();
   const gqlOps: GqlOperation[] = [];
   const gqlSeen = new Set<string>();
   let hasJsx = false;
+
+  const posOf = (node: ts.Node): { line: number; column: number } => {
+    const { line, character } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
+    return { line: line + 1, column: character + 1 };
+  };
 
   const addGql = (raw: string): void => {
     for (const op of extractGqlOperations(raw)) {
@@ -116,16 +125,30 @@ export function parseSource(fileName: string, text: string): ParsedFile {
         for (const e of st.exportClause.elements) exportNames.add(e.name.text);
       }
     } else if (ts.isExportAssignment(st)) {
-      if (!st.isExportEquals) exportNames.add('default');
+      if (!st.isExportEquals) {
+        exportNames.add('default');
+        positions.set('default', posOf(st.expression));
+      }
     } else if (ts.isFunctionDeclaration(st) && hasExportModifier(st)) {
+      if (hasDefaultModifier(st)) positions.set('default', posOf(st.name ?? st));
       if (hasDefaultModifier(st)) exportNames.add('default');
-      if (st.name) exportNames.add(st.name.text);
+      if (st.name) {
+        exportNames.add(st.name.text);
+        positions.set(st.name.text, posOf(st.name));
+      }
     } else if (ts.isClassDeclaration(st) && hasExportModifier(st)) {
+      if (hasDefaultModifier(st)) positions.set('default', posOf(st.name ?? st));
       if (hasDefaultModifier(st)) exportNames.add('default');
-      if (st.name) exportNames.add(st.name.text);
+      if (st.name) {
+        exportNames.add(st.name.text);
+        positions.set(st.name.text, posOf(st.name));
+      }
     } else if (ts.isVariableStatement(st) && hasExportModifier(st)) {
       for (const decl of st.declarationList.declarations) {
-        if (ts.isIdentifier(decl.name)) exportNames.add(decl.name.text);
+        if (ts.isIdentifier(decl.name)) {
+          exportNames.add(decl.name.text);
+          positions.set(decl.name.text, posOf(decl.name));
+        }
       }
     } else if (
       (ts.isInterfaceDeclaration(st) || ts.isTypeAliasDeclaration(st) || ts.isEnumDeclaration(st)) &&
@@ -158,13 +181,21 @@ export function parseSource(fileName: string, text: string): ParsedFile {
 
   const jsxCapable = isJsxFile || hasJsx;
   const components = [...exportNames].filter((n) => n !== 'default' && isPascalCase(n) && jsxCapable);
+  const componentDetails: ComponentLoc[] = components.map((name) => {
+    const p = positions.get(name) ?? { line: 1, column: 1 };
+    return { name, line: p.line, column: p.column };
+  });
   if (exportNames.has('default') && jsxCapable) {
     const baseName = (fileName.split('/').pop() ?? '').replace(/\.[^.]+$/, '');
-    if (isPascalCase(baseName) && !components.includes(baseName)) components.push(baseName);
+    if (isPascalCase(baseName) && !components.includes(baseName)) {
+      components.push(baseName);
+      const p = positions.get('default') ?? { line: 1, column: 1 };
+      componentDetails.push({ name: baseName, line: p.line, column: p.column });
+    }
   }
   const hooks = [...exportNames].filter((n) => /^use[A-Z0-9]/.test(n));
 
-  return { imports, exports: [...exportNames], components, hooks, gqlOps };
+  return { imports, exports: [...exportNames], components, componentDetails, hooks, gqlOps };
 }
 
 // ---- Next.js route detection ------------------------------------------------
