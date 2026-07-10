@@ -158,6 +158,10 @@ export const IpcChannels = {
   skeletonDetect: 'forge:skeleton:detect',
   skeletonGenerate: 'forge:skeleton:generate',
   skeletonGenerateAi: 'forge:skeleton:generateAi',
+  // Embedded Browser + component inspector. Port probing (dev-server detection) and the
+  // absolute file:// URL of the guest <webview> inspector preload both run in main.
+  browserProbePorts: 'forge:browser:probePorts',
+  browserPreloadPath: 'forge:browser:preloadPath',
 } as const;
 
 export interface DirEntry {
@@ -760,6 +764,13 @@ export interface GqlOperation {
   type: GqlOpType;
 }
 
+/** A React component export with the position of its declaration name (1-based, Monaco convention). */
+export interface ComponentLoc {
+  name: string;
+  line: number;
+  column: number;
+}
+
 /** One file in the dependency graph. Edges are stored as `dependsOn` / `usedBy` (workspace-relative). */
 export interface CodeNode {
   /** Absolute path. */
@@ -773,6 +784,8 @@ export interface CodeNode {
   exports: string[];
   /** Detected React component names. */
   components: string[];
+  /** Detected React component names with their declaration position (1-based line/column). */
+  componentDetails?: ComponentLoc[];
   /** Detected hook names (use…). */
   hooks: string[];
   /** GraphQL operations/fragments defined in this file. */
@@ -1109,6 +1122,55 @@ export interface DebugApi {
   onOutput: (cb: (e: DebugOutputEvent) => void) => () => void;
 }
 
+// ---- Embedded Browser + component inspector ---------------------------------
+
+/** A candidate local dev-server port and whether it's currently accepting connections. */
+export interface DevServerStatus {
+  port: number;
+  url: string;
+  running: boolean;
+}
+
+/** DOM facts about the element the user hovered/clicked in the embedded browser. */
+export interface BrowserInspectDom {
+  tagName: string;
+  id?: string;
+  className?: string;
+  text?: string;
+  role?: string;
+  ariaLabel?: string;
+  boundingBox?: { x: number; y: number; width: number; height: number };
+}
+
+/** React fiber facts pulled from the element in the guest page's main world (dev builds only). */
+export interface BrowserInspectReact {
+  componentName?: string;
+  displayName?: string;
+  ownerChain?: string[];
+  propsKeys?: string[];
+  source?: { fileName?: string; lineNumber?: number; columnNumber?: number };
+}
+
+/** `data-forge-*` metadata attributes, when a build-time injector added them (Strategy 2, opt-in). */
+export interface BrowserForgeMetadata {
+  component?: string;
+  sourceFile?: string;
+  line?: number;
+  column?: number;
+}
+
+/** A hover or click selection sent from the guest page (via the webview preload) to Forge. */
+export interface BrowserInspectorSelection {
+  /** 'hover' updates the tooltip only; 'click' opens the source. */
+  phase: 'hover' | 'click';
+  url: string;
+  routePath?: string;
+  dom: BrowserInspectDom;
+  react?: BrowserInspectReact;
+  forgeMetadata?: BrowserForgeMetadata;
+  confidence: 'high' | 'medium' | 'low';
+}
+
 export interface ForgeApi {
   ping: (msg: string) => Promise<string>;
   openFolder: () => Promise<Result<WorkspaceData | null>>;
@@ -1316,6 +1378,10 @@ export interface ForgeApi {
   openExternal: (url: string) => Promise<Result<void>>;
   /** Run an HTTP request from the main process (no renderer CORS). Used by the API Explorer. */
   apiRequest: (req: ApiHttpRequest) => Promise<Result<ApiHttpResponse>>;
+  /** Probe candidate localhost ports; reports which are accepting connections (dev-server detection). */
+  browserProbePorts: (ports: number[]) => Promise<Result<DevServerStatus[]>>;
+  /** Absolute file:// URL of the embedded browser's guest inspector preload script. */
+  browserPreloadPath: () => Promise<Result<string>>;
   onTerminalData: (cb: (e: TerminalDataEvent) => void) => () => void;
   onTerminalExit: (cb: (e: TerminalExitEvent) => void) => () => void;
   onTerminalBusy: (cb: (e: TerminalBusyEvent) => void) => () => void;

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Lock, SplitSquareHorizontal, Copy, Check, SquareTerminal, LayoutTemplate } from 'lucide-react';
+import { X, Lock, SplitSquareHorizontal, Copy, Check, SquareTerminal, LayoutTemplate, Globe } from 'lucide-react';
 import { useEditorStore } from '../stores/editor-store';
 import { commandRegistry } from '../commands/command-registry';
 import { useWorkspaceStore } from '../stores/workspace-store';
@@ -82,6 +82,8 @@ export function EditorTabs({ groupId = 'main' }: { groupId?: string }): React.JS
                 <span className="group-hover:opacity-0">
                   {tab.kind === 'api-explorer' ? (
                     <SquareTerminal size={14} className="text-accent" />
+                  ) : tab.kind === 'browser' ? (
+                    <Globe size={14} className="text-accent" />
                   ) : (
                     <FileTypeIcon name={tab.name} />
                   )}

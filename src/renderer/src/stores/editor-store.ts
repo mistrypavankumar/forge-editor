@@ -13,9 +13,9 @@ export interface OpenFile {
   original?: string;
   /**
    * Tab kind. Defaults to a normal file; `api-explorer` renders the API Explorer, `codemap` renders
-   * the Codebase Map dependency graph.
+   * the Codebase Map dependency graph, `browser` renders the embedded Browser + component inspector.
    */
-  kind?: 'file' | 'api-explorer' | 'codemap';
+  kind?: 'file' | 'api-explorer' | 'codemap' | 'browser';
 }
 
 /**
@@ -63,7 +63,7 @@ export interface EditorState {
     readOnly?: boolean;
     filePath?: string;
     original?: string;
-    kind?: 'file' | 'api-explorer' | 'codemap';
+    kind?: 'file' | 'api-explorer' | 'codemap' | 'browser';
   }) => void;
   closeFile: (path: string, groupId?: string) => void;
   setActive: (path: string, groupId?: string) => void;

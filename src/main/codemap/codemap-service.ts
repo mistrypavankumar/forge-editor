@@ -52,9 +52,9 @@ function packageName(spec: string): string {
 function parseByExt(rel: string, text: string): ParsedFile {
   if (CODE_EXT.test(rel)) return parseSource(rel, text);
   if (GQL_EXT.test(rel)) {
-    return { imports: [], exports: [], components: [], hooks: [], gqlOps: extractGqlOperations(text) };
+    return { imports: [], exports: [], components: [], componentDetails: [], hooks: [], gqlOps: extractGqlOperations(text) };
   }
-  return { imports: [], exports: [], components: [], hooks: [], gqlOps: [] };
+  return { imports: [], exports: [], components: [], componentDetails: [], hooks: [], gqlOps: [] };
 }
 
 /** Build (or return the memoized) dependency graph for `rootPath`. */
@@ -174,6 +174,7 @@ export async function buildCodeMap(
       kind: rec.kind,
       exports: rec.parsed.exports,
       components: rec.parsed.components,
+      componentDetails: rec.parsed.componentDetails,
       hooks: rec.parsed.hooks,
       gqlOps: rec.parsed.gqlOps,
       route: rec.route,

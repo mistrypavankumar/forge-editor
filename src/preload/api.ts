@@ -144,6 +144,8 @@ export const api: ForgeApi = {
   killCommand: (id) => ipcRenderer.invoke(IpcChannels.terminalKill, id),
   openExternal: (url) => ipcRenderer.invoke(IpcChannels.openExternal, url),
   apiRequest: (req) => ipcRenderer.invoke(IpcChannels.apiRequest, req),
+  browserProbePorts: (ports) => ipcRenderer.invoke(IpcChannels.browserProbePorts, ports),
+  browserPreloadPath: () => ipcRenderer.invoke(IpcChannels.browserPreloadPath),
   editorLanguage: {
     initializeProject: (root) => ipcRenderer.invoke(IpcChannels.langInit, root),
     openDocument: (file, content) => ipcRenderer.send(IpcChannels.langOpenDoc, file, content),
