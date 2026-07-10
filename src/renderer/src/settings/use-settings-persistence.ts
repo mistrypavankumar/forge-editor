@@ -11,6 +11,7 @@ import { useGitUserStore } from '../stores/git-user-store';
 import { useInlineRunStore } from '../stores/inline-run-store';
 import { useAiStore } from '../stores/ai-store';
 import { useWellnessStore } from '../stores/wellness-store';
+import { useBrowserDebugStore } from '../browser/browser-debug-store';
 import { clearFileCache } from '../lib/quickopen-cache';
 import type { FormatterId } from '../lib/detect-formatters';
 
@@ -46,6 +47,11 @@ export function useSettingsPersistence(): void {
   const wellnessStrict = useWellnessStore((s) => s.strict);
   const wellnessExercises = useWellnessStore((s) => s.exercises);
   const wellnessSound = useWellnessStore((s) => s.sound);
+  const bdEnabled = useBrowserDebugStore((s) => s.enabled);
+  const bdConfig = useBrowserDebugStore((s) => s.config);
+  const bdRedact = useBrowserDebugStore((s) => s.redactSensitiveHeaders);
+  const bdMaxEvents = useBrowserDebugStore((s) => s.maxEvents);
+  const bdAllowExternal = useBrowserDebugStore((s) => s.allowExternalCapture);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -118,6 +124,9 @@ export function useSettingsPersistence(): void {
         if (typeof res.data.wellnessSound === 'boolean') {
           useWellnessStore.getState().setSound(res.data.wellnessSound);
         }
+        if (res.data.browserDebug) {
+          useBrowserDebugStore.getState().applySettings(res.data.browserDebug);
+        }
         // Seed built-in default excludes once: union them with any stored list, then never re-add.
         if (res.data.searchExcludeSeeded) {
           useLayoutStore.getState().setSearchExclude(res.data.searchExclude ?? []);
@@ -167,8 +176,19 @@ export function useSettingsPersistence(): void {
       wellnessStrict,
       wellnessExercises,
       wellnessSound,
+      browserDebug: {
+        enabled: bdEnabled,
+        captureConsole: bdConfig.captureConsole,
+        captureNetwork: bdConfig.captureNetwork,
+        captureRequestBodies: bdConfig.captureRequestBodies,
+        captureResponseBodies: bdConfig.captureResponseBodies,
+        maxBodyKb: bdConfig.maxBodyKb,
+        redactSensitiveHeaders: bdRedact,
+        maxEvents: bdMaxEvents,
+        allowExternalCapture: bdAllowExternal,
+      },
     });
-  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, inlineRun, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight, aiProvider, aiModel, aiInlineSuggest, wellnessEnabled, wellnessIntervalMin, wellnessBreakSec, wellnessStrict, wellnessExercises, wellnessSound]);
+  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, inlineRun, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight, aiProvider, aiModel, aiInlineSuggest, wellnessEnabled, wellnessIntervalMin, wellnessBreakSec, wellnessStrict, wellnessExercises, wellnessSound, bdEnabled, bdConfig, bdRedact, bdMaxEvents, bdAllowExternal]);
 
   // Drop the quick-open cache when excludes change so the next search re-lists with them.
   useEffect(() => {

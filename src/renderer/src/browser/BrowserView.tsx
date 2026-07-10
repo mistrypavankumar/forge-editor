@@ -13,7 +13,12 @@ import {
   Network,
   Loader2,
 } from 'lucide-react';
-import type { BrowserInspectorSelection, CodeNode } from '@shared/ipc-contract';
+import type {
+  BrowserInspectorSelection,
+  BrowserConsoleEvent,
+  BrowserNetworkEvent,
+  CodeNode,
+} from '@shared/ipc-contract';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useTerminalStore } from '../stores/terminal-store';
@@ -28,6 +33,8 @@ import {
   DEFAULT_DEV_PORTS,
   type BrowserController,
 } from './store';
+import { useBrowserDebugStore, selectGuestConfig } from './browser-debug-store';
+import { isLocalUrl } from './network';
 import {
   matchComponents,
   matchRouteFile,
@@ -52,6 +59,27 @@ interface WebviewElement extends HTMLElement {
 const SELECTION_CHANNEL = 'forge:inspect:selection';
 const NAV_CHANNEL = 'forge:inspect:nav';
 const MODE_CHANNEL = 'forge:inspect:mode';
+const CONSOLE_CHANNEL = 'forge:debug:console';
+const NETWORK_CHANNEL = 'forge:debug:network';
+const DEBUG_CONFIG_CHANNEL = 'forge:debug:config';
+
+/** Guard that a payload from the guest looks like a console event before storing it. */
+function isConsoleEvent(v: unknown): v is BrowserConsoleEvent {
+  const e = v as BrowserConsoleEvent;
+  return !!e && typeof e.id === 'string' && typeof e.message === 'string' && typeof e.level === 'string';
+}
+/** Guard that a payload from the guest looks like a network event before storing it. */
+function isNetworkEvent(v: unknown): v is BrowserNetworkEvent {
+  const e = v as BrowserNetworkEvent;
+  return !!e && typeof e.id === 'string' && typeof e.url === 'string' && typeof e.method === 'string';
+}
+
+/** Whether a captured event should be stored: capture must be on, and the page local unless allowed. */
+function acceptDebugEvent(url: string): boolean {
+  const s = useBrowserDebugStore.getState();
+  if (!s.enabled) return false;
+  return s.allowExternalCapture || isLocalUrl(url);
+}
 
 /** Normalize an address-bar entry into a loadable URL (default scheme, localhost shortcuts). */
 function normalizeUrl(input: string): string {
@@ -270,6 +298,8 @@ export function BrowserView(): React.JSX.Element {
     const onDomReady = (): void => {
       // Re-assert inspect mode after each load (the guest re-injects its inspector per page).
       wv.send(MODE_CHANNEL, useBrowserStore.getState().inspectMode);
+      // Push current debug-capture config (folding in the master switch) to the freshly injected script.
+      wv.send(DEBUG_CONFIG_CHANNEL, selectGuestConfig(useBrowserDebugStore.getState()));
     };
     const onIpc = (e: Event): void => {
       const ev = e as Event & { channel: string; args: unknown[] };
@@ -277,6 +307,14 @@ export function BrowserView(): React.JSX.Element {
       else if (ev.channel === NAV_CHANNEL) {
         const nav = ev.args[0] as { url?: string };
         if (nav?.url) setAddr(nav.url);
+      } else if (ev.channel === CONSOLE_CHANNEL) {
+        if (isConsoleEvent(ev.args[0]) && acceptDebugEvent(ev.args[0].url)) {
+          useBrowserDebugStore.getState().addConsole(ev.args[0]);
+        }
+      } else if (ev.channel === NETWORK_CHANNEL) {
+        if (isNetworkEvent(ev.args[0]) && acceptDebugEvent(ev.args[0].url)) {
+          useBrowserDebugStore.getState().addNetwork(ev.args[0]);
+        }
       }
     };
 
@@ -319,6 +357,13 @@ export function BrowserView(): React.JSX.Element {
   useEffect(() => {
     webviewRef.current?.send(MODE_CHANNEL, inspectMode);
   }, [inspectMode]);
+
+  // Push debug-capture config changes (enable/disable, body caps) to the guest as they happen.
+  const debugEnabled = useBrowserDebugStore((s) => s.enabled);
+  const debugConfig = useBrowserDebugStore((s) => s.config);
+  useEffect(() => {
+    webviewRef.current?.send(DEBUG_CONFIG_CHANNEL, selectGuestConfig({ enabled: debugEnabled, config: debugConfig }));
+  }, [debugEnabled, debugConfig]);
 
   // Probe common dev-server ports on mount.
   useEffect(() => {

@@ -922,6 +922,8 @@ export interface ForgeSettings {
   aiModel?: string;
   /** Inline ghost-text AI completions in the editor are enabled. */
   aiInlineSuggest?: boolean;
+  /** Browser Debug capture preferences (console/network inspector). */
+  browserDebug?: BrowserDebugSettings;
   /** Optional model override for inline completions; empty = a fast per-provider default. */
   aiCompletionModel?: string;
   /** Set once the first-run "set Forge as default editor" prompt has been shown. */
@@ -1169,6 +1171,83 @@ export interface BrowserInspectorSelection {
   react?: BrowserInspectReact;
   forgeMetadata?: BrowserForgeMetadata;
   confidence: 'high' | 'medium' | 'low';
+}
+
+// ── Browser Debug ────────────────────────────────────────────────────────────
+// Events captured by the injected debug script in the embedded browser's guest page and bridged
+// to Forge (guest main world → webview-preload → BrowserView). All payloads are structured-clone
+// safe (no DOM nodes / functions); the injected script stringifies anything risky before posting.
+
+export type BrowserConsoleLevel = 'error' | 'warning' | 'info' | 'debug';
+
+/** A captured console call, uncaught error, or unhandled rejection from the guest page. */
+export interface BrowserConsoleEvent {
+  id: string;
+  level: BrowserConsoleLevel;
+  /** Human-readable one-line message (console args joined / error message). */
+  message: string;
+  /** Each console argument rendered to a short string (kept for the detail view). */
+  args?: string[];
+  /** Raw stack trace text when the event originated from an Error. */
+  stack?: string;
+  /** Page URL at capture time. */
+  url: string;
+  /** location.pathname at capture time. */
+  routePath?: string;
+  /** Source hint parsed by the guest (from the error's first stack frame), if any. */
+  source?: { fileName?: string; lineNumber?: number; columnNumber?: number };
+  /** epoch ms. */
+  timestamp: number;
+}
+
+/** How a captured request is classified for filtering/grouping. */
+export type BrowserNetworkType = 'graphql' | 'rest' | 'document' | 'asset' | 'unknown';
+
+/** A captured fetch/XHR request from the guest page, emitted once it settles (success or failure). */
+export interface BrowserNetworkEvent {
+  id: string;
+  url: string;
+  method: string;
+  status?: number;
+  statusText?: string;
+  requestHeaders?: Record<string, string>;
+  responseHeaders?: Record<string, string>;
+  /** Request body as a string (JSON/text); omitted for unsupported bodies (FormData/Blob) or when disabled. */
+  requestBody?: string;
+  /** Response body preview as a string, truncated to the configured size cap. */
+  responseBody?: string;
+  /** True when the response body was cut off at the size cap. */
+  responseTruncated?: boolean;
+  durationMs?: number;
+  startedAt: number;
+  endedAt?: number;
+  routePath?: string;
+  /** Coarse guest-side classification; refined host-side. */
+  type: BrowserNetworkType;
+  /** Network-level failure (e.g. connection refused, CORS) — distinct from an HTTP error status. */
+  error?: string;
+}
+
+/** Host→guest capture configuration for the debug script. */
+export interface BrowserDebugConfig {
+  captureConsole: boolean;
+  captureNetwork: boolean;
+  captureRequestBodies: boolean;
+  captureResponseBodies: boolean;
+  maxBodyKb: number;
+}
+
+/** Persisted Browser Debug preferences (stored in ForgeSettings; captured data is never persisted). */
+export interface BrowserDebugSettings {
+  enabled: boolean;
+  captureConsole: boolean;
+  captureNetwork: boolean;
+  captureRequestBodies: boolean;
+  captureResponseBodies: boolean;
+  maxBodyKb: number;
+  redactSensitiveHeaders: boolean;
+  maxEvents: number;
+  allowExternalCapture: boolean;
 }
 
 export interface ForgeApi {

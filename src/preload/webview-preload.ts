@@ -19,6 +19,10 @@ import { ipcRenderer } from 'electron';
 const HOST_TO_GUEST_MODE = 'forge:inspect:mode';
 const GUEST_TO_HOST_SELECTION = 'forge:inspect:selection';
 const GUEST_TO_HOST_NAV = 'forge:inspect:nav';
+// Browser Debug capture (console/errors + network) and its host→guest config.
+const GUEST_TO_HOST_CONSOLE = 'forge:debug:console';
+const GUEST_TO_HOST_NETWORK = 'forge:debug:network';
+const HOST_TO_GUEST_DEBUG_CONFIG = 'forge:debug:config';
 
 /** Source of the main-world inspector, injected as a <script>. Self-contained; no imports. */
 const INSPECTOR_SOURCE = `(() => {
@@ -165,6 +169,249 @@ const INSPECTOR_SOURCE = `(() => {
     window.postMessage({ __forgeInspect: true, kind: kind, payload: payload }, '*');
   }
 
+  // ── Browser Debug capture ──────────────────────────────────────────────────
+  // Wraps console/error/fetch/XHR to stream debug events to Forge. Everything is best-effort and
+  // wrapped in try/catch so a capture bug can never break the guest app. Payloads are made
+  // structured-clone safe (strings only for args/bodies) before posting.
+  var debugCfg = { captureConsole: true, captureNetwork: true, captureRequestBodies: true, captureResponseBodies: true, maxBodyBytes: 512 * 1024 };
+  var __seq = 0;
+  function nextId() { __seq++; return 'be_' + Date.now().toString(36) + '_' + __seq.toString(36); }
+
+  function safeArg(a) {
+    try {
+      if (a instanceof Error) return a.stack || (a.name + ': ' + a.message);
+      if (typeof a === 'string') return a;
+      if (a === null) return 'null';
+      if (typeof a === 'undefined') return 'undefined';
+      if (typeof a === 'object') { var s = JSON.stringify(a); return typeof s === 'string' ? s : Object.prototype.toString.call(a); }
+      return String(a);
+    } catch (e) { try { return Object.prototype.toString.call(a); } catch (e2) { return '[unserializable]'; } }
+  }
+
+  function clip(s) {
+    if (typeof s !== 'string') return undefined;
+    return s.length > debugCfg.maxBodyBytes ? s.slice(0, debugCfg.maxBodyBytes) : s;
+  }
+
+  // A lightweight guest-side source hint from the first non-node_modules stack frame; the host
+  // re-parses the full stack, this just speeds up the common case.
+  function firstFrameSource(stack) {
+    if (!stack || typeof stack !== 'string') return undefined;
+    var lines = stack.split('\\n');
+    for (var i = 0; i < lines.length; i++) {
+      var m = /\\(?([^\\s()]+):(\\d+):(\\d+)\\)?\\s*$/.exec(lines[i].trim());
+      if (m && m[1].indexOf('node_modules') === -1) return { fileName: m[1], lineNumber: parseInt(m[2], 10), columnNumber: parseInt(m[3], 10) };
+    }
+    return undefined;
+  }
+
+  function classifyType(url, body) {
+    var path = url;
+    try { path = new URL(url, location.href).pathname; } catch (e) {}
+    if (/\\/graphql\\b/i.test(path)) return 'graphql';
+    if (typeof body === 'string' && body.indexOf('"query"') !== -1) return 'graphql';
+    if (/\\.(js|mjs|css|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|otf|eot|map|mp4|webm|avif)(\\?|$)/i.test(path)) return 'asset';
+    return 'unknown';
+  }
+
+  function headersToObj(h) {
+    var out = {};
+    try {
+      if (!h) return out;
+      if (typeof Headers !== 'undefined' && h instanceof Headers) { h.forEach(function (v, k) { out[k] = v; }); return out; }
+      if (Array.isArray(h)) { h.forEach(function (p) { out[p[0]] = p[1]; }); return out; }
+      Object.keys(h).forEach(function (k) { out[k] = String(h[k]); });
+    } catch (e) {}
+    return out;
+  }
+  function responseHeadersToObj(h) {
+    var out = {};
+    try { if (h && h.forEach) h.forEach(function (v, k) { out[k] = v; }); } catch (e) {}
+    return out;
+  }
+  function parseRawHeaders(raw) {
+    var out = {};
+    if (!raw) return out;
+    raw.trim().split(/[\\r\\n]+/).forEach(function (line) {
+      var i = line.indexOf(':');
+      if (i > 0) out[line.slice(0, i).trim().toLowerCase()] = line.slice(i + 1).trim();
+    });
+    return out;
+  }
+
+  function installConsole() {
+    var map = { error: 'error', warn: 'warning', info: 'info' };
+    Object.keys(map).forEach(function (method) {
+      var orig = console[method];
+      if (typeof orig !== 'function') return;
+      console[method] = function () {
+        try {
+          if (debugCfg.captureConsole) {
+            var args = Array.prototype.slice.call(arguments);
+            var strs = args.map(safeArg);
+            var errArg = null;
+            for (var i = 0; i < args.length; i++) { if (args[i] instanceof Error) { errArg = args[i]; break; } }
+            post('console', {
+              id: nextId(), level: map[method],
+              message: strs.join(' ').slice(0, 4000), args: strs.slice(0, 12),
+              stack: errArg ? errArg.stack : undefined,
+              url: location.href, routePath: location.pathname,
+              source: errArg ? firstFrameSource(errArg.stack) : undefined,
+              timestamp: Date.now(),
+            });
+          }
+        } catch (e) {}
+        return orig.apply(console, arguments); // never recurse — original preserved
+      };
+    });
+
+    window.addEventListener('error', function (ev) {
+      if (!debugCfg.captureConsole) return;
+      // Ignore resource-load errors (img/script/link) — they carry no message/error.
+      if (!ev.error && !ev.message) return;
+      try {
+        var err = ev.error;
+        post('console', {
+          id: nextId(), level: 'error',
+          message: ev.message || (err && err.message) || 'Uncaught error',
+          stack: err && err.stack, args: undefined,
+          url: location.href, routePath: location.pathname,
+          source: ev.filename ? { fileName: ev.filename, lineNumber: ev.lineno, columnNumber: ev.colno } : (err ? firstFrameSource(err.stack) : undefined),
+          timestamp: Date.now(),
+        });
+      } catch (e) {}
+    }, true);
+
+    window.addEventListener('unhandledrejection', function (ev) {
+      if (!debugCfg.captureConsole) return;
+      try {
+        var r = ev.reason;
+        var msg = (r && r.message) ? r.message : safeArg(r);
+        post('console', {
+          id: nextId(), level: 'error',
+          message: 'Unhandled promise rejection: ' + msg,
+          stack: r && r.stack, args: undefined,
+          url: location.href, routePath: location.pathname,
+          source: (r && r.stack) ? firstFrameSource(r.stack) : undefined,
+          timestamp: Date.now(),
+        });
+      } catch (e) {}
+    });
+  }
+
+  function installNetwork() {
+    var origFetch = window.fetch;
+    if (typeof origFetch === 'function') {
+      window.fetch = function (input, init) {
+        if (!debugCfg.captureNetwork) return origFetch.apply(this, arguments);
+        var started = Date.now();
+        var id = nextId();
+        var method = (init && init.method) || (input && input.method) || 'GET';
+        var url = (typeof input === 'string') ? input : (input && input.url) || String(input);
+        try { url = new URL(url, location.href).href; } catch (e) {}
+        var reqBody = (debugCfg.captureRequestBodies && init && typeof init.body === 'string') ? clip(init.body) : undefined;
+        var reqHeaders = headersToObj(init && init.headers);
+        var type = classifyType(url, reqBody);
+        return origFetch.apply(this, arguments).then(function (res) {
+          try {
+            var ended = Date.now();
+            var resHeaders = responseHeadersToObj(res.headers);
+            var ct = (res.headers && res.headers.get) ? (res.headers.get('content-type') || '') : '';
+            var isAsset = /^(image|font|video|audio)\\//.test(ct) || type === 'asset';
+            var base = {
+              id: id, url: url, method: method, status: res.status, statusText: res.statusText,
+              requestHeaders: reqHeaders, responseHeaders: resHeaders, requestBody: reqBody,
+              durationMs: ended - started, startedAt: started, endedAt: ended,
+              routePath: location.pathname, type: type,
+            };
+            if (!debugCfg.captureResponseBodies || isAsset) { post('network', base); }
+            else {
+              res.clone().text().then(function (t) {
+                base.responseTruncated = t.length > debugCfg.maxBodyBytes;
+                base.responseBody = base.responseTruncated ? t.slice(0, debugCfg.maxBodyBytes) : t;
+                post('network', base);
+              }, function () { post('network', base); });
+            }
+          } catch (e) {}
+          return res;
+        }, function (err) {
+          try {
+            var ended2 = Date.now();
+            post('network', {
+              id: id, url: url, method: method, requestHeaders: reqHeaders, requestBody: reqBody,
+              durationMs: ended2 - started, startedAt: started, endedAt: ended2,
+              routePath: location.pathname, type: type,
+              error: (err && err.message) ? err.message : String(err),
+            });
+          } catch (e) {}
+          throw err;
+        });
+      };
+    }
+
+    var XHR = window.XMLHttpRequest;
+    if (XHR && XHR.prototype) {
+      var open = XHR.prototype.open, send = XHR.prototype.send, setHeader = XHR.prototype.setRequestHeader;
+      XHR.prototype.open = function (method, url) {
+        var abs = url;
+        try { abs = new URL(url, location.href).href; } catch (e) {}
+        this.__forgeDbg = { method: method, url: abs, headers: {}, started: 0 };
+        return open.apply(this, arguments);
+      };
+      XHR.prototype.setRequestHeader = function (k, v) {
+        if (this.__forgeDbg) this.__forgeDbg.headers[k] = v;
+        return setHeader.apply(this, arguments);
+      };
+      XHR.prototype.send = function (body) {
+        var d = this.__forgeDbg;
+        if (debugCfg.captureNetwork && d) {
+          d.started = Date.now();
+          var id = nextId();
+          var reqBody = (debugCfg.captureRequestBodies && typeof body === 'string') ? clip(body) : undefined;
+          var self = this;
+          var type = classifyType(d.url, reqBody);
+          this.addEventListener('loadend', function () {
+            try {
+              var ended = Date.now();
+              var resHeaders = parseRawHeaders(self.getAllResponseHeaders ? self.getAllResponseHeaders() : '');
+              var ct = resHeaders['content-type'] || '';
+              var isAsset = /^(image|font|video|audio)\\//.test(ct) || type === 'asset';
+              var respBody = undefined, truncated = false;
+              if (debugCfg.captureResponseBodies && !isAsset) {
+                try {
+                  var rt = (self.responseType === '' || self.responseType === 'text') ? self.responseText : undefined;
+                  if (typeof rt === 'string') { truncated = rt.length > debugCfg.maxBodyBytes; respBody = truncated ? rt.slice(0, debugCfg.maxBodyBytes) : rt; }
+                } catch (e) {}
+              }
+              post('network', {
+                id: id, url: d.url, method: d.method,
+                status: self.status || undefined, statusText: self.statusText || undefined,
+                requestHeaders: d.headers, responseHeaders: resHeaders, requestBody: reqBody,
+                responseBody: respBody, responseTruncated: truncated,
+                durationMs: ended - d.started, startedAt: d.started, endedAt: ended,
+                routePath: location.pathname, type: type,
+                error: self.status === 0 ? 'Request failed (status 0 — network error or CORS)' : undefined,
+              });
+            } catch (e) {}
+          });
+        }
+        return send.apply(this, arguments);
+      };
+    }
+  }
+
+  function applyDebugConfig(cfg) {
+    if (!cfg || typeof cfg !== 'object') return;
+    if (typeof cfg.captureConsole === 'boolean') debugCfg.captureConsole = cfg.captureConsole;
+    if (typeof cfg.captureNetwork === 'boolean') debugCfg.captureNetwork = cfg.captureNetwork;
+    if (typeof cfg.captureRequestBodies === 'boolean') debugCfg.captureRequestBodies = cfg.captureRequestBodies;
+    if (typeof cfg.captureResponseBodies === 'boolean') debugCfg.captureResponseBodies = cfg.captureResponseBodies;
+    if (typeof cfg.maxBodyKb === 'number' && cfg.maxBodyKb > 0) debugCfg.maxBodyBytes = cfg.maxBodyKb * 1024;
+  }
+
+  installConsole();
+  installNetwork();
+
   function onMove(e) {
     if (!enabled) return;
     if (raf) return;
@@ -206,6 +453,7 @@ const INSPECTOR_SOURCE = `(() => {
     const d = e.data;
     if (!d || d.__forgeCmd !== true) return;
     if (d.cmd === 'mode') setEnabled(d.on);
+    else if (d.cmd === 'debugConfig') applyDebugConfig(d.config);
   });
 
   window.__forgeInspector = { setEnabled: setEnabled };
@@ -232,9 +480,14 @@ window.addEventListener('message', (e) => {
   if (!d || d.__forgeInspect !== true) return;
   if (d.kind === 'selection') ipcRenderer.sendToHost(GUEST_TO_HOST_SELECTION, d.payload);
   else if (d.kind === 'ready') ipcRenderer.sendToHost(GUEST_TO_HOST_NAV, d.payload);
+  else if (d.kind === 'console') ipcRenderer.sendToHost(GUEST_TO_HOST_CONSOLE, d.payload);
+  else if (d.kind === 'network') ipcRenderer.sendToHost(GUEST_TO_HOST_NETWORK, d.payload);
 });
 
 // host -> main world
 ipcRenderer.on(HOST_TO_GUEST_MODE, (_e, on: boolean) => {
   window.postMessage({ __forgeCmd: true, cmd: 'mode', on }, '*');
+});
+ipcRenderer.on(HOST_TO_GUEST_DEBUG_CONFIG, (_e, config: unknown) => {
+  window.postMessage({ __forgeCmd: true, cmd: 'debugConfig', config }, '*');
 });

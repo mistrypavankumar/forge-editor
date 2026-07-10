@@ -8,6 +8,8 @@ import { ProblemList } from './ProblemList';
 import { OutputPanel } from './OutputPanel';
 import { TestPanel } from './TestPanel';
 import { DebugConsolePanel } from './DebugConsolePanel';
+import { BrowserDebugPanel } from '../browser';
+import { useBrowserDebugStore } from '../browser/browser-debug-store';
 import { useWorkbenchStatusStore, markerCounts } from '../stores/workbench-status-store';
 import { cn } from '../lib/cn';
 
@@ -18,6 +20,7 @@ export function BottomPanel(): React.JSX.Element {
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
   const markers = useWorkbenchStatusStore((s) => s.markers);
   const counts = markerCounts(markers);
+  const browserErrors = useBrowserDebugStore((s) => s.console.filter((e) => e.level === 'error').length);
 
   // The terminal owns live shell (PTY) sessions, so once opened it must stay mounted —
   // unmounting it on a tab switch (or hiding the panel) would kill every session. Mount
@@ -39,6 +42,7 @@ export function BottomPanel(): React.JSX.Element {
             { id: 'output', label: 'Output' },
             { id: 'tests', label: 'Tests' },
             { id: 'debug', label: 'Debug Console' },
+            { id: 'browserDebug', label: 'Browser Debug', badge: browserErrors },
           ]}
           active={bottomTab}
           onSelect={(id) => setBottomTab(id as BottomTab)}
@@ -58,6 +62,7 @@ export function BottomPanel(): React.JSX.Element {
         {bottomTab === 'output' ? <OutputPanel /> : null}
         {bottomTab === 'tests' ? <TestPanel /> : null}
         {bottomTab === 'debug' ? <DebugConsolePanel /> : null}
+        {bottomTab === 'browserDebug' ? <BrowserDebugPanel /> : null}
       </div>
     </div>
   );

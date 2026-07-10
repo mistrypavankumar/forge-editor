@@ -4,6 +4,7 @@ import {
   matchRouteFile,
   matchComponents,
   componentUsages,
+  matchGqlOperation,
   resolveSourceFile,
   normalizePathname,
 } from './resolver';
@@ -69,6 +70,17 @@ describe('matchRouteFile', () => {
   it('returns null when nothing matches', () => {
     expect(matchRouteFile('/no/such/route/here', nodes)).toBeNull();
   });
+
+  it('ignores Next.js route groups and parallel-route slots in the route', () => {
+    const grouped = [
+      node({ rel: 'app/(redux)/dashboard/procurement/supplier-fulfillment/page.tsx', kind: 'next-page', route: '/(redux)/dashboard/procurement/supplier-fulfillment' }),
+      node({ rel: 'app/(marketing)/@modal/settings/page.tsx', kind: 'next-page', route: '/(marketing)/@modal/settings' }),
+    ];
+    expect(matchRouteFile('/dashboard/procurement/supplier-fulfillment', grouped)?.rel).toBe(
+      'app/(redux)/dashboard/procurement/supplier-fulfillment/page.tsx',
+    );
+    expect(matchRouteFile('/settings', grouped)?.rel).toBe('app/(marketing)/@modal/settings/page.tsx');
+  });
 });
 
 describe('matchComponents', () => {
@@ -125,6 +137,45 @@ describe('componentUsages', () => {
 
   it('returns nothing for an unknown component', () => {
     expect(componentUsages('Nope', nodes)).toHaveLength(0);
+  });
+});
+
+describe('matchGqlOperation', () => {
+  const nodes = [
+    node({
+      rel: 'src/hooks/useSupplierFulfillmentsQuery.ts',
+      kind: 'graphql',
+      gqlOps: [{ name: 'GetSupplierFulfillments', type: 'query' }],
+      usedBy: ['src/components/SupplierFulfillmentTable.tsx'],
+    }),
+    node({
+      rel: 'src/components/SupplierFulfillmentTable.tsx',
+      kind: 'component',
+      components: ['SupplierFulfillmentTable'],
+    }),
+    node({
+      rel: 'src/graphql/fragments.ts',
+      kind: 'graphql',
+      gqlOps: [{ name: 'GetSupplierFulfillments', type: 'fragment' }],
+    }),
+  ];
+
+  it('matches the defining file by operation name and surfaces usedBy files', () => {
+    const m = matchGqlOperation('GetSupplierFulfillments', nodes);
+    expect(m).toHaveLength(1);
+    expect(m[0].rel).toBe('src/hooks/useSupplierFulfillmentsQuery.ts');
+    expect(m[0].type).toBe('query');
+    expect(m[0].usedBy.map((u) => u.rel)).toEqual(['src/components/SupplierFulfillmentTable.tsx']);
+    expect(m[0].usedBy[0].path).toBe('/repo/src/components/SupplierFulfillmentTable.tsx');
+  });
+
+  it('ignores fragments with the same name', () => {
+    const m = matchGqlOperation('GetSupplierFulfillments', nodes);
+    expect(m.every((x) => x.type !== 'fragment')).toBe(true);
+  });
+
+  it('returns nothing for an unknown operation', () => {
+    expect(matchGqlOperation('Nope', nodes)).toHaveLength(0);
   });
 });
 

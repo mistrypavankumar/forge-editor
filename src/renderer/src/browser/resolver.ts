@@ -1,4 +1,4 @@
-import type { CodeNode } from '@shared/ipc-contract';
+import type { CodeNode, GqlOpType } from '@shared/ipc-contract';
 
 /**
  * Pure mapping from a clicked browser element back to a source file, using the Codebase Map
@@ -40,6 +40,14 @@ export function normalizePathname(p: string): string {
   if (!s.startsWith('/')) s = '/' + s;
   if (s.length > 1) s = s.replace(/\/+$/, '');
   return s || '/';
+}
+
+/**
+ * Segments that exist in the file tree but NOT in the URL: Next.js route groups `(marketing)` and
+ * parallel-route slots `@modal`. They must be dropped before matching a route pattern to a URL.
+ */
+function isNonUrlSegment(seg: string): boolean {
+  return (seg.startsWith('(') && seg.endsWith(')')) || seg.startsWith('@');
 }
 
 /** True for a Next.js dynamic segment: `[id]`, `[...slug]`, `[[...slug]]`. */
@@ -100,7 +108,8 @@ export function matchRouteFile(urlPath: string, nodes: CodeNode[]): RouteMatch |
   let best: (RouteMatch & { _score: number; _rank: number }) | null = null;
   for (const n of nodes) {
     if (!n.route || ROUTE_KIND_RANK[n.kind] === undefined) continue;
-    const routeSegs = n.route.split('/').filter(Boolean);
+    // Drop route groups `(group)` and parallel slots `@slot` — they don't appear in the URL.
+    const routeSegs = n.route.split('/').filter((s) => s && !isNonUrlSegment(s));
     const res = scoreRoute(routeSegs, urlSegs);
     if (!res) continue;
     const rank = ROUTE_KIND_RANK[n.kind] ?? 0;
@@ -157,6 +166,39 @@ export function componentUsages(name: string, nodes: CodeNode[]): { rel: string;
     .sort()
     .map((rel) => ({ rel, path: byRel.get(rel) ?? '' }))
     .filter((x) => x.path);
+}
+
+/** A GraphQL operation matched to the file that defines it, plus the files that use that file. */
+export interface GqlOperationMatch {
+  /** Absolute path of the file declaring the operation. */
+  path: string;
+  /** Workspace-relative path (for display). */
+  rel: string;
+  name: string;
+  type: GqlOpType;
+  /** Files that import the declaring file — likely the hooks/components that run the operation. */
+  usedBy: { rel: string; path: string }[];
+}
+
+/**
+ * Find the file(s) that define a GraphQL operation by name, using the codemap's per-file `gqlOps`
+ * index. Match is exact (operation names are case-sensitive). `usedBy` surfaces the frontend files
+ * that import the declaring file — the "Open Component Using This Operation" action. Positions
+ * aren't indexed for operations, so callers open at the file head (line 1).
+ */
+export function matchGqlOperation(name: string, nodes: CodeNode[]): GqlOperationMatch[] {
+  if (!name) return [];
+  const byRel = new Map(nodes.map((n) => [n.rel, n.path]));
+  const out: GqlOperationMatch[] = [];
+  for (const n of nodes) {
+    const op = n.gqlOps.find((o) => o.name === name && o.type !== 'fragment');
+    if (!op) continue;
+    const usedBy = n.usedBy
+      .map((rel) => ({ rel, path: byRel.get(rel) ?? '' }))
+      .filter((x) => x.path);
+    out.push({ path: n.path, rel: n.rel, name, type: op.type, usedBy });
+  }
+  return out.sort((a, b) => a.rel.localeCompare(b.rel));
 }
 
 /**
