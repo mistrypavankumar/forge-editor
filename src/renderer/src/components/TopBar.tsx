@@ -1,5 +1,5 @@
 import {
-  Play,
+  Camera,
   ChevronDown,
   PanelLeft,
   PanelRight,
@@ -105,11 +105,12 @@ export function TopBar(): React.JSX.Element {
 
         <button
           type="button"
-          onClick={() => void commandRegistry.run('file.save')}
-          className="flex h-7 items-center gap-1.5 rounded-md bg-accent px-2.5 text-xs font-medium text-accent-fg transition-opacity hover:opacity-90"
+          onClick={() => void commandRegistry.run('forge.annotate.capture')}
+          title="Annotate the editor and copy a screenshot"
+          className="flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-xs font-medium text-muted transition-colors hover:border-line-strong hover:text-fg"
         >
-          <Play size={12} className="fill-current" />
-          Run
+          <Camera size={12} className="text-accent" />
+          Annotate
         </button>
 
         <div className="mx-1 h-5 w-px bg-line" />
