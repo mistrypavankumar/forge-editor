@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, RotateCcw, SlidersHorizontal, Wand2, Keyboard, Search, FolderSearch, Sparkles, HeartPulse, Check } from 'lucide-react';
+import { X, RotateCcw, SlidersHorizontal, Wand2, Keyboard, Search, FolderSearch, Sparkles, HeartPulse, Check, Bug } from 'lucide-react';
 import { useAiStore } from '../stores/ai-store';
+import { useBrowserDebugStore } from '../browser/browser-debug-store';
 import { useWellnessStore, WELLNESS_INTERVAL_MIN, WELLNESS_INTERVAL_MAX, WELLNESS_BREAK_MIN, WELLNESS_BREAK_MAX } from '../stores/wellness-store';
 import { WELLNESS_EXERCISES } from '../lib/wellness-exercises';
 import type { AiKeyStatus, AiProvider } from '@shared/ipc-contract';
@@ -23,6 +24,7 @@ const SECTIONS = [
   { id: 'formatting', label: 'Formatting', icon: Wand2 },
   { id: 'search', label: 'Search', icon: FolderSearch },
   { id: 'ai', label: 'AI', icon: Sparkles },
+  { id: 'browserDebug', label: 'Browser Debug', icon: Bug },
   { id: 'wellness', label: 'Wellness', icon: HeartPulse },
   { id: 'keyboard', label: 'Keyboard Shortcuts', icon: Keyboard },
 ] as const;
@@ -436,6 +438,51 @@ export function SettingsView(): React.JSX.Element | null {
   const fieldCls =
     'w-60 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[12px] text-fg outline-none transition-colors placeholder:text-faint focus:border-accent/70';
 
+  // Select only the preference fields (not the event arrays) so capture activity doesn't re-render Settings.
+  const bdEnabled = useBrowserDebugStore((s) => s.enabled);
+  const bdConfig = useBrowserDebugStore((s) => s.config);
+  const bdRedact = useBrowserDebugStore((s) => s.redactSensitiveHeaders);
+  const bdMaxEvents = useBrowserDebugStore((s) => s.maxEvents);
+  const bdAllowExternal = useBrowserDebugStore((s) => s.allowExternalCapture);
+  const bd = useBrowserDebugStore.getState();
+  const browserDebug = (
+    <div className="flex flex-col gap-4">
+      <Card>
+        <SettingRow label="Enable Browser Debug" hint="Capture console + network activity from the embedded browser. Data is kept in memory only.">
+          <Toggle on={bdEnabled} onChange={bd.setEnabled} />
+        </SettingRow>
+        <SettingRow label="Capture console" hint="Console errors/warnings, uncaught errors, and unhandled rejections">
+          <Toggle on={bdConfig.captureConsole} onChange={(v) => bd.setConfig({ captureConsole: v })} />
+        </SettingRow>
+        <SettingRow label="Capture network" hint="fetch / XHR requests made by the app" last>
+          <Toggle on={bdConfig.captureNetwork} onChange={(v) => bd.setConfig({ captureNetwork: v })} />
+        </SettingRow>
+      </Card>
+      <Card>
+        <SettingRow label="Capture request bodies" hint="Store request payloads (up to the size limit below)">
+          <Toggle on={bdConfig.captureRequestBodies} onChange={(v) => bd.setConfig({ captureRequestBodies: v })} />
+        </SettingRow>
+        <SettingRow label="Capture response bodies" hint="Store response previews (assets are always skipped)">
+          <Toggle on={bdConfig.captureResponseBodies} onChange={(v) => bd.setConfig({ captureResponseBodies: v })} />
+        </SettingRow>
+        <SettingRow label="Max body size" hint="Bodies larger than this are truncated">
+          <Stepper value={bdConfig.maxBodyKb} onChange={(v) => bd.setConfig({ maxBodyKb: v })} min={16} max={4096} step={16} suffix=" KB" />
+        </SettingRow>
+        <SettingRow label="Max events" hint="Oldest console/network events are dropped past this count" last>
+          <Stepper value={bdMaxEvents} onChange={bd.setMaxEvents} min={50} max={5000} step={50} />
+        </SettingRow>
+      </Card>
+      <Card>
+        <SettingRow label="Redact sensitive headers" hint="Mask Authorization, Cookie, Set-Cookie, X-API-Key in displays and cURL">
+          <Toggle on={bdRedact} onChange={bd.setRedactSensitiveHeaders} />
+        </SettingRow>
+        <SettingRow label="Capture external pages" hint="By default only localhost / private dev URLs are captured. Enable to capture any site." last>
+          <Toggle on={bdAllowExternal} onChange={bd.setAllowExternalCapture} />
+        </SettingRow>
+      </Card>
+    </div>
+  );
+
   const ai = (
     <Card>
       <SettingRow label="AI provider" hint="Powers the Assistant panel and AI commit messages">
@@ -728,6 +775,7 @@ export function SettingsView(): React.JSX.Element | null {
             {active === 'formatting' ? formatting : null}
             {active === 'search' ? search : null}
             {active === 'ai' ? ai : null}
+            {active === 'browserDebug' ? browserDebug : null}
             {active === 'wellness' ? wellness : null}
             {active === 'keyboard' ? keyboard : null}
           </div>

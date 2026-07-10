@@ -12,8 +12,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useEditorStore } from '../stores/editor-store';
+import { useAssistantStore } from '../stores/assistant-store';
 import { languageFor } from '../editor/language';
 import { FileTypeIcon } from './file-icon';
+
+type ContextFile = { name: string; language: string; content: string } | null;
 
 interface QuickAction {
   id: string;
@@ -140,7 +143,9 @@ export function AssistantPanel(): React.JSX.Element {
     };
   }, []);
 
-  const run = (displayText: string, promptText: string): void => {
+  // `fileOverride`: omit to use the active editor tab (default); pass a file (or null) to override
+  // the attached context — used by "Ask AI to Fix", which attaches the resolved error source file.
+  const run = (displayText: string, promptText: string, fileOverride?: ContextFile): void => {
     if (busy) return;
     const reqId = `req-${nextId()}`;
     const asstId = nextId();
@@ -153,9 +158,12 @@ export function AssistantPanel(): React.JSX.Element {
     ]);
     pendingRef.current = { reqId, msgId: asstId };
     setBusy(true);
-    const file = active
-      ? { name: active.name, language: languageFor(active.name), content: active.content }
-      : null;
+    const file =
+      fileOverride !== undefined
+        ? fileOverride
+        : active
+          ? { name: active.name, language: languageFor(active.name), content: active.content }
+          : null;
     void window.forge.assistantSend({ id: reqId, question: promptText, file, history }).then((res) => {
       if (res.ok) return;
       // Spawn failed before any streaming started.
@@ -173,6 +181,16 @@ export function AssistantPanel(): React.JSX.Element {
     setDraft('');
     run(text, text);
   };
+
+  // Consume a prompt seeded from elsewhere (e.g. "Ask AI to Fix") once, as a chat turn.
+  const seed = useAssistantStore((s) => s.seed);
+  useEffect(() => {
+    if (!seed || busy) return;
+    useAssistantStore.getState().setSeed(null);
+    run(seed.displayText, seed.promptText, seed.file);
+    // `run` closes over the current render's state; deps intentionally track only the seed/busy gate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed, busy]);
 
   const stop = (): void => {
     const p = pendingRef.current;

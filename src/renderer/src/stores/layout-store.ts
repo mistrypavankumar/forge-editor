@@ -9,7 +9,7 @@ export type ActivityId =
   | 'extensions'
   | 'database'
   | 'settings';
-export type BottomTab = 'terminal' | 'problems' | 'output' | 'tests' | 'debug';
+export type BottomTab = 'terminal' | 'problems' | 'output' | 'tests' | 'debug' | 'browserDebug';
 export type SidebarSide = 'left' | 'right';
 /** Which view the right (assistant) panel shows: conversational Chat or the AI Agent workspace. */
 export type RightMode = 'chat' | 'agent';
