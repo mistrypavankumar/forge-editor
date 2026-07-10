@@ -122,11 +122,16 @@ const notCancelled = {
   onCancellationRequested: () => ({ dispose() {} }),
 };
 
-/** Build `n` distinct `property` document symbols on consecutive lines. */
-function propertySymbols(n: number): unknown[] {
+/**
+ * Build `n` distinct hint-eligible document symbols on consecutive lines. Uses `function` kind:
+ * data-member kinds (`property`, `field`) are intentionally excluded from usage hints, so a symbol
+ * must be a callable/type declaration to produce a hint at all. `function` is in USAGE_KINDS but not
+ * IMPL_KINDS, so these emit a usages hint without an implementations query.
+ */
+function declSymbols(n: number): unknown[] {
   return Array.from({ length: n }, (_, i) => ({
     name: `prop${i + 1}`,
-    kind: 'property',
+    kind: 'function',
     file: '/repo/map.ts',
     line: i + 1,
     column: 3,
@@ -140,7 +145,7 @@ function oneExternalUsage() {
 
 describe('Inlay hint provider — visible range + symbol-dense guard', () => {
   it('emits one hint per declaration inside the visible range', async () => {
-    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: propertySymbols(20) });
+    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: declSymbols(20) });
     lang.getReferences.mockResolvedValue(oneExternalUsage());
     const res = await provider.provideInlayHints!(
       makeModel(40) as never,
@@ -151,7 +156,7 @@ describe('Inlay hint provider — visible range + symbol-dense guard', () => {
   });
 
   it('skips declarations outside the visible range and does not query them', async () => {
-    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: propertySymbols(20) });
+    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: declSymbols(20) });
     lang.getReferences.mockResolvedValue(oneExternalUsage());
     // Only lines 5..8 are visible → 4 hints, 4 reference queries.
     const res = await provider.provideInlayHints!(
@@ -164,8 +169,8 @@ describe('Inlay hint provider — visible range + symbol-dense guard', () => {
   });
 
   it('suppresses hints when the visible range exceeds the cap (the freeze case)', async () => {
-    // 201 property symbols on screen > MAX_INLAY_HINTS (200) → no hints, so no resolve fan-out.
-    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: propertySymbols(201) });
+    // 201 eligible symbols on screen > MAX_INLAY_HINTS (200) → no hints, so no resolve fan-out.
+    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: declSymbols(201) });
     const res = await provider.provideInlayHints!(
       makeModel(300) as never,
       fullRange(300) as never,
@@ -179,7 +184,7 @@ describe('Inlay hint provider — visible range + symbol-dense guard', () => {
 
 describe('Inlay hint provider — counts, cache, and cancellation', () => {
   it('excludes the declaration itself from the usage count', async () => {
-    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: propertySymbols(1) });
+    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: declSymbols(1) });
     // Two hits: the declaration (line 1, same file) and one real usage. Count should read "1 usage".
     lang.getReferences.mockResolvedValue({
       ok: true,
@@ -203,7 +208,7 @@ describe('Inlay hint provider — counts, cache, and cancellation', () => {
   });
 
   it('reuses cached counts on a second pass at the same model version', async () => {
-    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: propertySymbols(3) });
+    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: declSymbols(3) });
     lang.getReferences.mockResolvedValue(oneExternalUsage());
     const model = makeModel(10) as never;
     await provider.provideInlayHints!(model, fullRange(10) as never, notCancelled as never);
@@ -214,7 +219,7 @@ describe('Inlay hint provider — counts, cache, and cancellation', () => {
   });
 
   it('returns no hints when cancelled before the symbols come back', async () => {
-    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: propertySymbols(5) });
+    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: declSymbols(5) });
     const cancelled = {
       isCancellationRequested: true,
       onCancellationRequested: () => ({ dispose() {} }),
@@ -226,5 +231,89 @@ describe('Inlay hint provider — counts, cache, and cancellation', () => {
     );
     expect(res?.hints.length).toBe(0);
     expect(lang.getReferences).not.toHaveBeenCalled();
+  });
+
+  it('drops a single failed declaration but keeps the rest of the pass', async () => {
+    lang.getDocumentSymbols.mockResolvedValue({ ok: true, data: declSymbols(3) });
+    // The middle declaration's reference query rejects; its hint is dropped, the other two survive.
+    lang.getReferences.mockImplementation((_f: string, line: number) =>
+      line === 2 ? Promise.reject(new Error('LS worker died')) : Promise.resolve(oneExternalUsage()),
+    );
+    const res = await provider.provideInlayHints!(
+      makeModel(10) as never,
+      fullRange(10) as never,
+      notCancelled as never,
+    );
+    expect(res?.hints.length).toBe(2);
+  });
+});
+
+/** A model with an explicit single-line body, so anchor-column math is exercised on real text. */
+function singleLineModel(line: string): unknown {
+  return {
+    uri: { path: '/repo/a.ts', toString: () => 'file:///repo/a.ts' },
+    getValueLength: () => 200,
+    getLineCount: () => 1,
+    getLineContent: () => line,
+    getLineMaxColumn: () => line.length + 1,
+    getVersionId: () => version,
+  };
+}
+
+/** `n` distinct non-declaration reference locations (all pass the not-self filter). */
+function externalUsages(n: number) {
+  return {
+    ok: true,
+    data: Array.from({ length: n }, (_, i) => ({
+      file: '/repo/other.ts', line: 7 + i, column: 1, endLine: 7 + i, endColumn: 5,
+    })),
+  };
+}
+
+describe('Inlay hint provider — anchor + same-line declarations', () => {
+  it('anchors the reference query at an identifier boundary, not a bare substring', async () => {
+    // `foo` also appears inside `fooBar`; the query must anchor on the standalone identifier.
+    const line = 'const fooBar = foo;';
+    lang.getDocumentSymbols.mockResolvedValue({
+      ok: true,
+      data: [{ name: 'foo', kind: 'function', file: '/repo/a.ts', line: 1, column: 1 }],
+    });
+    lang.getReferences.mockResolvedValue(oneExternalUsage());
+    await provider.provideInlayHints!(
+      singleLineModel(line) as never,
+      new Range(1, 1, 1, 1) as never,
+      notCancelled as never,
+    );
+    const col = lang.getReferences.mock.calls[0][2];
+    expect(col).toBe(line.indexOf('foo', 8) + 1); // the second `foo`, not the one inside fooBar
+  });
+
+  it('gives two declarations sharing a line their own counts (line:column cache key)', async () => {
+    const line = 'function alpha(){} function beta(){}';
+    const alphaCol = line.indexOf('alpha') + 1;
+    const betaCol = line.indexOf('beta') + 1;
+    lang.getDocumentSymbols.mockResolvedValue({
+      ok: true,
+      data: [
+        { name: 'alpha', kind: 'function', file: '/repo/a.ts', line: 1, column: 1 },
+        { name: 'beta', kind: 'function', file: '/repo/a.ts', line: 1, column: 1 },
+      ],
+    });
+    // Counts differ by anchored column; a line-only cache key would serve beta alpha's 3 usages.
+    lang.getReferences.mockImplementation((_f: string, _l: number, col: number) =>
+      Promise.resolve(col === alphaCol ? externalUsages(3) : externalUsages(1)),
+    );
+    const res = await provider.provideInlayHints!(
+      singleLineModel(line) as never,
+      new Range(1, 1, 1, 1) as never,
+      notCancelled as never,
+    );
+    expect(res?.hints.length).toBe(2);
+    expect(lang.getReferences).toHaveBeenCalledTimes(2);
+    const labels = res!.hints.map(
+      (h) => (h.label as languages.InlayHintLabelPart[])[0].label,
+    );
+    expect(labels.sort()).toEqual(['1 usage', '3 usages']);
+    expect(betaCol).toBeGreaterThan(alphaCol); // sanity: the two anchors really are distinct
   });
 });

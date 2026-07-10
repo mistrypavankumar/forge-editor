@@ -535,7 +535,10 @@ export function Palette(): React.JSX.Element | null {
                 key={item.row.id}
                 type="button"
                 ref={i === activeIndex ? activeRef : null}
-                onMouseEnter={() => setActiveIndex(i)}
+                // Use mousemove, not mouseenter: typing remounts rows under a stationary cursor, and
+                // mouseenter would fire on that remount and hijack the selection away from the top
+                // match. mousemove only fires on real pointer movement, so keyboard selection sticks.
+                onMouseMove={() => setActiveIndex(i)}
                 onClick={() => runAt(i)}
                 className={cn(
                   'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left',
