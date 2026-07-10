@@ -3,6 +3,7 @@ import type { CodeNode } from '@shared/ipc-contract';
 import {
   matchRouteFile,
   matchComponents,
+  componentUsages,
   resolveSourceFile,
   normalizePathname,
 } from './resolver';
@@ -106,6 +107,24 @@ describe('matchComponents', () => {
 
   it('returns nothing for an unknown component', () => {
     expect(matchComponents('Nope', nodes)).toHaveLength(0);
+  });
+});
+
+describe('componentUsages', () => {
+  const nodes = [
+    node({ rel: 'src/Button.tsx', kind: 'component', components: ['Button'], usedBy: ['src/Form.tsx', 'src/Page.tsx'] }),
+    node({ rel: 'src/Form.tsx', kind: 'component', components: ['Form'] }),
+    node({ rel: 'src/Page.tsx', kind: 'component', components: ['Page'] }),
+  ];
+
+  it('lists the files that import the declaring file, resolved to absolute paths', () => {
+    const u = componentUsages('Button', nodes);
+    expect(u.map((x) => x.rel)).toEqual(['src/Form.tsx', 'src/Page.tsx']);
+    expect(u[0].path).toBe('/repo/src/Form.tsx');
+  });
+
+  it('returns nothing for an unknown component', () => {
+    expect(componentUsages('Nope', nodes)).toHaveLength(0);
   });
 });
 

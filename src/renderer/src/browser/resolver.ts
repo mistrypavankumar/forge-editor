@@ -144,6 +144,21 @@ export function matchComponents(name: string, nodes: CodeNode[]): ComponentMatch
   return out.sort((a, b) => a.rel.localeCompare(b.rel));
 }
 
+/** Files that import the file(s) declaring component `name` — its usage sites (from the codemap). */
+export function componentUsages(name: string, nodes: CodeNode[]): { rel: string; path: string }[] {
+  if (!name) return [];
+  const byRel = new Map(nodes.map((n) => [n.rel, n.path]));
+  const rels = new Set<string>();
+  for (const n of nodes) {
+    const declares = n.componentDetails?.some((c) => c.name === name) || n.components.includes(name);
+    if (declares) for (const u of n.usedBy) rels.add(u);
+  }
+  return [...rels]
+    .sort()
+    .map((rel) => ({ rel, path: byRel.get(rel) ?? '' }))
+    .filter((x) => x.path);
+}
+
 /**
  * Turn a source-file reference (from fiber `_debugSource` or `data-forge-source-file`) into an
  * openable absolute path, or null when it isn't a real on-disk file (e.g. a `webpack-internal://`
