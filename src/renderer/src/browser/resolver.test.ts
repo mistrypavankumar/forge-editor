@@ -147,6 +147,11 @@ describe('resolveSourceFile', () => {
     expect(resolveSourceFile(undefined, '/repo')).toBeNull();
   });
 
+  it('rejects node_modules paths (never open library internals)', () => {
+    expect(resolveSourceFile('/repo/node_modules/@mui/material/Tab.js', '/repo')).toBeNull();
+    expect(resolveSourceFile('file:///repo/node_modules/@mui/base/ButtonBase.js', '/repo')).toBeNull();
+  });
+
   it('decodes a file:// URL', () => {
     expect(resolveSourceFile('file:///repo/src/my%20comp.tsx', '/repo')).toBe('/repo/src/my comp.tsx');
   });

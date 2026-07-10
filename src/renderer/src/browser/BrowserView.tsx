@@ -28,7 +28,13 @@ import {
   DEFAULT_DEV_PORTS,
   type BrowserController,
 } from './store';
-import { matchComponents, matchRouteFile, componentUsages, resolveSourceFile } from './resolver';
+import {
+  matchComponents,
+  matchRouteFile,
+  componentUsages,
+  resolveSourceFile,
+  type ComponentMatch,
+} from './resolver';
 
 /** Minimal typing for the Electron <webview> element (only the members we use). */
 interface WebviewElement extends HTMLElement {
@@ -78,6 +84,30 @@ export function BrowserView(): React.JSX.Element {
     );
   }, []);
 
+  // Pinpoint the exact line in `path` that renders the clicked element, so we jump to the JSX
+  // site rather than the component's declaration head. Without fiber `_debugSource` we have no
+  // precise line, but the element's visible text (e.g. a tab's "Sales Based" label) is almost
+  // always present literally on its JSX line. Best-effort: fall back to `fallback` on any miss.
+  const findUsageSite = useCallback(
+    async (
+      path: string,
+      sel: BrowserInspectorSelection,
+      fallback: { line: number; column: number },
+    ): Promise<{ line: number; column: number }> => {
+      const text = sel.dom?.text?.trim();
+      if (!text || text.length < 2) return fallback;
+      const res = await window.forge.readFile(path);
+      if (!res.ok || typeof res.data !== 'string') return fallback;
+      const lines = res.data.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const col = lines[i].indexOf(text);
+        if (col >= 0) return { line: i + 1, column: col + 1 };
+      }
+      return fallback;
+    },
+    [],
+  );
+
   // Build (or reuse) the Codebase Map node index for component/route resolution.
   const ensureNodes = useCallback(async (): Promise<CodeNode[] | null> => {
     if (nodesRef.current) return nodesRef.current;
@@ -104,7 +134,26 @@ export function BrowserView(): React.JSX.Element {
       const routeFile = nodes ? matchRouteFile(sel.routePath ?? sel.url, nodes) : null;
       s.setRouteFile(routeFile);
       const name = sel.react?.componentName;
-      if (name && nodes) s.setUsages(componentUsages(name, nodes));
+
+      // The owner chain runs nearest → root and usually begins with library internals
+      // (e.g. MuiButtonBaseRoot, MuiTab) that the codemap never indexes. Walk it and stop at
+      // the nearest name the project actually declares — that's the component rendering this
+      // element, i.e. "where it's used", not the top-level route file.
+      const chain = sel.react?.ownerChain?.length ? sel.react.ownerChain : name ? [name] : [];
+      let projectName: string | undefined;
+      let projectMatches: ComponentMatch[] = [];
+      if (nodes) {
+        for (const candidate of chain) {
+          const found = matchComponents(candidate, nodes);
+          if (found.length) {
+            projectName = candidate;
+            projectMatches = found;
+            break;
+          }
+        }
+      }
+      // Usages of the nearest *project* component, not the raw (often library) leaf name.
+      if (projectName && nodes) s.setUsages(componentUsages(projectName, nodes));
 
       const open = (path: string, line: number, column: number, rel?: string): void => {
         s.setResolved({ path, line, column, rel });
@@ -123,18 +172,23 @@ export function BrowserView(): React.JSX.Element {
         open(fiberFile, sel.react?.source?.lineNumber ?? 1, sel.react?.source?.columnNumber ?? 1);
         return;
       }
-      // 3. Component name → project index.
-      if (name && nodes) {
-        const found = matchComponents(name, nodes);
-        if (found.length === 1) {
-          open(found[0].path, found[0].line, found[0].column, found[0].rel);
-          return;
+      // 3. Nearest project component in the owner chain.
+      if (projectMatches.length === 1) {
+        const m = projectMatches[0];
+        // Jump to the exact JSX line rendering the clicked element, not the component head.
+        const site = await findUsageSite(m.path, sel, { line: m.line, column: m.column });
+        if (projectName && projectName !== name) {
+          s.setMessage(
+            `Opened "${projectName}" — the nearest project component rendering <${name ?? 'element'}>.`,
+          );
         }
-        if (found.length > 1) {
-          s.setMatches(found);
-          s.setMessage(`${found.length} files export "${name}" — choose one.`);
-          return;
-        }
+        open(m.path, site.line, site.column, m.rel);
+        return;
+      }
+      if (projectMatches.length > 1) {
+        s.setMatches(projectMatches);
+        s.setMessage(`${projectMatches.length} files export "${projectName}" — choose one.`);
+        return;
       }
       // 4. URL → Next.js route file.
       if (routeFile) {
@@ -148,7 +202,7 @@ export function BrowserView(): React.JSX.Element {
         : 'No React component info on this element.';
       s.setMessage(`${hint} Try rebuilding the Codebase Map, or pick a file manually.`);
     },
-    [ensureNodes, openAt],
+    [ensureNodes, openAt, findUsageSite],
   );
 
   // Handle a selection message coming from the guest page.
