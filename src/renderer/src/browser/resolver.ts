@@ -177,6 +177,8 @@ export function resolveSourceFile(raw: string | undefined, root: string | null):
       return null;
     }
   }
+  // Never open a library's own internals — the user wants their usage site, not node_modules.
+  if (/[/\\]node_modules[/\\]/.test(file)) return null;
   if (file.startsWith('/')) return file;
   if (root) return `${root}/${file.replace(/^\.\//, '')}`;
   return null;

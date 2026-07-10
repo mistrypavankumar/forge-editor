@@ -71,7 +71,9 @@ const INSPECTOR_SOURCE = `(() => {
     let node = fiber;
     let hops = 0;
     while (node && hops < 60) {
-      if (!source && node._debugSource) source = node._debugSource;
+      // Prefer the nearest source that points into the project, not a library's own
+      // internals (e.g. MUI). A node_modules _debugSource is never "where it's used".
+      if (!source && node._debugSource && node._debugSource.fileName && node._debugSource.fileName.indexOf('node_modules') === -1) source = node._debugSource;
       const nm = nameOfType(node.type);
       if (nm) {
         if (!nearest) nearest = nm;
