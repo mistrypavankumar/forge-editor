@@ -157,7 +157,20 @@ const INLAY_HINT_LIGHT: Record<string, string> = {
   'editorInlayHint.typeBackground': '#00000000',
 };
 
+// Bracket pair guide lines. Monaco defaults to a rainbow (one hue per nesting level); we
+// collapse all six levels to a single neutral color instead — a faint gray at rest and a
+// brighter near-white for the active pair — so the guides read as structure, not decoration.
+function bracketGuideColors(rest: string, active: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (let n = 1; n <= 6; n++) {
+    out[`editorBracketPairGuide.background${n}`] = rest;
+    out[`editorBracketPairGuide.activeBackground${n}`] = active;
+  }
+  return out;
+}
+
 const FORGE_DARK_COLORS: Record<string, string> = {
+  ...bracketGuideColors('#6B768A55', '#B7C0CE80'),
   // Transparent so the editor host's translucent `bg-bg` (and the window vibrancy behind
   // it) shows through — matching the frosted-glass look of the rest of the chrome.
   'editor.background': '#00000000',
@@ -197,6 +210,7 @@ const FORGE_DARK_COLORS: Record<string, string> = {
 };
 
 const FORGE_LIGHT_COLORS: Record<string, string> = {
+  ...bracketGuideColors('#5A657855', '#1F2937CC'),
   'editor.background': '#00000000',
   focusBorder: '#00000000',
   'editor.foreground': '#18181b',

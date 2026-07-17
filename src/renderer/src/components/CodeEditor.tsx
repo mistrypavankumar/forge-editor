@@ -178,12 +178,15 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
       scrollBeyondLastLine: false,
       roundedSelection: true,
       // Colorize matching brackets and draw the vertical guide line connecting each open/close
-      // bracket (and JSX/HTML tag) pair — the VS Code "bracket pair guides" look.
+      // bracket (and JSX/HTML tag) pair — the VS Code "bracket pair guides" look. Vertical guides
+      // only span pairs that cross lines, so single-line pairs draw nothing. No horizontal
+      // connectors; the guide colors themselves are a neutral gray/near-white (see the theme's
+      // editorBracketPairGuide.* keys), not the rainbow default.
       bracketPairColorization: { enabled: true },
       guides: {
         indentation: false,
         bracketPairs: true,
-        bracketPairsHorizontal: 'active',
+        bracketPairsHorizontal: false,
         highlightActiveBracketPair: true,
       },
       overviewRulerBorder: false,
