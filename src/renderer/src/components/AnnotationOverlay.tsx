@@ -55,6 +55,7 @@ export function AnnotationOverlay(): React.JSX.Element | null {
   const drawingRef = useRef(false);
   const [textDraft, setTextDraft] = useState<TextDraft | null>(null);
   const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const close = useCallback(() => {
     draftRef.current = null;
@@ -163,11 +164,18 @@ export function AnnotationOverlay(): React.JSX.Element | null {
 
   const onCopy = async (): Promise<void> => {
     const ok = await copyAnnotationToClipboard();
-    if (ok) {
-      setCopied(true);
-      setTimeout(close, 550);
-    }
+    if (!ok) return;
+    // Flash "Copied", then revert to "Copy" so the button is reusable and the overlay stays
+    // open — the user can keep marking up and copy again without reopening.
+    setCopied(true);
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopied(false), 1500);
   };
+
+  // Clear the pending revert if the overlay unmounts mid-flash.
+  useEffect(() => () => {
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+  }, []);
 
   return createPortal(
     <div className="fixed inset-0 z-[4000] bg-bg/80 backdrop-blur-sm">
@@ -250,7 +258,13 @@ function Toolbar({
   const store = useAnnotationStore.getState;
 
   return (
-    <div className="absolute left-1/2 top-4 z-20 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-line bg-surface-2/95 px-2 py-1.5 text-muted shadow-2xl backdrop-blur">
+    <div
+      // Keep DOM focus on the frozen editor: without this, the first pointer-down on a control
+      // just transfers focus off the Monaco pane and that click is swallowed, so every button
+      // needed a second click. preventDefault stops the focus shift; the click still fires.
+      onPointerDown={(e) => e.preventDefault()}
+      className="absolute left-1/2 top-4 z-20 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-line bg-surface-2/95 px-2 py-1.5 text-muted shadow-2xl backdrop-blur"
+    >
       {/* Tools */}
       {TOOLS.map(({ tool: t, icon: Icon, label }) => (
         <button

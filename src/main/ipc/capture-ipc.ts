@@ -30,7 +30,10 @@ export function registerCaptureIpc(ipcMain: IpcMain): void {
         width: Math.round(rect.width),
         height: Math.round(rect.height),
       });
-      return image.toDataURL();
+      // Encode the full device-pixel bitmap. `toDataURL()` returns the 1x representation, which
+      // halves the resolution on a Retina display and makes the pasted image look blurry; `toPNG`
+      // keeps every physical pixel the capture actually holds.
+      return `data:image/png;base64,${image.toPNG().toString('base64')}`;
     }),
   );
   ipcMain.handle(IpcChannels.clipboardWriteImage, (_e, dataUrl: string) =>
