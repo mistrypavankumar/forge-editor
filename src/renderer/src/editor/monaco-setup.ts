@@ -169,8 +169,24 @@ function bracketGuideColors(rest: string, active: string): Record<string, string
   return out;
 }
 
+// Indentation guide lines — the vertical rules down every indented block, including JSX/HTML
+// tag blocks the bracket-pair guides don't cover. Monaco's defaults are near-invisible over
+// the transparent editor background, so we set explicit neutral colors here.
+function indentGuideColors(rest: string, active: string): Record<string, string> {
+  return {
+    'editorIndentGuide.background': rest,
+    'editorIndentGuide.activeBackground': active,
+    'editorIndentGuide.background1': rest,
+    'editorIndentGuide.activeBackground1': active,
+  };
+}
+
 const FORGE_DARK_COLORS: Record<string, string> = {
   ...bracketGuideColors('#6B768A55', '#B7C0CE80'),
+  // Indent guides run down every indented block — crucially JSX/HTML tag blocks, which the
+  // bracket-pair guides skip (Monaco only pairs {}/()/[]). Kept a touch fainter than the
+  // bracket guides so nested brackets still read as the stronger structure.
+  ...indentGuideColors('#6B768A33', '#B7C0CE66'),
   // Transparent so the editor host's translucent `bg-bg` (and the window vibrancy behind
   // it) shows through — matching the frosted-glass look of the rest of the chrome.
   'editor.background': '#00000000',
@@ -211,6 +227,7 @@ const FORGE_DARK_COLORS: Record<string, string> = {
 
 const FORGE_LIGHT_COLORS: Record<string, string> = {
   ...bracketGuideColors('#5A657855', '#1F2937CC'),
+  ...indentGuideColors('#5A657833', '#1F293799'),
   'editor.background': '#00000000',
   focusBorder: '#00000000',
   'editor.foreground': '#18181b',

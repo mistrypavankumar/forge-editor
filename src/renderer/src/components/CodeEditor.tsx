@@ -184,7 +184,11 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
       // editorBracketPairGuide.* keys), not the rainbow default.
       bracketPairColorization: { enabled: true },
       guides: {
-        indentation: false,
+        // Indentation guides draw the vertical line down every indented block — including
+        // JSX/HTML tag blocks like <Box>…</Box>, which bracket-pair guides don't cover (Monaco
+        // only pairs {}, (), []). This is what gives the VS Code look for components/tags.
+        indentation: true,
+        highlightActiveIndentation: true,
         bracketPairs: true,
         bracketPairsHorizontal: false,
         highlightActiveBracketPair: true,
