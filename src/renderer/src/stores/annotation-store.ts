@@ -34,6 +34,13 @@ export interface AnnotationState {
   naturalHeight: number;
   /** Where to place/size the image on screen (matches the editor pane it was captured from). */
   rect: CaptureRect | null;
+  /**
+   * Opaque backing color for the frozen capture. The editor renders on a transparent background
+   * (window vibrancy shows through), so `capturePage` returns a PNG whose code area is transparent.
+   * Both the on-screen preview and the exported PNG are painted over this so the screenshot reads
+   * as solid instead of blank/see-through.
+   */
+  background: string;
 
   tool: ShapeTool;
   color: string;
@@ -48,6 +55,7 @@ export interface AnnotationState {
     rect: CaptureRect;
     naturalWidth: number;
     naturalHeight: number;
+    background: string;
   }) => void;
   close: () => void;
   setTool: (t: ShapeTool) => void;
@@ -65,6 +73,7 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
   naturalWidth: 0,
   naturalHeight: 0,
   rect: null,
+  background: '#080b12',
 
   tool: 'arrow',
   color: ANNOTATION_COLORS[0],
@@ -72,13 +81,14 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
   hidden: false,
   shapes: [],
 
-  begin: ({ image, rect, naturalWidth, naturalHeight }) =>
+  begin: ({ image, rect, naturalWidth, naturalHeight, background }) =>
     set({
       active: true,
       image,
       rect,
       naturalWidth,
       naturalHeight,
+      background,
       shapes: [],
       hidden: false,
     }),

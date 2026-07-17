@@ -43,6 +43,7 @@ export function AnnotationOverlay(): React.JSX.Element | null {
   const active = useAnnotationStore((s) => s.active);
   const image = useAnnotationStore((s) => s.image);
   const rect = useAnnotationStore((s) => s.rect);
+  const background = useAnnotationStore((s) => s.background);
   const shapes = useAnnotationStore((s) => s.shapes);
   const hidden = useAnnotationStore((s) => s.hidden);
   const tool = useAnnotationStore((s) => s.tool);
@@ -185,7 +186,9 @@ export function AnnotationOverlay(): React.JSX.Element | null {
         alt="Editor screenshot"
         draggable={false}
         className="pointer-events-none absolute select-none rounded-md shadow-2xl ring-1 ring-line"
-        style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }}
+        // The capture is transparent where the editor background is (window vibrancy shows through
+        // there), so back it with the theme's solid base or the frozen code reads as blank.
+        style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height, backgroundColor: background }}
       />
       <canvas
         ref={canvasRef}

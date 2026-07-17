@@ -123,6 +123,10 @@ export function drawAll(ctx: CanvasRenderingContext2D, shapes: Shape[]): void {
  * Composite the frozen screenshot plus every annotation into one canvas at the natural pixel
  * dimensions of the capture. `shapes` are in the same on-screen coordinate space as the displayed
  * image, so they're scaled by (natural / displayed) before drawing.
+ *
+ * `background` is painted first: the editor captures on a transparent background, so the screenshot
+ * PNG has transparent regions that would otherwise export as blank (or black once flattened onto a
+ * clipboard). Filling an opaque base makes the exported image read as solid.
  */
 export function composite(
   image: CanvasImageSource,
@@ -131,12 +135,15 @@ export function composite(
   naturalHeight: number,
   displayWidth: number,
   displayHeight: number,
+  background: string,
 ): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = naturalWidth;
   canvas.height = naturalHeight;
   const ctx = canvas.getContext('2d');
   if (!ctx) return canvas;
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, naturalWidth, naturalHeight);
   ctx.drawImage(image, 0, 0, naturalWidth, naturalHeight);
   const sx = displayWidth > 0 ? naturalWidth / displayWidth : 1;
   const sy = displayHeight > 0 ? naturalHeight / displayHeight : 1;
