@@ -1,0 +1,1667 @@
+{
+  "/Users/pavankumarmistry/Developer/forge/.claude/settings.local.json": {
+    "mtime": 1784312215.477116,
+    "ast_hash": "dd96b97f2c517ad1743f627daa55c009",
+    "semantic_hash": "dd96b97f2c517ad1743f627daa55c009"
+  },
+  "/Users/pavankumarmistry/Developer/forge/electron.vite.config.ts": {
+    "mtime": 1783954306.3953953,
+    "ast_hash": "3ad38fcd780e365a34a4e2f97574ea58",
+    "semantic_hash": "3ad38fcd780e365a34a4e2f97574ea58"
+  },
+  "/Users/pavankumarmistry/Developer/forge/index.js": {
+    "mtime": 1783430987.5007641,
+    "ast_hash": "81d9f306b48c2a63a25dd2afdad81626",
+    "semantic_hash": "81d9f306b48c2a63a25dd2afdad81626"
+  },
+  "/Users/pavankumarmistry/Developer/forge/package.json": {
+    "mtime": 1784312452.584268,
+    "ast_hash": "8a26dcdfe80cd77008520748bc859c38",
+    "semantic_hash": "8a26dcdfe80cd77008520748bc859c38"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/agent/command-exec.ts": {
+    "mtime": 1783139868.018879,
+    "ast_hash": "23b6c8650dce66cf19f6030a835490f3",
+    "semantic_hash": "23b6c8650dce66cf19f6030a835490f3"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ai/agent-service.ts": {
+    "mtime": 1783139852.5555656,
+    "ast_hash": "ae17104cb0f034a35e9f86842475b887",
+    "semantic_hash": "ae17104cb0f034a35e9f86842475b887"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ai/ai-config.ts": {
+    "mtime": 1782757318.9564245,
+    "ast_hash": "418776cb89c1af2f5f235c916846721d",
+    "semantic_hash": "418776cb89c1af2f5f235c916846721d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ai/ai-credentials.ts": {
+    "mtime": 1782757318.9566593,
+    "ast_hash": "10aebcff71397e8675205df1e512338a",
+    "semantic_hash": "10aebcff71397e8675205df1e512338a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ai/assistant-service.ts": {
+    "mtime": 1782757318.956874,
+    "ast_hash": "fec7168ffd4c246b33ce00c726510574",
+    "semantic_hash": "fec7168ffd4c246b33ce00c726510574"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ai/chat.ts": {
+    "mtime": 1782757318.9569685,
+    "ast_hash": "d9b786447d03d1f7346a70dfba1ae185",
+    "semantic_hash": "d9b786447d03d1f7346a70dfba1ae185"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ai/commit-message-service.ts": {
+    "mtime": 1782757318.9571748,
+    "ast_hash": "710bfaa156b838bfafd277bbb23f322f",
+    "semantic_hash": "710bfaa156b838bfafd277bbb23f322f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ai/completion-service.ts": {
+    "mtime": 1782757318.9572382,
+    "ast_hash": "37c4160e68c8245545f1fe8808c94e3e",
+    "semantic_hash": "37c4160e68c8245545f1fe8808c94e3e"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/aws/aws-service.test.ts": {
+    "mtime": 1782097086.099063,
+    "ast_hash": "2245e5d995c2ba32f1c683189050fe12",
+    "semantic_hash": "2245e5d995c2ba32f1c683189050fe12"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/aws/aws-service.ts": {
+    "mtime": 1782097086.0991917,
+    "ast_hash": "7487345a7ee49e84cd1d2fd99fa8dce1",
+    "semantic_hash": "7487345a7ee49e84cd1d2fd99fa8dce1"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/aws/ini.test.ts": {
+    "mtime": 1782097086.0992842,
+    "ast_hash": "105a9b288a8dc61db777606d6f360d1b",
+    "semantic_hash": "105a9b288a8dc61db777606d6f360d1b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/aws/ini.ts": {
+    "mtime": 1782097086.099371,
+    "ast_hash": "ee989c016896e21ae21cdfe854150ef8",
+    "semantic_hash": "ee989c016896e21ae21cdfe854150ef8"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/browser/dev-server.ts": {
+    "mtime": 1783954306.3955064,
+    "ast_hash": "7ac1155a8d1c41a23b308265c3b744c7",
+    "semantic_hash": "7ac1155a8d1c41a23b308265c3b744c7"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/codemap/codemap-service.ts": {
+    "mtime": 1783954306.3956559,
+    "ast_hash": "90cf79ac7d90acac2e8bc461eac06772",
+    "semantic_hash": "90cf79ac7d90acac2e8bc461eac06772"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/codemap/graph.test.ts": {
+    "mtime": 1783141261.7232115,
+    "ast_hash": "2f42cfa97dfa96efe39e11d718437885",
+    "semantic_hash": "2f42cfa97dfa96efe39e11d718437885"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/codemap/graph.ts": {
+    "mtime": 1783140694.4036124,
+    "ast_hash": "6370155faccf6377a165ec4aee6ed8a7",
+    "semantic_hash": "6370155faccf6377a165ec4aee6ed8a7"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/codemap/graphql.test.ts": {
+    "mtime": 1783141249.2215793,
+    "ast_hash": "f25f9d7428909a7d4444938cfab63e53",
+    "semantic_hash": "f25f9d7428909a7d4444938cfab63e53"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/codemap/graphql.ts": {
+    "mtime": 1783140658.0118432,
+    "ast_hash": "64de06eb30e04bc6ffb2f1fc6942c17d",
+    "semantic_hash": "64de06eb30e04bc6ffb2f1fc6942c17d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/codemap/integration.smoke.test.ts": {
+    "mtime": 1783141361.2351737,
+    "ast_hash": "6fe1b53f3a96f8156bac00b961e24750",
+    "semantic_hash": "6fe1b53f3a96f8156bac00b961e24750"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/codemap/scan.test.ts": {
+    "mtime": 1783954306.395769,
+    "ast_hash": "3a056ab7ab125a17a9cc3751d781a29f",
+    "semantic_hash": "3a056ab7ab125a17a9cc3751d781a29f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/codemap/scan.ts": {
+    "mtime": 1783954306.3959591,
+    "ast_hash": "31d49d79cb975b3116fa5ecd82c27348",
+    "semantic_hash": "31d49d79cb975b3116fa5ecd82c27348"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/debug/cdp-client.ts": {
+    "mtime": 1782762301.2225983,
+    "ast_hash": "fd15efdaffe161c51deb3f488187afd2",
+    "semantic_hash": "fd15efdaffe161c51deb3f488187afd2"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/debug/debug-ipc.ts": {
+    "mtime": 1782762301.2227292,
+    "ast_hash": "5a279de373eac872bea8c4b9c25a638f",
+    "semantic_hash": "5a279de373eac872bea8c4b9c25a638f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/debug/node-debug-session.ts": {
+    "mtime": 1782768855.4104362,
+    "ast_hash": "e44d8184a4bd8fdd1445e6d904ff720f",
+    "semantic_hash": "e44d8184a4bd8fdd1445e6d904ff720f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/debug/source-maps.test.ts": {
+    "mtime": 1782762301.2230244,
+    "ast_hash": "7ea2ee57ac87fec3676bfacc733ee396",
+    "semantic_hash": "7ea2ee57ac87fec3676bfacc733ee396"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/debug/source-maps.ts": {
+    "mtime": 1782762301.2232327,
+    "ast_hash": "d15d03b506add5ede7e55eb38469b25c",
+    "semantic_hash": "d15d03b506add5ede7e55eb38469b25c"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/diagnostics/diagnostics-service.test.ts": {
+    "mtime": 1782097086.0994945,
+    "ast_hash": "512dfee9356777b0e11f35cac7f661d7",
+    "semantic_hash": "512dfee9356777b0e11f35cac7f661d7"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/diagnostics/diagnostics-service.ts": {
+    "mtime": 1782097086.099587,
+    "ast_hash": "f64a3cc8c01fa01f0632249fe35d9617",
+    "semantic_hash": "f64a3cc8c01fa01f0632249fe35d9617"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/editor-integration/installer.test.ts": {
+    "mtime": 1782757318.9573338,
+    "ast_hash": "9f4d6a13c614672905d6b4330d5bb69f",
+    "semantic_hash": "9f4d6a13c614672905d6b4330d5bb69f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/editor-integration/installer.ts": {
+    "mtime": 1782757318.957498,
+    "ast_hash": "731bc9417bd9dba3c4c199e964827825",
+    "semantic_hash": "731bc9417bd9dba3c4c199e964827825"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/editor-integration/shell-profile.test.ts": {
+    "mtime": 1782757318.9575589,
+    "ast_hash": "0bb0648655bc160c9d617542cb3f551d",
+    "semantic_hash": "0bb0648655bc160c9d617542cb3f551d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/editor-integration/shell-profile.ts": {
+    "mtime": 1782757318.957689,
+    "ast_hash": "02928fc584b3746be364269b9d2d4a5b",
+    "semantic_hash": "02928fc584b3746be364269b9d2d4a5b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/execution/code-runner.ts": {
+    "mtime": 1782251289.7438085,
+    "ast_hash": "46082b297b9be6c5564fed41cf277293",
+    "semantic_hash": "46082b297b9be6c5564fed41cf277293"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/format/format-service.ts": {
+    "mtime": 1782097086.0997255,
+    "ast_hash": "8a2716ebbc9d53250a2759ba3966026f",
+    "semantic_hash": "8a2716ebbc9d53250a2759ba3966026f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/fs/fs-service.test.ts": {
+    "mtime": 1782159498.587208,
+    "ast_hash": "2d267fd49694f229d6d3335162d16f79",
+    "semantic_hash": "2d267fd49694f229d6d3335162d16f79"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/fs/fs-service.ts": {
+    "mtime": 1782757318.9578156,
+    "ast_hash": "a63311a8bc6232204ef6c87c338b03f3",
+    "semantic_hash": "a63311a8bc6232204ef6c87c338b03f3"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/fs/watcher.ts": {
+    "mtime": 1783954306.396068,
+    "ast_hash": "790c1b47289dccd308b4c35c96ac7001",
+    "semantic_hash": "790c1b47289dccd308b4c35c96ac7001"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/git/git-service.ts": {
+    "mtime": 1783375583.6274724,
+    "ast_hash": "68e1164bca4b6dfde33273ea4a645a96",
+    "semantic_hash": "68e1164bca4b6dfde33273ea4a645a96"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/index.ts": {
+    "mtime": 1783954306.3962324,
+    "ast_hash": "593fbfd373903d9a81fecb5ce4f62362",
+    "semantic_hash": "593fbfd373903d9a81fecb5ce4f62362"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ipc/api-request-ipc.ts": {
+    "mtime": 1782757318.9583545,
+    "ast_hash": "686c25a2d1c24c7c2399b0d12e4f387e",
+    "semantic_hash": "686c25a2d1c24c7c2399b0d12e4f387e"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ipc/aws-ipc.ts": {
+    "mtime": 1782097086.1006026,
+    "ast_hash": "52f2c52a3b140e341bf92ce80b09ebb2",
+    "semantic_hash": "52f2c52a3b140e341bf92ce80b09ebb2"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ipc/browser-ipc.ts": {
+    "mtime": 1783954306.3963172,
+    "ast_hash": "db0dd93de5b0394d6a2babd2e8409f8b",
+    "semantic_hash": "db0dd93de5b0394d6a2babd2e8409f8b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ipc/capture-ipc.ts": {
+    "mtime": 1783954306.3963754,
+    "ast_hash": "270a4cc53e8fabb3545f957cb4e9b12b",
+    "semantic_hash": "270a4cc53e8fabb3545f957cb4e9b12b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ipc/editor-integration-ipc.ts": {
+    "mtime": 1782757318.9584105,
+    "ast_hash": "071f2f7e546c905f60e0c53d58ded625",
+    "semantic_hash": "071f2f7e546c905f60e0c53d58ded625"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/ipc/editor-language-ipc.ts": {
+    "mtime": 1783435652.6483479,
+    "ast_hash": "5d66d76db9d1d3e92952abc149618bab",
+    "semantic_hash": "5d66d76db9d1d3e92952abc149618bab"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/java/jdtls-service.ts": {
+    "mtime": 1783435637.4196248,
+    "ast_hash": "504d2393de1167085ab04b0ec44cab66",
+    "semantic_hash": "504d2393de1167085ab04b0ec44cab66"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/java/lsp-client.ts": {
+    "mtime": 1782251289.7445626,
+    "ast_hash": "1a2a7f0c2d4a8e9c1537c2b3e84f81ef",
+    "semantic_hash": "1a2a7f0c2d4a8e9c1537c2b3e84f81ef"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/language/language-client.ts": {
+    "mtime": 1783435607.486725,
+    "ast_hash": "8e640dd2bdfcfa9a97ac6b395d3d865f",
+    "semantic_hash": "8e640dd2bdfcfa9a97ac6b395d3d865f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/language/language.worker.ts": {
+    "mtime": 1783435601.5777295,
+    "ast_hash": "098ada46777003aa8cdb717684a5b41b",
+    "semantic_hash": "098ada46777003aa8cdb717684a5b41b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/language/project-service.ts": {
+    "mtime": 1782150143.627435,
+    "ast_hash": "6a58674fa7fc7952acc0a8c8384e020b",
+    "semantic_hash": "6a58674fa7fc7952acc0a8c8384e020b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/language/typescript-service.test.ts": {
+    "mtime": 1783435845.237135,
+    "ast_hash": "1b825a9297f654fb69bd06ac66ba4bdf",
+    "semantic_hash": "1b825a9297f654fb69bd06ac66ba4bdf"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/language/typescript-service.ts": {
+    "mtime": 1783435596.6757908,
+    "ast_hash": "db9ee6135f4ba4d69381cddc9adc15ff",
+    "semantic_hash": "db9ee6135f4ba4d69381cddc9adc15ff"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/navigation/resolve-import.test.ts": {
+    "mtime": 1782757318.9599984,
+    "ast_hash": "39526c7a17baf7ce4e57eea5044ca3dd",
+    "semantic_hash": "39526c7a17baf7ce4e57eea5044ca3dd"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/navigation/resolve-import.ts": {
+    "mtime": 1782757318.9603395,
+    "ast_hash": "7211ec1ba1ed951af0c0b7a00ad4daa7",
+    "semantic_hash": "7211ec1ba1ed951af0c0b7a00ad4daa7"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/search/search-service.test.ts": {
+    "mtime": 1782097086.1017237,
+    "ast_hash": "3dac771b19988fbe945757e6f6bd28e6",
+    "semantic_hash": "3dac771b19988fbe945757e6f6bd28e6"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/search/search-service.ts": {
+    "mtime": 1783137319.572941,
+    "ast_hash": "f55fe9476cc604d4fc0c21dd44cdd966",
+    "semantic_hash": "f55fe9476cc604d4fc0c21dd44cdd966"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/settings/settings-service.test.ts": {
+    "mtime": 1781710275.4032254,
+    "ast_hash": "020cc9e6f51cb5669b546400fe66d5ca",
+    "semantic_hash": "020cc9e6f51cb5669b546400fe66d5ca"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/settings/settings-service.ts": {
+    "mtime": 1781710269.325596,
+    "ast_hash": "2279176e145cedc05f9df8a49c273d53",
+    "semantic_hash": "2279176e145cedc05f9df8a49c273d53"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/skeleton/ai-generator.test.ts": {
+    "mtime": 1783361578.5091894,
+    "ast_hash": "7c485389f47e58dad1dba4f5c34de342",
+    "semantic_hash": "7c485389f47e58dad1dba4f5c34de342"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/skeleton/ai-generator.ts": {
+    "mtime": 1783433508.1043367,
+    "ast_hash": "32ccabd509c58d0d114d9cbafd1e93bc",
+    "semantic_hash": "32ccabd509c58d0d114d9cbafd1e93bc"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/skeleton/detect.ts": {
+    "mtime": 1783358495.3120573,
+    "ast_hash": "bca2f5796ae31d0cbc780d493b9e6d0c",
+    "semantic_hash": "bca2f5796ae31d0cbc780d493b9e6d0c"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/skeleton/generator.test.ts": {
+    "mtime": 1783358504.0581758,
+    "ast_hash": "d08eabd9467c902db9bd8594ad7e83d4",
+    "semantic_hash": "d08eabd9467c902db9bd8594ad7e83d4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/skeleton/generator.ts": {
+    "mtime": 1783358565.4613557,
+    "ast_hash": "2bc4b10cad501e804f0c69fad9272f53",
+    "semantic_hash": "2bc4b10cad501e804f0c69fad9272f53"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/skeleton/skeleton-service.ts": {
+    "mtime": 1783359666.9632702,
+    "ast_hash": "914fa153d47bcdd9fe64acbda2e05b16",
+    "semantic_hash": "914fa153d47bcdd9fe64acbda2e05b16"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/main/terminal/command-runner.ts": {
+    "mtime": 1783954306.3965433,
+    "ast_hash": "9b7af59cbbf7db1f5d7da8d5b0ddd633",
+    "semantic_hash": "9b7af59cbbf7db1f5d7da8d5b0ddd633"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/preload/api.ts": {
+    "mtime": 1783954306.396714,
+    "ast_hash": "25d50cf83cc62c57f2b09c97c2c42814",
+    "semantic_hash": "25d50cf83cc62c57f2b09c97c2c42814"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/preload/index.ts": {
+    "mtime": 1782095742.5489588,
+    "ast_hash": "c1c518342a0b22cd26ffcaea21a3aed4",
+    "semantic_hash": "c1c518342a0b22cd26ffcaea21a3aed4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/preload/webview-preload.ts": {
+    "mtime": 1783954306.3967984,
+    "ast_hash": "3022216afa5838896823660f193f3e6d",
+    "semantic_hash": "3022216afa5838896823660f193f3e6d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/App.tsx": {
+    "mtime": 1782095742.5490663,
+    "ast_hash": "02fcebe5b97f1e069c2970a2db59492f",
+    "semantic_hash": "02fcebe5b97f1e069c2970a2db59492f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/agent/orchestrator.ts": {
+    "mtime": 1783140045.9991803,
+    "ast_hash": "f109ff2f180eb11d736c1de955a129bd",
+    "semantic_hash": "f109ff2f180eb11d736c1de955a129bd"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/agent/parse.test.ts": {
+    "mtime": 1783140220.0570862,
+    "ast_hash": "b9eceba39966c9298d703ee6aec2c6a6",
+    "semantic_hash": "b9eceba39966c9298d703ee6aec2c6a6"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/agent/parse.ts": {
+    "mtime": 1783139929.8737388,
+    "ast_hash": "bbffe6e000223abdf8c45193147ad0d2",
+    "semantic_hash": "bbffe6e000223abdf8c45193147ad0d2"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/agent/tools.ts": {
+    "mtime": 1783139954.862951,
+    "ast_hash": "182652d2aeded1385fd083e3a30c8c5d",
+    "semantic_hash": "182652d2aeded1385fd083e3a30c8c5d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/agent/types.ts": {
+    "mtime": 1783139908.6139414,
+    "ast_hash": "c5cd8bbb561bdf2ed1707f6320d4a6bc",
+    "semantic_hash": "c5cd8bbb561bdf2ed1707f6320d4a6bc"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/ApiExplorerEditor.tsx": {
+    "mtime": 1783357203.762522,
+    "ast_hash": "bce2505788729519df17d7904de6c78a",
+    "semantic_hash": "bce2505788729519df17d7904de6c78a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/AuthEditor.tsx": {
+    "mtime": 1782757318.9608293,
+    "ast_hash": "7d48ba03022529dfd5a249fd4a38d1b9",
+    "semantic_hash": "7d48ba03022529dfd5a249fd4a38d1b9"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/Collections.tsx": {
+    "mtime": 1782850713.2885978,
+    "ast_hash": "f672edd021f2975247a02636d00ed9fc",
+    "semantic_hash": "f672edd021f2975247a02636d00ed9fc"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/HeadersEditor.tsx": {
+    "mtime": 1783357203.762699,
+    "ast_hash": "fd2828f34d60c885f84d83e1770706bd",
+    "semantic_hash": "fd2828f34d60c885f84d83e1770706bd"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/KeyValueEditor.tsx": {
+    "mtime": 1782757318.9612427,
+    "ast_hash": "5b7339682bf5edf2d58a9b3096dee7c7",
+    "semantic_hash": "5b7339682bf5edf2d58a9b3096dee7c7"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/MonacoMini.tsx": {
+    "mtime": 1782757318.9613326,
+    "ast_hash": "590bb61d49b067fdff82071a39bdb6d2",
+    "semantic_hash": "590bb61d49b067fdff82071a39bdb6d2"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/ResponseTabs.tsx": {
+    "mtime": 1783435501.0237825,
+    "ast_hash": "387efe984fd6e7c4f8fc6128800bb91a",
+    "semantic_hash": "387efe984fd6e7c4f8fc6128800bb91a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/SchemaTree.tsx": {
+    "mtime": 1782757318.9615283,
+    "ast_hash": "51e51d638e524e6ef1ac019194d3eccc",
+    "semantic_hash": "51e51d638e524e6ef1ac019194d3eccc"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/Sidebar.tsx": {
+    "mtime": 1783357203.7628853,
+    "ast_hash": "0204690fcc759df58a923447f673c9b2",
+    "semantic_hash": "0204690fcc759df58a923447f673c9b2"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/graphql-utils.ts": {
+    "mtime": 1782757318.9617102,
+    "ast_hash": "249426abac6eb510f8e2e16dccb006ea",
+    "semantic_hash": "249426abac6eb510f8e2e16dccb006ea"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/http-utils.ts": {
+    "mtime": 1782757318.9617572,
+    "ast_hash": "8cc0fc987595d1e16dec6df2cd27afbb",
+    "semantic_hash": "8cc0fc987595d1e16dec6df2cd27afbb"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/index.ts": {
+    "mtime": 1782757318.9618068,
+    "ast_hash": "874248a8851a5fd9bd265e4e3c98ef20",
+    "semantic_hash": "874248a8851a5fd9bd265e4e3c98ef20"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/runner.ts": {
+    "mtime": 1782757318.9618974,
+    "ast_hash": "75357e08bf12889d7150372f7c48aa6d",
+    "semantic_hash": "75357e08bf12889d7150372f7c48aa6d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/schema.ts": {
+    "mtime": 1782757318.9619877,
+    "ast_hash": "4381fa7e061e1f76d6c67530e4763503",
+    "semantic_hash": "4381fa7e061e1f76d6c67530e4763503"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/store.ts": {
+    "mtime": 1783357203.7630944,
+    "ast_hash": "25037382de5ceb2decca27faaf7ad6fd",
+    "semantic_hash": "25037382de5ceb2decca27faaf7ad6fd"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/templates.ts": {
+    "mtime": 1782757318.9621243,
+    "ast_hash": "037da57935f9be7952f7f9f81ae87862",
+    "semantic_hash": "037da57935f9be7952f7f9f81ae87862"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/api-explorer/types.ts": {
+    "mtime": 1782757318.9622102,
+    "ast_hash": "4226a4e4b726677f8b9c796cd6846024",
+    "semantic_hash": "4226a4e4b726677f8b9c796cd6846024"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/BrowserDebugPanel.tsx": {
+    "mtime": 1783954306.3969443,
+    "ast_hash": "c189910f981c80cd2d18e95085c4f8a5",
+    "semantic_hash": "c189910f981c80cd2d18e95085c4f8a5"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/BrowserView.tsx": {
+    "mtime": 1783954306.3970444,
+    "ast_hash": "b9e605ca818de1c09814d7cf6e8ead2a",
+    "semantic_hash": "b9e605ca818de1c09814d7cf6e8ead2a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/browser-debug-actions.test.ts": {
+    "mtime": 1783954306.3971188,
+    "ast_hash": "ae1c4f4747daa0c5a1da097855826ca8",
+    "semantic_hash": "ae1c4f4747daa0c5a1da097855826ca8"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/browser-debug-actions.ts": {
+    "mtime": 1783954306.3972573,
+    "ast_hash": "cd0ccefa24aa4e6837901f92f7d9ad56",
+    "semantic_hash": "cd0ccefa24aa4e6837901f92f7d9ad56"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/browser-debug-store.test.ts": {
+    "mtime": 1783954306.3973193,
+    "ast_hash": "02fec71b0b201dd3ceddb5e4e80f1759",
+    "semantic_hash": "02fec71b0b201dd3ceddb5e4e80f1759"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/browser-debug-store.ts": {
+    "mtime": 1783954306.3974278,
+    "ast_hash": "aa89a5ea8515f0bef5430b06a782592c",
+    "semantic_hash": "aa89a5ea8515f0bef5430b06a782592c"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/index.ts": {
+    "mtime": 1783954306.397478,
+    "ast_hash": "1badddc4b4b4cd34111541455e2d4bc4",
+    "semantic_hash": "1badddc4b4b4cd34111541455e2d4bc4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/network.test.ts": {
+    "mtime": 1783954306.3975933,
+    "ast_hash": "4d88da500f83eb12fcd7ba5504af4291",
+    "semantic_hash": "4d88da500f83eb12fcd7ba5504af4291"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/network.ts": {
+    "mtime": 1783954306.3976738,
+    "ast_hash": "b951b5bc77c174f8655c88400936fbe5",
+    "semantic_hash": "b951b5bc77c174f8655c88400936fbe5"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/resolver.test.ts": {
+    "mtime": 1783954306.3977933,
+    "ast_hash": "d0e992813712c99d10f8584d7621731c",
+    "semantic_hash": "d0e992813712c99d10f8584d7621731c"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/resolver.ts": {
+    "mtime": 1783954306.397872,
+    "ast_hash": "c4ea5fc55488440677445cb7e547155e",
+    "semantic_hash": "c4ea5fc55488440677445cb7e547155e"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/stack.test.ts": {
+    "mtime": 1783954306.3979418,
+    "ast_hash": "a0104904d808a6a4519954489b7b1f11",
+    "semantic_hash": "a0104904d808a6a4519954489b7b1f11"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/stack.ts": {
+    "mtime": 1783954306.3980486,
+    "ast_hash": "40dea9996c8f1fa973eb33b6bfbf4c51",
+    "semantic_hash": "40dea9996c8f1fa973eb33b6bfbf4c51"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/browser/store.ts": {
+    "mtime": 1783954306.398107,
+    "ast_hash": "6d8e824ff08eca71d1cdc1b1da3a6259",
+    "semantic_hash": "6d8e824ff08eca71d1cdc1b1da3a6259"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/codemap/insight.test.ts": {
+    "mtime": 1783141291.173885,
+    "ast_hash": "af3ba3241b3b138efdccb91d054a1142",
+    "semantic_hash": "af3ba3241b3b138efdccb91d054a1142"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/codemap/insight.ts": {
+    "mtime": 1783140988.4740644,
+    "ast_hash": "24b5ff7dbeade5f36a959b8ee66c6afb",
+    "semantic_hash": "24b5ff7dbeade5f36a959b8ee66c6afb"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/codemap/store.ts": {
+    "mtime": 1783140972.5090904,
+    "ast_hash": "d362a935e224e6c8a8d6edbdf3336359",
+    "semantic_hash": "d362a935e224e6c8a8d6edbdf3336359"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/commands/agent-commands.ts": {
+    "mtime": 1783140189.056326,
+    "ast_hash": "815d0cce62d317004e708914cdd5f67d",
+    "semantic_hash": "815d0cce62d317004e708914cdd5f67d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/commands/browser-commands.ts": {
+    "mtime": 1783954306.3981671,
+    "ast_hash": "7b9e61b21e98a4764856960a8c23334f",
+    "semantic_hash": "7b9e61b21e98a4764856960a8c23334f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/commands/browser-debug-commands.ts": {
+    "mtime": 1783954306.3982234,
+    "ast_hash": "a9af7132de3c28020be45cac3455a1a0",
+    "semantic_hash": "a9af7132de3c28020be45cac3455a1a0"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/commands/command-registry.test.ts": {
+    "mtime": 1781709712.2060435,
+    "ast_hash": "929ed2a5fc3433180b282a2257fdc17a",
+    "semantic_hash": "929ed2a5fc3433180b282a2257fdc17a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/commands/command-registry.ts": {
+    "mtime": 1781709717.684049,
+    "ast_hash": "bec9c04461e811e9f4eba2fda605e865",
+    "semantic_hash": "bec9c04461e811e9f4eba2fda605e865"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/commands/core-commands.ts": {
+    "mtime": 1783448927.4446394,
+    "ast_hash": "41e39bf3c75a0dc20652dca8a9cb068d",
+    "semantic_hash": "41e39bf3c75a0dc20652dca8a9cb068d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/commands/debug-commands.ts": {
+    "mtime": 1782762301.2238088,
+    "ast_hash": "84e311de231c65ad88917033af6a16be",
+    "semantic_hash": "84e311de231c65ad88917033af6a16be"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/commands/palette-commands.ts": {
+    "mtime": 1781709922.493933,
+    "ast_hash": "b3382dd6f087784e7b7240ec735b2a20",
+    "semantic_hash": "b3382dd6f087784e7b7240ec735b2a20"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/commands/screenshot-commands.ts": {
+    "mtime": 1783954306.3982797,
+    "ast_hash": "0937c56df7cdcb18ee57790adcb479bd",
+    "semantic_hash": "0937c56df7cdcb18ee57790adcb479bd"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/commands/skeleton-commands.ts": {
+    "mtime": 1783356396.3023233,
+    "ast_hash": "3c7da34d10a0ec4681ad06c9c8a8bb24",
+    "semantic_hash": "3c7da34d10a0ec4681ad06c9c8a8bb24"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/commands/theme-commands.ts": {
+    "mtime": 1781710228.3290346,
+    "ast_hash": "b62b8a5c378bd645ac062c24660e8558",
+    "semantic_hash": "b62b8a5c378bd645ac062c24660e8558"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ActivitySidebar.tsx": {
+    "mtime": 1783954306.3984354,
+    "ast_hash": "06bf441d52bacd51d5639a2b4399c1e1",
+    "semantic_hash": "06bf441d52bacd51d5639a2b4399c1e1"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/AgentPanel.tsx": {
+    "mtime": 1783140173.1942036,
+    "ast_hash": "6a77af35588442b9df57e25d13dd5eb7",
+    "semantic_hash": "6a77af35588442b9df57e25d13dd5eb7"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/AnnotationOverlay.tsx": {
+    "mtime": 1783954306.398519,
+    "ast_hash": "9a1217b845542d2e993cde3e4e09aa17",
+    "semantic_hash": "9a1217b845542d2e993cde3e4e09aa17"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/AppShell.test.tsx": {
+    "mtime": 1782757318.9625342,
+    "ast_hash": "af0a5f1c27bd18c6c48370e78dfd9c14",
+    "semantic_hash": "af0a5f1c27bd18c6c48370e78dfd9c14"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/AppShell.tsx": {
+    "mtime": 1783954306.398648,
+    "ast_hash": "706e9edc4f4f8b57d1ed9b6436c25812",
+    "semantic_hash": "706e9edc4f4f8b57d1ed9b6436c25812"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/AssistantPanel.tsx": {
+    "mtime": 1783954306.3988078,
+    "ast_hash": "2c8d65aa65aa01d1ccf4d3db4535dc05",
+    "semantic_hash": "2c8d65aa65aa01d1ccf4d3db4535dc05"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/AwsConnectionPicker.tsx": {
+    "mtime": 1782097086.1030602,
+    "ast_hash": "3ea6268c31a0dee67d7274b81e7348ca",
+    "semantic_hash": "3ea6268c31a0dee67d7274b81e7348ca"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/AwsCredentialsEditor.tsx": {
+    "mtime": 1782097086.103205,
+    "ast_hash": "7d3bb7a55b8d3e30bc21fa96fd85fb25",
+    "semantic_hash": "7d3bb7a55b8d3e30bc21fa96fd85fb25"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/BinaryFileView.tsx": {
+    "mtime": 1782757318.9630232,
+    "ast_hash": "ae9afbe23c741172e3390039f12f6237",
+    "semantic_hash": "ae9afbe23c741172e3390039f12f6237"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/BottomPanel.tsx": {
+    "mtime": 1783954306.3989062,
+    "ast_hash": "69540c67b64e69c93a011e53fba94354",
+    "semantic_hash": "69540c67b64e69c93a011e53fba94354"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/BranchPicker.tsx": {
+    "mtime": 1782831508.7397094,
+    "ast_hash": "b3efbcf790df1f30d7003af67c16f723",
+    "semantic_hash": "b3efbcf790df1f30d7003af67c16f723"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/BranchStatePill.test.tsx": {
+    "mtime": 1782920609.7030761,
+    "ast_hash": "20ca4096bd60520535c8e878beab80ce",
+    "semantic_hash": "20ca4096bd60520535c8e878beab80ce"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/BranchStatePill.tsx": {
+    "mtime": 1783137319.5733294,
+    "ast_hash": "461e2ddb6cd283d7fd342f71fe9de8fd",
+    "semantic_hash": "461e2ddb6cd283d7fd342f71fe9de8fd"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/Breadcrumbs.tsx": {
+    "mtime": 1783137319.5734873,
+    "ast_hash": "9b19b033c5d2d61ae1f9978dde6b6e30",
+    "semantic_hash": "9b19b033c5d2d61ae1f9978dde6b6e30"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ChangesView.tsx": {
+    "mtime": 1782757318.963375,
+    "ast_hash": "7f7b368992cd7109e41894957ca86a82",
+    "semantic_hash": "7f7b368992cd7109e41894957ca86a82"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/CodeEditor.tsx": {
+    "mtime": 1783954306.3990152,
+    "ast_hash": "60d0f3a4944679f51ee19d92238ea0eb",
+    "semantic_hash": "60d0f3a4944679f51ee19d92238ea0eb"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/CodebaseMapView.tsx": {
+    "mtime": 1783141163.0109959,
+    "ast_hash": "3e19b6e8ad1020edbcdc62683bc1833c",
+    "semantic_hash": "3e19b6e8ad1020edbcdc62683bc1833c"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/DebugConsolePanel.tsx": {
+    "mtime": 1782762301.2246814,
+    "ast_hash": "6e11f6a19f6e9222ba86442379dfc282",
+    "semantic_hash": "6e11f6a19f6e9222ba86442379dfc282"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/DebugControls.tsx": {
+    "mtime": 1782762301.2248242,
+    "ast_hash": "0c45c40fdcc9a56a364da477349722bc",
+    "semantic_hash": "0c45c40fdcc9a56a364da477349722bc"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/DebugPanel.tsx": {
+    "mtime": 1782762301.2250526,
+    "ast_hash": "ce544c4b96cc4e0caae5d68492a3ff66",
+    "semantic_hash": "ce544c4b96cc4e0caae5d68492a3ff66"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/DebugToolbar.tsx": {
+    "mtime": 1782762301.2251787,
+    "ast_hash": "d7fd9b1985aa13a9b04f5c96c6806d58",
+    "semantic_hash": "d7fd9b1985aa13a9b04f5c96c6806d58"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/DiffView.tsx": {
+    "mtime": 1782251289.7459059,
+    "ast_hash": "169d7c6114c0b495f338fce0f2ebfe1f",
+    "semantic_hash": "169d7c6114c0b495f338fce0f2ebfe1f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/EditorGroupView.tsx": {
+    "mtime": 1783954306.3991404,
+    "ast_hash": "6f673fcfa5b27dbb7791edcff68307fd",
+    "semantic_hash": "6f673fcfa5b27dbb7791edcff68307fd"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/EditorTabs.tsx": {
+    "mtime": 1783954306.3992865,
+    "ast_hash": "a1664b6f45ed3884e65f5e81a400a084",
+    "semantic_hash": "a1664b6f45ed3884e65f5e81a400a084"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/FeaturesView.tsx": {
+    "mtime": 1783434862.955066,
+    "ast_hash": "46735f9a754c5717167019b8f9019fe8",
+    "semantic_hash": "46735f9a754c5717167019b8f9019fe8"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/FileExplorer.test.tsx": {
+    "mtime": 1783954306.3993897,
+    "ast_hash": "12c8556983c84416c74c4ddc6331f058",
+    "semantic_hash": "12c8556983c84416c74c4ddc6331f058"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/FileExplorer.tsx": {
+    "mtime": 1782097086.1044679,
+    "ast_hash": "683e369dc46cb38500b0d6f599e00469",
+    "semantic_hash": "683e369dc46cb38500b0d6f599e00469"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/FileInsightPanel.tsx": {
+    "mtime": 1783141204.8966546,
+    "ast_hash": "db5419e512ddd3487c5d4315ea7ad566",
+    "semantic_hash": "db5419e512ddd3487c5d4315ea7ad566"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/FileMenu.tsx": {
+    "mtime": 1782166647.3439753,
+    "ast_hash": "ba9939ba8ac32eaffb72a5af6d7f6d5c",
+    "semantic_hash": "ba9939ba8ac32eaffb72a5af6d7f6d5c"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/FileTree.tsx": {
+    "mtime": 1782768855.4107058,
+    "ast_hash": "0d7e6fd632952e24adf5d736a4094e42",
+    "semantic_hash": "0d7e6fd632952e24adf5d736a4094e42"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/FocusView.tsx": {
+    "mtime": 1782097080.1630607,
+    "ast_hash": "87e260c822833a68684c0cab1e60c9a1",
+    "semantic_hash": "87e260c822833a68684c0cab1e60c9a1"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/FormatterPicker.tsx": {
+    "mtime": 1782097086.104915,
+    "ast_hash": "b98fe0ab74c98ed96d31a622c9cbae79",
+    "semantic_hash": "b98fe0ab74c98ed96d31a622c9cbae79"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/FormatterSegment.tsx": {
+    "mtime": 1782097086.1050131,
+    "ast_hash": "85697cd9c80d12a3190c124c3838e9ea",
+    "semantic_hash": "85697cd9c80d12a3190c124c3838e9ea"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/GitBranchBar.tsx": {
+    "mtime": 1782251289.7462091,
+    "ast_hash": "be5a23c5d58da01afa69a0b251356e1f",
+    "semantic_hash": "be5a23c5d58da01afa69a0b251356e1f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/GitUserPicker.tsx": {
+    "mtime": 1782156828.88619,
+    "ast_hash": "92ee49142ea121ffb30a71504b1cc0cc",
+    "semantic_hash": "92ee49142ea121ffb30a71504b1cc0cc"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ImageView.tsx": {
+    "mtime": 1782757318.9640088,
+    "ast_hash": "456861bdbc626c24c1fc629059f1351c",
+    "semantic_hash": "456861bdbc626c24c1fc629059f1351c"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/Landing.tsx": {
+    "mtime": 1782251289.7463336,
+    "ast_hash": "874587734c42d14e40c286672fa9306f",
+    "semantic_hash": "874587734c42d14e40c286672fa9306f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/MarkdownPreview.tsx": {
+    "mtime": 1782251289.7464511,
+    "ast_hash": "ec63ce7c7848df706d486795f55a0b57",
+    "semantic_hash": "ec63ce7c7848df706d486795f55a0b57"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ModernFileIcon.tsx": {
+    "mtime": 1781713485.6912315,
+    "ast_hash": "e9b52b89f81dc45c7b4edcf5424ee537",
+    "semantic_hash": "e9b52b89f81dc45c7b4edcf5424ee537"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ModernFolderIcon.tsx": {
+    "mtime": 1781713491.0853496,
+    "ast_hash": "20e7454af46ffc649dcb4f5c7c75fbf4",
+    "semantic_hash": "20e7454af46ffc649dcb4f5c7c75fbf4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/NavigatorTabs.tsx": {
+    "mtime": 1783357203.7645068,
+    "ast_hash": "f8d9696d4c019cc42b64ea767eb28e2a",
+    "semantic_hash": "f8d9696d4c019cc42b64ea767eb28e2a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/OutputPanel.tsx": {
+    "mtime": 1781713097.349848,
+    "ast_hash": "291509c32803ef06946ac0b0c245628d",
+    "semantic_hash": "291509c32803ef06946ac0b0c245628d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/Palette.test.tsx": {
+    "mtime": 1781709933.396859,
+    "ast_hash": "fd03dd402e7236c7ea4f0f8dd541b027",
+    "semantic_hash": "fd03dd402e7236c7ea4f0f8dd541b027"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/Palette.tsx": {
+    "mtime": 1783954306.3995135,
+    "ast_hash": "3185e6a6adff5930dbbe0985580fa84b",
+    "semantic_hash": "3185e6a6adff5930dbbe0985580fa84b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/PlaceholderPanel.tsx": {
+    "mtime": 1782097086.1061568,
+    "ast_hash": "1a3cfe7760fb5e27d77bdab3e8046ace",
+    "semantic_hash": "1a3cfe7760fb5e27d77bdab3e8046ace"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ProblemList.tsx": {
+    "mtime": 1783357203.7646875,
+    "ast_hash": "857c5322fd8f0507b141562432aa45d4",
+    "semantic_hash": "857c5322fd8f0507b141562432aa45d4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ProjectMapView.tsx": {
+    "mtime": 1782097086.106452,
+    "ast_hash": "d77de0d09f530a8c28c1e9450816ed39",
+    "semantic_hash": "d77de0d09f530a8c28c1e9450816ed39"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ProjectNavigator.tsx": {
+    "mtime": 1783357203.7648127,
+    "ast_hash": "c524b4b6f498437667913b5603278465",
+    "semantic_hash": "c524b4b6f498437667913b5603278465"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ProjectRow.tsx": {
+    "mtime": 1782757318.9647083,
+    "ast_hash": "45e1bbee017b62ac0e3e928d66d9b911",
+    "semantic_hash": "45e1bbee017b62ac0e3e928d66d9b911"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/RightPanel.tsx": {
+    "mtime": 1783357203.7650425,
+    "ast_hash": "f85291e956f1a651752fe60be4df6071",
+    "semantic_hash": "f85291e956f1a651752fe60be4df6071"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/RunPanel.tsx": {
+    "mtime": 1782762301.2253482,
+    "ast_hash": "df3ced604df0fe0d81cae2106cad3b9b",
+    "semantic_hash": "df3ced604df0fe0d81cae2106cad3b9b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/SearchPanel.tsx": {
+    "mtime": 1783137319.573931,
+    "ast_hash": "fece620002e051a679e09253e2250ffc",
+    "semantic_hash": "fece620002e051a679e09253e2250ffc"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/SettingsView.tsx": {
+    "mtime": 1783954306.3996537,
+    "ast_hash": "05f4e8b225867904abba2220f9f4e009",
+    "semantic_hash": "05f4e8b225867904abba2220f9f4e009"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/SkeletonPreview.tsx": {
+    "mtime": 1783359759.0712776,
+    "ast_hash": "bb700576bfd21de007df544db65bba24",
+    "semantic_hash": "bb700576bfd21de007df544db65bba24"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/SourceControlPanel.tsx": {
+    "mtime": 1783375133.0016997,
+    "ast_hash": "2779290200e184804105befb9e991c2e",
+    "semantic_hash": "2779290200e184804105befb9e991c2e"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/StatusBar.tsx": {
+    "mtime": 1783434689.7729254,
+    "ast_hash": "18de6af0418d72b173aa12910e4fee22",
+    "semantic_hash": "18de6af0418d72b173aa12910e4fee22"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/StructureTreeView.tsx": {
+    "mtime": 1781712547.8753896,
+    "ast_hash": "41867941dfbecda741ababf764fd5e69",
+    "semantic_hash": "41867941dfbecda741ababf764fd5e69"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/TaskConfig.tsx": {
+    "mtime": 1783137319.5742357,
+    "ast_hash": "e1c1e7dc574c01312d10ca820912cd61",
+    "semantic_hash": "e1c1e7dc574c01312d10ca820912cd61"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/TerminalPanel.tsx": {
+    "mtime": 1782178825.6734328,
+    "ast_hash": "ae4b610d97af0cb8521b1f8e2a9c3cdc",
+    "semantic_hash": "ae4b610d97af0cb8521b1f8e2a9c3cdc"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/TerminalView.tsx": {
+    "mtime": 1783954306.3998494,
+    "ast_hash": "a2896b5fb40aafa984edc0886f35bc4a",
+    "semantic_hash": "a2896b5fb40aafa984edc0886f35bc4a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/TestPanel.tsx": {
+    "mtime": 1781713092.5275342,
+    "ast_hash": "3ee65698b0b3652c03a87dbc625fd8f8",
+    "semantic_hash": "3ee65698b0b3652c03a87dbc625fd8f8"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/TopBar.tsx": {
+    "mtime": 1783954306.4000266,
+    "ast_hash": "3aa602a68a8fabbe8781cce0942fb94b",
+    "semantic_hash": "3aa602a68a8fabbe8781cce0942fb94b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/WellnessBreakOverlay.tsx": {
+    "mtime": 1782830002.9618096,
+    "ast_hash": "2dbbbea76dada887b2f2414b6b38ab1d",
+    "semantic_hash": "2dbbbea76dada887b2f2414b6b38ab1d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/WorkspaceSwitcher.tsx": {
+    "mtime": 1782757318.965871,
+    "ast_hash": "35c1c154884fd3284e1611eee98a4d3d",
+    "semantic_hash": "35c1c154884fd3284e1611eee98a4d3d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/file-icon.tsx": {
+    "mtime": 1781713500.311008,
+    "ast_hash": "4c7d99c30d0271d772ff32f70bb9e7e2",
+    "semantic_hash": "4c7d99c30d0271d772ff32f70bb9e7e2"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ui/ContextMenu.tsx": {
+    "mtime": 1782097086.107998,
+    "ast_hash": "f64ad10ddfcad642688b1ac39a3e1ef9",
+    "semantic_hash": "f64ad10ddfcad642688b1ac39a3e1ef9"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ui/EmptyState.tsx": {
+    "mtime": 1781713078.5118806,
+    "ast_hash": "f002b72b60dbf3ea98aceb68e5428d06",
+    "semantic_hash": "f002b72b60dbf3ea98aceb68e5428d06"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ui/ErrorBoundary.tsx": {
+    "mtime": 1783140082.3474298,
+    "ast_hash": "e44845051b028917d3aa255b9076d9d5",
+    "semantic_hash": "e44845051b028917d3aa255b9076d9d5"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ui/IconButton.tsx": {
+    "mtime": 1781710938.3577387,
+    "ast_hash": "838934b80a75781773a53cff57766f04",
+    "semantic_hash": "838934b80a75781773a53cff57766f04"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ui/Panel.tsx": {
+    "mtime": 1781710953.0501144,
+    "ast_hash": "a51a64b286a7ce292468d4ae57af4afb",
+    "semantic_hash": "a51a64b286a7ce292468d4ae57af4afb"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/components/ui/Tabs.tsx": {
+    "mtime": 1781710946.5702658,
+    "ast_hash": "b9a9f97c77cdd9366372bf5a4a15d8ff",
+    "semantic_hash": "b9a9f97c77cdd9366372bf5a4a15d8ff"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/active-editor.ts": {
+    "mtime": 1783954306.400149,
+    "ast_hash": "e7db2100fc1d122830679f4017e10683",
+    "semantic_hash": "e7db2100fc1d122830679f4017e10683"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/auto-close-tag.test.ts": {
+    "mtime": 1782097086.108191,
+    "ast_hash": "0111c3e81ee379064cbf463d85952004",
+    "semantic_hash": "0111c3e81ee379064cbf463d85952004"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/auto-close-tag.ts": {
+    "mtime": 1782097086.1082811,
+    "ast_hash": "54a894c86eb19567b56900fe55824ff6",
+    "semantic_hash": "54a894c86eb19567b56900fe55824ff6"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/breakpoint-gutter.ts": {
+    "mtime": 1782762301.2254722,
+    "ast_hash": "2c21aa91182aa8288906df54290a16e4",
+    "semantic_hash": "2c21aa91182aa8288906df54290a16e4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/change-nav.ts": {
+    "mtime": 1782757318.9661324,
+    "ast_hash": "eda1ac66ad9d4f3f8f1257bcf0e7e0aa",
+    "semantic_hash": "eda1ac66ad9d4f3f8f1257bcf0e7e0aa"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/diff-peek.ts": {
+    "mtime": 1782251289.7473545,
+    "ast_hash": "3fdbac6ae6f3529a230ddd5ac83f7d72",
+    "semantic_hash": "3fdbac6ae6f3529a230ddd5ac83f7d72"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/editor-schemes.test.ts": {
+    "mtime": 1782251289.7473993,
+    "ast_hash": "9969a7d4be52ad49f0937127f6d410ed",
+    "semantic_hash": "9969a7d4be52ad49f0937127f6d410ed"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/editor-schemes.ts": {
+    "mtime": 1782251289.7474728,
+    "ast_hash": "be0b4ef6f3a0d58e84d37648f2aca5a6",
+    "semantic_hash": "be0b4ef6f3a0d58e84d37648f2aca5a6"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/format-provider.ts": {
+    "mtime": 1782142793.8544989,
+    "ast_hash": "18bffae1abac82158a348171a936f8fb",
+    "semantic_hash": "18bffae1abac82158a348171a936f8fb"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/git-gutter.ts": {
+    "mtime": 1782757318.9663672,
+    "ast_hash": "8505a40bf3273da5cec0e67d1419027c",
+    "semantic_hash": "8505a40bf3273da5cec0e67d1419027c"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/graphql-diagnostics.test.ts": {
+    "mtime": 1783364325.603212,
+    "ast_hash": "f94aa9a1939b9b94c49c3c2e53903f6c",
+    "semantic_hash": "f94aa9a1939b9b94c49c3c2e53903f6c"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/graphql-diagnostics.ts": {
+    "mtime": 1783364346.6571279,
+    "ast_hash": "6d172b33037ecd23d10fcdaa76d40331",
+    "semantic_hash": "6d172b33037ecd23d10fcdaa76d40331"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/inlay-hints-provider.test.ts": {
+    "mtime": 1783954306.4003096,
+    "ast_hash": "468dd373bdd72af5575b960c15abefeb",
+    "semantic_hash": "468dd373bdd72af5575b960c15abefeb"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/inline-run.ts": {
+    "mtime": 1782251289.7476497,
+    "ast_hash": "6c2784c5f8b48aa29e0af9f6c6c8eca1",
+    "semantic_hash": "6c2784c5f8b48aa29e0af9f6c6c8eca1"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/java-snippets.test.ts": {
+    "mtime": 1782251289.7476978,
+    "ast_hash": "e80342602c48bc7463f2850f8528617a",
+    "semantic_hash": "e80342602c48bc7463f2850f8528617a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/java-snippets.ts": {
+    "mtime": 1782251289.747756,
+    "ast_hash": "619e4c44d8906c4fb3d3de025618412d",
+    "semantic_hash": "619e4c44d8906c4fb3d3de025618412d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/language-bridge.ts": {
+    "mtime": 1783435929.3514638,
+    "ast_hash": "5d8f215874741832a24b5c25145f5a1b",
+    "semantic_hash": "5d8f215874741832a24b5c25145f5a1b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/language.test.ts": {
+    "mtime": 1782771907.7653835,
+    "ast_hash": "c2aa105404289be5100a3ff84214b9a9",
+    "semantic_hash": "c2aa105404289be5100a3ff84214b9a9"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/language.ts": {
+    "mtime": 1782771893.8109927,
+    "ast_hash": "5c9560716f232f343fc3b3a9871b4e60",
+    "semantic_hash": "5c9560716f232f343fc3b3a9871b4e60"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/monaco-providers.ts": {
+    "mtime": 1783954306.400452,
+    "ast_hash": "e5dbebdcb3016b93ce260c28e093487d",
+    "semantic_hash": "e5dbebdcb3016b93ce260c28e093487d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/monaco-setup.ts": {
+    "mtime": 1783954306.4005873,
+    "ast_hash": "695130c40d9a90e8ad7c6e02ae7fcce2",
+    "semantic_hash": "695130c40d9a90e8ad7c6e02ae7fcce2"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/react-snippets.test.ts": {
+    "mtime": 1782251289.748262,
+    "ast_hash": "bfa319fad6c58ce41cb3a0bc44ccd0b4",
+    "semantic_hash": "bfa319fad6c58ce41cb3a0bc44ccd0b4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/react-snippets.ts": {
+    "mtime": 1782251289.7483146,
+    "ast_hash": "8427fa6d34ea3377c54a6697ed798fe8",
+    "semantic_hash": "8427fa6d34ea3377c54a6697ed798fe8"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/replace-preview.test.ts": {
+    "mtime": 1783137319.5831711,
+    "ast_hash": "5862e8b3ae65e36f3ca22f71a84d028c",
+    "semantic_hash": "5862e8b3ae65e36f3ca22f71a84d028c"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/replace-preview.ts": {
+    "mtime": 1783136146.2832873,
+    "ast_hash": "7141b84833cb55737a7f9d9e862f241a",
+    "semantic_hash": "7141b84833cb55737a7f9d9e862f241a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/tab-out.test.ts": {
+    "mtime": 1782097086.1094427,
+    "ast_hash": "aea797926bcfde2caba86bb900cb0568",
+    "semantic_hash": "aea797926bcfde2caba86bb900cb0568"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/editor/tab-out.ts": {
+    "mtime": 1782097086.109524,
+    "ast_hash": "6595893affe6dfd11cbf7cdac21ac32f",
+    "semantic_hash": "6595893affe6dfd11cbf7cdac21ac32f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/env.d.ts": {
+    "mtime": 1781708728.4097004,
+    "ast_hash": "e652cdbb40e0b71a3178f61da70d3c46",
+    "semantic_hash": "e652cdbb40e0b71a3178f61da70d3c46"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/keybindings/debug-keys.ts": {
+    "mtime": 1782762301.2257097,
+    "ast_hash": "44f0d72e90031b3f47cb27bae5c818f1",
+    "semantic_hash": "44f0d72e90031b3f47cb27bae5c818f1"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/keybindings/keybinding-service.test.ts": {
+    "mtime": 1782097086.1096365,
+    "ast_hash": "3789d5a696a4db7eca664fcbe19913ec",
+    "semantic_hash": "3789d5a696a4db7eca664fcbe19913ec"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/keybindings/keybinding-service.ts": {
+    "mtime": 1782757318.9668903,
+    "ast_hash": "0332c1f7cebf93b1d75be159073e4d1a",
+    "semantic_hash": "0332c1f7cebf93b1d75be159073e4d1a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/keybindings/use-keybindings.test.tsx": {
+    "mtime": 1782251289.7484863,
+    "ast_hash": "b7349ed6ef25eff37f7da0ebd68ff199",
+    "semantic_hash": "b7349ed6ef25eff37f7da0ebd68ff199"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/keybindings/use-keybindings.ts": {
+    "mtime": 1782251289.7485547,
+    "ast_hash": "863ac77202f8bdbd1bcc5ac2d12a410d",
+    "semantic_hash": "863ac77202f8bdbd1bcc5ac2d12a410d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/annotation-actions.ts": {
+    "mtime": 1783954306.400661,
+    "ast_hash": "21d7f9adb6b07b878f8e1ca08153e630",
+    "semantic_hash": "21d7f9adb6b07b878f8e1ca08153e630"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/annotation-draw.test.ts": {
+    "mtime": 1783954306.4007316,
+    "ast_hash": "19eff8bf2ba47937b4bd381b836f1564",
+    "semantic_hash": "19eff8bf2ba47937b4bd381b836f1564"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/annotation-draw.ts": {
+    "mtime": 1783954306.4008403,
+    "ast_hash": "b73ccc2f247c481538a9727fab5c61c4",
+    "semantic_hash": "b73ccc2f247c481538a9727fab5c61c4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/cn.ts": {
+    "mtime": 1781710932.2390954,
+    "ast_hash": "013c5c9af375b62302a7c6a55af06513",
+    "semantic_hash": "013c5c9af375b62302a7c6a55af06513"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/derive-project-map.test.ts": {
+    "mtime": 1782097086.109952,
+    "ast_hash": "8cb5bfa07386f58610140c0a0d34f221",
+    "semantic_hash": "8cb5bfa07386f58610140c0a0d34f221"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/derive-project-map.ts": {
+    "mtime": 1782097086.1101096,
+    "ast_hash": "b41ef8a7277a462cfdd38a92f0fdd66a",
+    "semantic_hash": "b41ef8a7277a462cfdd38a92f0fdd66a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/detect-formatters.test.ts": {
+    "mtime": 1782097086.1102138,
+    "ast_hash": "e876e7dfb8bbb773b00829303aeef976",
+    "semantic_hash": "e876e7dfb8bbb773b00829303aeef976"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/detect-formatters.ts": {
+    "mtime": 1782097086.110344,
+    "ast_hash": "a7afaea1da7987559ac5b54448d35c9f",
+    "semantic_hash": "a7afaea1da7987559ac5b54448d35c9f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/detect-pm.ts": {
+    "mtime": 1782097086.1105244,
+    "ast_hash": "df0ff79913cbd38ce00925196f47953a",
+    "semantic_hash": "df0ff79913cbd38ce00925196f47953a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/format-actions.ts": {
+    "mtime": 1782097086.110614,
+    "ast_hash": "a9179f8fa87cd550e5c73859a9cc4960",
+    "semantic_hash": "a9179f8fa87cd550e5c73859a9cc4960"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/format-text.test.ts": {
+    "mtime": 1782097086.1107016,
+    "ast_hash": "bfec9c9a4ad8ccc69531708392a0f01a",
+    "semantic_hash": "bfec9c9a4ad8ccc69531708392a0f01a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/format-text.ts": {
+    "mtime": 1782097086.110788,
+    "ast_hash": "766b05df7babdd1e58756aae9ac8bd3a",
+    "semantic_hash": "766b05df7babdd1e58756aae9ac8bd3a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/fs-actions.ts": {
+    "mtime": 1782097086.1108963,
+    "ast_hash": "3403bf909ac0fcbcab446268fdf64e10",
+    "semantic_hash": "3403bf909ac0fcbcab446268fdf64e10"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/git-graph.ts": {
+    "mtime": 1782097086.1110392,
+    "ast_hash": "8c17542d462d97e48c50438af2fcace7",
+    "semantic_hash": "8c17542d462d97e48c50438af2fcace7"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/go-to-definition.test.ts": {
+    "mtime": 1782097086.1111276,
+    "ast_hash": "429c8d823dc240c09f1fb88583e10932",
+    "semantic_hash": "429c8d823dc240c09f1fb88583e10932"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/go-to-definition.ts": {
+    "mtime": 1782097086.111214,
+    "ast_hash": "f989e0499e2bee3ea5e0da621dbdf451",
+    "semantic_hash": "f989e0499e2bee3ea5e0da621dbdf451"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/icons.ts": {
+    "mtime": 1782771901.9418943,
+    "ast_hash": "bd9ffa6aee85e673b60ca52a0568b8cf",
+    "semantic_hash": "bd9ffa6aee85e673b60ca52a0568b8cf"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/is-binary.test.ts": {
+    "mtime": 1782757318.9670632,
+    "ast_hash": "47f340414a2ac31f46a355805663b297",
+    "semantic_hash": "47f340414a2ac31f46a355805663b297"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/is-binary.ts": {
+    "mtime": 1782757318.967111,
+    "ast_hash": "c4293039295117ecfa6f1965802798d2",
+    "semantic_hash": "c4293039295117ecfa6f1965802798d2"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/is-image.test.ts": {
+    "mtime": 1782757318.9671602,
+    "ast_hash": "8a7fca3f33cb2dc6e8db8d6b6d0039a5",
+    "semantic_hash": "8a7fca3f33cb2dc6e8db8d6b6d0039a5"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/is-image.ts": {
+    "mtime": 1782757318.967214,
+    "ast_hash": "59901fd69a5f60a10b81221742630751",
+    "semantic_hash": "59901fd69a5f60a10b81221742630751"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/line-diff.test.ts": {
+    "mtime": 1782097086.1114085,
+    "ast_hash": "4ea7533f25687b322016314f290a089b",
+    "semantic_hash": "4ea7533f25687b322016314f290a089b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/line-diff.ts": {
+    "mtime": 1782097086.1115537,
+    "ast_hash": "72f74147621076945877c913802bc2bf",
+    "semantic_hash": "72f74147621076945877c913802bc2bf"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/open-entry.ts": {
+    "mtime": 1781712472.1806505,
+    "ast_hash": "74f89f8b41cd0b97c179c342a73b0f21",
+    "semantic_hash": "74f89f8b41cd0b97c179c342a73b0f21"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/protected-branch.ts": {
+    "mtime": 1782178933.6349795,
+    "ast_hash": "13d6e0f3f56f2b97c9f721654bb6362e",
+    "semantic_hash": "13d6e0f3f56f2b97c9f721654bb6362e"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/quickopen-cache.ts": {
+    "mtime": 1782159433.152499,
+    "ast_hash": "379cdf5124e7aa53e264d919d82050b4",
+    "semantic_hash": "379cdf5124e7aa53e264d919d82050b4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/relative-time.ts": {
+    "mtime": 1782097086.1117365,
+    "ast_hash": "822739faaefc4a004d0766c5fa5aa409",
+    "semantic_hash": "822739faaefc4a004d0766c5fa5aa409"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/restore-session.test.ts": {
+    "mtime": 1783954306.4009542,
+    "ast_hash": "7d0111a368fa01d054422af177eb9183",
+    "semantic_hash": "7d0111a368fa01d054422af177eb9183"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/reveal-in-tree.ts": {
+    "mtime": 1782097086.1118197,
+    "ast_hash": "bd4051981d2cb867d8134f58455d0702",
+    "semantic_hash": "bd4051981d2cb867d8134f58455d0702"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/save-actions.ts": {
+    "mtime": 1782097086.1119034,
+    "ast_hash": "4aed1bb58a9a34fc6a2c59a6e90e4e15",
+    "semantic_hash": "4aed1bb58a9a34fc6a2c59a6e90e4e15"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/search-regex.ts": {
+    "mtime": 1783136126.6987379,
+    "ast_hash": "339870ed56621fc3bad8415799c13285",
+    "semantic_hash": "339870ed56621fc3bad8415799c13285"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/terminal-exec.ts": {
+    "mtime": 1782097086.1120126,
+    "ast_hash": "892c7093a487682874e20565c7a97d8d",
+    "semantic_hash": "892c7093a487682874e20565c7a97d8d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/wellness-chime.ts": {
+    "mtime": 1782829972.0960934,
+    "ast_hash": "0e42b7b4a65d360e71b78b121c62f97a",
+    "semantic_hash": "0e42b7b4a65d360e71b78b121c62f97a"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/wellness-exercises.ts": {
+    "mtime": 1782828882.4172351,
+    "ast_hash": "d0ddd2a7ee68c35afa20ac54b3a120e1",
+    "semantic_hash": "d0ddd2a7ee68c35afa20ac54b3a120e1"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/lib/workspace-actions.ts": {
+    "mtime": 1783954306.4010715,
+    "ast_hash": "21c49f926f1a6369df125c15c5aa894f",
+    "semantic_hash": "21c49f926f1a6369df125c15c5aa894f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/main.tsx": {
+    "mtime": 1783954306.4011676,
+    "ast_hash": "a228c0406a2a85ff453d9b6535dc4b67",
+    "semantic_hash": "a228c0406a2a85ff453d9b6535dc4b67"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/settings/use-auto-diagnostics.ts": {
+    "mtime": 1782097086.1123166,
+    "ast_hash": "c11feb476d57f9b87ccf93b33c824ae4",
+    "semantic_hash": "c11feb476d57f9b87ccf93b33c824ae4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/settings/use-auto-format.test.ts": {
+    "mtime": 1782097086.1124313,
+    "ast_hash": "5abcefa37647044cef6b684fc565e673",
+    "semantic_hash": "5abcefa37647044cef6b684fc565e673"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/settings/use-auto-format.ts": {
+    "mtime": 1782097086.1125536,
+    "ast_hash": "407dfd592388492f19e77d8ec7d226cf",
+    "semantic_hash": "407dfd592388492f19e77d8ec7d226cf"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/settings/use-auto-save.ts": {
+    "mtime": 1782097086.112674,
+    "ast_hash": "1f4afa81c3555163f516f089a973f6b2",
+    "semantic_hash": "1f4afa81c3555163f516f089a973f6b2"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/settings/use-session-persistence.test.ts": {
+    "mtime": 1783954306.401271,
+    "ast_hash": "a3f32aced01f6169af2fd174bb242bcf",
+    "semantic_hash": "a3f32aced01f6169af2fd174bb242bcf"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/settings/use-session-persistence.ts": {
+    "mtime": 1783954306.4013321,
+    "ast_hash": "ae3918d768f638dd592d9e09c6aeaecf",
+    "semantic_hash": "ae3918d768f638dd592d9e09c6aeaecf"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/settings/use-settings-persistence.ts": {
+    "mtime": 1783954306.4014657,
+    "ast_hash": "0463558f2c5680af5ece4a9da7eff8ab",
+    "semantic_hash": "0463558f2c5680af5ece4a9da7eff8ab"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/settings/use-wellness-breaks.ts": {
+    "mtime": 1782828908.275649,
+    "ast_hash": "8a7dccd57409eb84a547973b7dfeee10",
+    "semantic_hash": "8a7dccd57409eb84a547973b7dfeee10"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/skeleton/actions.ts": {
+    "mtime": 1783359720.9783323,
+    "ast_hash": "f051985b34e84f69be890fd48692e2e3",
+    "semantic_hash": "f051985b34e84f69be890fd48692e2e3"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/skeleton/transform.test.ts": {
+    "mtime": 1783356698.024197,
+    "ast_hash": "9b450e9782252443ffd6727e3a8d4ea0",
+    "semantic_hash": "9b450e9782252443ffd6727e3a8d4ea0"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/skeleton/transform.ts": {
+    "mtime": 1783356611.0653121,
+    "ast_hash": "da46849045b88eaab0a06b4fb2fcc527",
+    "semantic_hash": "da46849045b88eaab0a06b4fb2fcc527"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/agent-store.ts": {
+    "mtime": 1783140275.997493,
+    "ast_hash": "fdf1e4cb014c28f27b2f31b2a5c7cf30",
+    "semantic_hash": "fdf1e4cb014c28f27b2f31b2a5c7cf30"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/ai-store.ts": {
+    "mtime": 1782757318.9674637,
+    "ast_hash": "e946e0886b4b5c313d57ebb329cca174",
+    "semantic_hash": "e946e0886b4b5c313d57ebb329cca174"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/annotation-store.ts": {
+    "mtime": 1783954306.401531,
+    "ast_hash": "63b409fb0ee751712a12fe7b154c913d",
+    "semantic_hash": "63b409fb0ee751712a12fe7b154c913d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/assistant-store.ts": {
+    "mtime": 1783954306.4015844,
+    "ast_hash": "89d148b5a439099645518f4897ba893e",
+    "semantic_hash": "89d148b5a439099645518f4897ba893e"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/aws-store.ts": {
+    "mtime": 1782097086.1130257,
+    "ast_hash": "70b9f93f2c43606da875a6e7c953254b",
+    "semantic_hash": "70b9f93f2c43606da875a6e7c953254b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/debug-store.ts": {
+    "mtime": 1782762301.2260826,
+    "ast_hash": "f1acd8f8063d5790979dc05abd0abad6",
+    "semantic_hash": "f1acd8f8063d5790979dc05abd0abad6"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/diagnostics-store.ts": {
+    "mtime": 1782097086.1131463,
+    "ast_hash": "92d92636b26467c8c7db9ef72f76a3a8",
+    "semantic_hash": "92d92636b26467c8c7db9ef72f76a3a8"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/editor-store.test.ts": {
+    "mtime": 1782097086.1133425,
+    "ast_hash": "625361908cbf7e2b7abb767526d63034",
+    "semantic_hash": "625361908cbf7e2b7abb767526d63034"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/editor-store.ts": {
+    "mtime": 1783954306.4016976,
+    "ast_hash": "870bc8bc560f9cc50be32e340e99829f",
+    "semantic_hash": "870bc8bc560f9cc50be32e340e99829f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/file-clipboard.ts": {
+    "mtime": 1781721880.8920135,
+    "ast_hash": "4822e7a85767d7c500cd2f642f34155c",
+    "semantic_hash": "4822e7a85767d7c500cd2f642f34155c"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/formatter-store.test.ts": {
+    "mtime": 1782097086.113663,
+    "ast_hash": "77f11ee3840bbcbc11edacdb9e20c005",
+    "semantic_hash": "77f11ee3840bbcbc11edacdb9e20c005"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/formatter-store.ts": {
+    "mtime": 1782097086.1137755,
+    "ast_hash": "5e1ffc0a0c7680121bdfc4024d987f73",
+    "semantic_hash": "5e1ffc0a0c7680121bdfc4024d987f73"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/git-user-store.ts": {
+    "mtime": 1782097086.1139023,
+    "ast_hash": "bc7a019b3e2a63a430a3e6d1dfc22783",
+    "semantic_hash": "bc7a019b3e2a63a430a3e6d1dfc22783"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/inline-run-store.ts": {
+    "mtime": 1782251289.7489269,
+    "ast_hash": "7a52e2aca26511326aa4bc94e5eb2ec0",
+    "semantic_hash": "7a52e2aca26511326aa4bc94e5eb2ec0"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/java-status-store.ts": {
+    "mtime": 1782251289.7489712,
+    "ast_hash": "57b3de13d41401780f08faa9537efeeb",
+    "semantic_hash": "57b3de13d41401780f08faa9537efeeb"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/keybindings-store.test.ts": {
+    "mtime": 1782097086.1140232,
+    "ast_hash": "d1428639ee1ba1146f29f9273dd4225f",
+    "semantic_hash": "d1428639ee1ba1146f29f9273dd4225f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/keybindings-store.ts": {
+    "mtime": 1782097086.1141374,
+    "ast_hash": "1731637fb19569506cc30fcde2582ac7",
+    "semantic_hash": "1731637fb19569506cc30fcde2582ac7"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/layout-store.test.ts": {
+    "mtime": 1782757318.9678023,
+    "ast_hash": "4cded0a536705022478f43f8f626ae9b",
+    "semantic_hash": "4cded0a536705022478f43f8f626ae9b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/layout-store.ts": {
+    "mtime": 1783954306.4017918,
+    "ast_hash": "29911eccba01bb1c264d6007c292d906",
+    "semantic_hash": "29911eccba01bb1c264d6007c292d906"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/navigator-store.ts": {
+    "mtime": 1783357203.766733,
+    "ast_hash": "bea96f2e6d60280d2a59234f59d0a244",
+    "semantic_hash": "bea96f2e6d60280d2a59234f59d0a244"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/palette-store.ts": {
+    "mtime": 1783137319.574824,
+    "ast_hash": "f3a96a441dfcaf08319d540bf8eecada",
+    "semantic_hash": "f3a96a441dfcaf08319d540bf8eecada"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/recents-store.ts": {
+    "mtime": 1781717873.9523435,
+    "ast_hash": "4c4ac41dcdeb5bc6e5ff52859b8a1a72",
+    "semantic_hash": "4c4ac41dcdeb5bc6e5ff52859b8a1a72"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/search-store.ts": {
+    "mtime": 1783136977.44597,
+    "ast_hash": "badf30b153b69d1d245a3d71940240ac",
+    "semantic_hash": "badf30b153b69d1d245a3d71940240ac"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/skeleton-store.ts": {
+    "mtime": 1783359714.1890821,
+    "ast_hash": "5eb9fc9b9cc053bcaaa057c53355c889",
+    "semantic_hash": "5eb9fc9b9cc053bcaaa057c53355c889"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/tasks-store.ts": {
+    "mtime": 1783137319.5749428,
+    "ast_hash": "09b1e1555b7d409d962cbcb95a18046b",
+    "semantic_hash": "09b1e1555b7d409d962cbcb95a18046b"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/terminal-store.ts": {
+    "mtime": 1783954306.401931,
+    "ast_hash": "525f805d12e480fd6ef256dffff738e4",
+    "semantic_hash": "525f805d12e480fd6ef256dffff738e4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/theme-store.test.ts": {
+    "mtime": 1781710168.40863,
+    "ast_hash": "173ee3da55a26bbcf169727581281a06",
+    "semantic_hash": "173ee3da55a26bbcf169727581281a06"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/theme-store.ts": {
+    "mtime": 1782251289.7490387,
+    "ast_hash": "2077f1d4d11d3ad1cdb748f920ca14ed",
+    "semantic_hash": "2077f1d4d11d3ad1cdb748f920ca14ed"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/wellness-store.ts": {
+    "mtime": 1782829992.6972473,
+    "ast_hash": "d49c5f846c83654cb5f324673971e8a9",
+    "semantic_hash": "d49c5f846c83654cb5f324673971e8a9"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/workbench-status-store.ts": {
+    "mtime": 1783434674.7135723,
+    "ast_hash": "fce3078b3506bf52e859e8b198f0c72e",
+    "semantic_hash": "fce3078b3506bf52e859e8b198f0c72e"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/workspace-store.test.ts": {
+    "mtime": 1781708564.5057416,
+    "ast_hash": "c9030267951eb24f57292f3859c015a7",
+    "semantic_hash": "c9030267951eb24f57292f3859c015a7"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/stores/workspace-store.ts": {
+    "mtime": 1782849763.8365529,
+    "ast_hash": "2fb74c309af865a1addb0cfe4f648b05",
+    "semantic_hash": "2fb74c309af865a1addb0cfe4f648b05"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/theme/theme-service.test.ts": {
+    "mtime": 1781710157.7406182,
+    "ast_hash": "bfde005f23078ab79ac08c84fbda61b3",
+    "semantic_hash": "bfde005f23078ab79ac08c84fbda61b3"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/theme/theme-service.ts": {
+    "mtime": 1781710152.4498324,
+    "ast_hash": "95f360a09f925838fbc0cb046beb89b3",
+    "semantic_hash": "95f360a09f925838fbc0cb046beb89b3"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/theme/themes.ts": {
+    "mtime": 1782097086.1154802,
+    "ast_hash": "8bb938f37447b00f08220771473d84cb",
+    "semantic_hash": "8bb938f37447b00f08220771473d84cb"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/util/fuzzy.fields.test.ts": {
+    "mtime": 1783137319.583263,
+    "ast_hash": "e3b62480627ceb48587161de2e4687fb",
+    "semantic_hash": "e3b62480627ceb48587161de2e4687fb"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/util/fuzzy.test.ts": {
+    "mtime": 1782160156.6709046,
+    "ast_hash": "c0c7f14a7f2f871616b29488b608ebd5",
+    "semantic_hash": "c0c7f14a7f2f871616b29488b608ebd5"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/src/util/fuzzy.ts": {
+    "mtime": 1783137319.575263,
+    "ast_hash": "03f3e76e54b306397bbd938213d02ea4",
+    "semantic_hash": "03f3e76e54b306397bbd938213d02ea4"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/shared/ipc-contract.test.ts": {
+    "mtime": 1781707438.6897995,
+    "ast_hash": "bd6b8de388059e7edca9129aae64093d",
+    "semantic_hash": "bd6b8de388059e7edca9129aae64093d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/shared/ipc-contract.ts": {
+    "mtime": 1783954306.402104,
+    "ast_hash": "8599fea1657e5485c98d263fc41670d9",
+    "semantic_hash": "8599fea1657e5485c98d263fc41670d9"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/shared/result.test.ts": {
+    "mtime": 1781708487.9680746,
+    "ast_hash": "ba763281765e567e8aeeaec0212f320d",
+    "semantic_hash": "ba763281765e567e8aeeaec0212f320d"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/shared/result.ts": {
+    "mtime": 1781708491.6115134,
+    "ast_hash": "de32d0ddcd0b1223112f8cb2f3709985",
+    "semantic_hash": "de32d0ddcd0b1223112f8cb2f3709985"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/shared/skeleton.ts": {
+    "mtime": 1783359617.4215114,
+    "ast_hash": "b2e56cb437060293d09302248b895415",
+    "semantic_hash": "b2e56cb437060293d09302248b895415"
+  },
+  "/Users/pavankumarmistry/Developer/forge/tsconfig.json": {
+    "mtime": 1782095742.5618064,
+    "ast_hash": "9314a09ad92aa41572c4a110dda3b5ed",
+    "semantic_hash": "9314a09ad92aa41572c4a110dda3b5ed"
+  },
+  "/Users/pavankumarmistry/Developer/forge/tsconfig.node.json": {
+    "mtime": 1781703843.9930983,
+    "ast_hash": "647416d17a92d66292de7fc807761c46",
+    "semantic_hash": "647416d17a92d66292de7fc807761c46"
+  },
+  "/Users/pavankumarmistry/Developer/forge/vitest.config.ts": {
+    "mtime": 1781703852.5600529,
+    "ast_hash": "b199dda778c613578664591fb7c4edc8",
+    "semantic_hash": "b199dda778c613578664591fb7c4edc8"
+  },
+  "/Users/pavankumarmistry/Developer/forge/README.md": {
+    "mtime": 1782757318.9556208,
+    "ast_hash": "05fb48738280c6abf026dbdc1d7eccca",
+    "semantic_hash": "05fb48738280c6abf026dbdc1d7eccca"
+  },
+  "/Users/pavankumarmistry/Developer/forge/docs/browser-component-inspector.md": {
+    "mtime": 1783954306.3952603,
+    "ast_hash": "91070a09ff793ed506a1eade1b8da0fc",
+    "semantic_hash": "91070a09ff793ed506a1eade1b8da0fc"
+  },
+  "/Users/pavankumarmistry/Developer/forge/docs/forge-workflow-intelligence.md": {
+    "mtime": 1783141404.0739746,
+    "ast_hash": "ae2a1d154f0ea7eea46639cfb4a4925f",
+    "semantic_hash": "ae2a1d154f0ea7eea46639cfb4a4925f"
+  },
+  "/Users/pavankumarmistry/Developer/forge/docs/generate-skeleton.md": {
+    "mtime": 1783362270.4753702,
+    "ast_hash": "e657da2c8912391bb859417a2b83b0e9",
+    "semantic_hash": "e657da2c8912391bb859417a2b83b0e9"
+  },
+  "/Users/pavankumarmistry/Developer/forge/docs/superpowers/plans/2026-06-17-forge-phase0-scaffold.md": {
+    "mtime": 1781703750.7124565,
+    "ast_hash": "ad64528feb41ec77737e9a2dfbbcf0ba",
+    "semantic_hash": "ad64528feb41ec77737e9a2dfbbcf0ba"
+  },
+  "/Users/pavankumarmistry/Developer/forge/docs/superpowers/plans/2026-06-17-forge-phase1-editing-core.md": {
+    "mtime": 1781708466.1331162,
+    "ast_hash": "a9ab325f8a6f5f0f93dd63546ec4ed26",
+    "semantic_hash": "a9ab325f8a6f5f0f93dd63546ec4ed26"
+  },
+  "/Users/pavankumarmistry/Developer/forge/docs/superpowers/plans/2026-06-17-forge-phase2a-command-spine.md": {
+    "mtime": 1781709685.1274729,
+    "ast_hash": "a9db69bb3b5dafd1bc740237c54038d0",
+    "semantic_hash": "a9db69bb3b5dafd1bc740237c54038d0"
+  },
+  "/Users/pavankumarmistry/Developer/forge/docs/superpowers/plans/2026-06-17-forge-phase2b-themes-persistence.md": {
+    "mtime": 1781710124.806322,
+    "ast_hash": "06821a2a0bb2d230995e6d80f7fb4d47",
+    "semantic_hash": "06821a2a0bb2d230995e6d80f7fb4d47"
+  },
+  "/Users/pavankumarmistry/Developer/forge/docs/superpowers/plans/2026-06-26-forge-editor-integration.md": {
+    "mtime": 1782757318.9557505,
+    "ast_hash": "556db4ee33f2b49680c3fc2ff2b1e536",
+    "semantic_hash": "556db4ee33f2b49680c3fc2ff2b1e536"
+  },
+  "/Users/pavankumarmistry/Developer/forge/docs/superpowers/specs/2026-06-17-forge-code-editor-design.md": {
+    "mtime": 1781703470.7916284,
+    "ast_hash": "4e70e70728d4a8f9769867d7d6a63cc5",
+    "semantic_hash": "4e70e70728d4a8f9769867d7d6a63cc5"
+  },
+  "/Users/pavankumarmistry/Developer/forge/docs/superpowers/specs/2026-06-26-forge-editor-integration-design.md": {
+    "mtime": 1782757318.9558594,
+    "ast_hash": "0702825d4c16ee06bc0b5afa11fe2188",
+    "semantic_hash": "0702825d4c16ee06bc0b5afa11fe2188"
+  },
+  "/Users/pavankumarmistry/Developer/forge/electron-builder.yml": {
+    "mtime": 1782768855.4086862,
+    "ast_hash": "8c351bb632fed4edb52ab7245be5603e",
+    "semantic_hash": "8c351bb632fed4edb52ab7245be5603e"
+  },
+  "/Users/pavankumarmistry/Developer/forge/src/renderer/index.html": {
+    "mtime": 1781703866.43039,
+    "ast_hash": "7028a4a588c42cdcf24e3b3c7a4b1da6",
+    "semantic_hash": "7028a4a588c42cdcf24e3b3c7a4b1da6"
+  }
+}
