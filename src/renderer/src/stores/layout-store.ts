@@ -11,8 +11,8 @@ export type ActivityId =
   | 'settings';
 export type BottomTab = 'terminal' | 'problems' | 'output' | 'tests' | 'debug' | 'browserDebug';
 export type SidebarSide = 'left' | 'right';
-/** Which view the right (assistant) panel shows: conversational Chat or the AI Agent workspace. */
-export type RightMode = 'chat' | 'agent';
+/** Which view the right (assistant) panel shows: Chat, the AI Agent workspace, or Recipes. */
+export type RightMode = 'chat' | 'agent' | 'recipes';
 
 export interface LayoutState {
   sidebarVisible: boolean;

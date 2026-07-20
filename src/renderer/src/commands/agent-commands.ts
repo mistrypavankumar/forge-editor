@@ -27,6 +27,16 @@ export function registerAgentCommands(): void {
     },
   });
   commandRegistry.register({
+    id: 'ai.openRecipes',
+    title: 'AI Recipes: Open Prompt Builder',
+    category: 'AI',
+    run: () => {
+      const l = useLayoutStore.getState();
+      l.setRightMode('recipes');
+      l.setPanelVisible('right', true);
+    },
+  });
+  commandRegistry.register({
     id: 'ai.toggleAgentEnabled',
     title: 'AI Agent: Enable/Disable Agent Mode',
     category: 'AI',

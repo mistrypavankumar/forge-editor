@@ -667,6 +667,11 @@ export interface AssistantSendArgs {
   file?: { name: string; language: string; content: string } | null;
   /** Earlier turns in this conversation (oldest first), for multi-turn context. */
   history?: AssistantTurn[];
+  /**
+   * Optional persona override. When set, it replaces the default coding-assistant system prompt —
+   * used by the Recipes prompt-builder, which needs a writing-assistant persona instead.
+   */
+  systemOverride?: string;
 }
 
 /** A streamed slice of the assistant's reply. */
@@ -950,6 +955,32 @@ export interface ForgeSettings {
    * is reopened — notably after "Reload Window" — so open tabs survive a reload.
    */
   sessions?: Record<string, EditorSession>;
+  /** User-defined recipes for the Recipes prompt-builder (built-ins live in code, not here). */
+  customRecipes?: Recipe[];
+}
+
+// ---- Recipes prompt-builder ------------------------------------------------
+
+/** A tuning dropdown a recipe can expose in the Recipes prompt-builder. */
+export type RecipeControl = 'length' | 'tone';
+
+/**
+ * A Recipes prompt-builder template — a labelled writing task (Rephrase, Reply, Summarize, …).
+ * Built-in recipes ship in the renderer; user-defined ones are persisted in {@link ForgeSettings}.
+ * The panel composes `instruction` + the chosen tuning controls + the user's input text into a
+ * single prompt sent through the (writing-persona) assistant stream.
+ */
+export interface Recipe {
+  /** Stable id (`builtin:*` for shipped recipes, a generated id for custom ones). */
+  id: string;
+  /** Short name shown in the recipe list. */
+  label: string;
+  /** Lucide icon name shown beside the label (falls back to a default when unknown/omitted). */
+  icon?: string;
+  /** The task instruction prepended to the user's text. */
+  instruction: string;
+  /** Which tuning dropdowns this recipe shows (Length, Tone). */
+  controls: RecipeControl[];
 }
 
 /** Outcome of running a formatter CLI against a file. */

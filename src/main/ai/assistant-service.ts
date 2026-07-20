@@ -37,7 +37,7 @@ export function startAssistant(
   const handle = streamAiChat(
     cfg,
     {
-      system: SYSTEM_PROMPT,
+      system: args.systemOverride?.trim() || SYSTEM_PROMPT,
       history: (args.history ?? []).map((t) => ({ role: t.role, content: t.text })),
       question: args.question,
       context: fileContext(args.file),

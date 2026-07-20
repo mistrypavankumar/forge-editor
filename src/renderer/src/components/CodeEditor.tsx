@@ -188,7 +188,13 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
         // JSX/HTML tag blocks like <Box>…</Box>, which bracket-pair guides don't cover (Monaco
         // only pairs {}, (), []). This is what gives the VS Code look for components/tags.
         indentation: true,
-        highlightActiveIndentation: true,
+        // 'always' (not `true`): Monaco otherwise suppresses the active-indent highlight on any
+        // line that also carries a bracket-pair guide. JSX/HTML tag blocks are full of brackets
+        // (`{...}` props, `sx={{}}`, `onClick={}`), so clicking a tag like </Box> would drop the
+        // Box block's highlight on all its bracketed lines and only light up the stray plain
+        // lines in scope — looking like it highlights the wrong guide. 'always' keeps the active
+        // tag-block guide continuous (a bracket guide still wins its own column, so no doubling).
+        highlightActiveIndentation: 'always',
         bracketPairs: true,
         bracketPairsHorizontal: false,
         highlightActiveBracketPair: true,

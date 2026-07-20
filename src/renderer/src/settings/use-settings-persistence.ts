@@ -12,6 +12,7 @@ import { useInlineRunStore } from '../stores/inline-run-store';
 import { useAiStore } from '../stores/ai-store';
 import { useWellnessStore } from '../stores/wellness-store';
 import { useBrowserDebugStore } from '../browser/browser-debug-store';
+import { useRecipesStore } from '../stores/recipes-store';
 import { clearFileCache } from '../lib/quickopen-cache';
 import type { FormatterId } from '../lib/detect-formatters';
 
@@ -52,6 +53,7 @@ export function useSettingsPersistence(): void {
   const bdRedact = useBrowserDebugStore((s) => s.redactSensitiveHeaders);
   const bdMaxEvents = useBrowserDebugStore((s) => s.maxEvents);
   const bdAllowExternal = useBrowserDebugStore((s) => s.allowExternalCapture);
+  const customRecipes = useRecipesStore((s) => s.custom);
 
   // Hydrate once on mount.
   useEffect(() => {
@@ -127,6 +129,9 @@ export function useSettingsPersistence(): void {
         if (res.data.browserDebug) {
           useBrowserDebugStore.getState().applySettings(res.data.browserDebug);
         }
+        if (Array.isArray(res.data.customRecipes)) {
+          useRecipesStore.getState().setCustom(res.data.customRecipes);
+        }
         // Seed built-in default excludes once: union them with any stored list, then never re-add.
         if (res.data.searchExcludeSeeded) {
           useLayoutStore.getState().setSearchExclude(res.data.searchExclude ?? []);
@@ -187,8 +192,9 @@ export function useSettingsPersistence(): void {
         maxEvents: bdMaxEvents,
         allowExternalCapture: bdAllowExternal,
       },
+      customRecipes,
     });
-  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, inlineRun, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight, aiProvider, aiModel, aiInlineSuggest, wellnessEnabled, wellnessIntervalMin, wellnessBreakSec, wellnessStrict, wellnessExercises, wellnessSound, bdEnabled, bdConfig, bdRedact, bdMaxEvents, bdAllowExternal]);
+  }, [themeId, editorScheme, glass, glassOpacity, sidebarVisible, sidebarSide, recents, taskCommands, customTasks, autoSave, fontSize, formatterId, formatOnSave, autoFormat, keybindings, autoCheckProblems, inlineRun, gitUsers, searchExclude, searchExcludeSeeded, scmGraphHeight, aiProvider, aiModel, aiInlineSuggest, wellnessEnabled, wellnessIntervalMin, wellnessBreakSec, wellnessStrict, wellnessExercises, wellnessSound, bdEnabled, bdConfig, bdRedact, bdMaxEvents, bdAllowExternal, customRecipes]);
 
   // Drop the quick-open cache when excludes change so the next search re-lists with them.
   useEffect(() => {
