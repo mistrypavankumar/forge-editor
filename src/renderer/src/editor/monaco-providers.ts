@@ -11,6 +11,7 @@ import { importSpecForName, moduleSpecAtColumn, localDeclarationLine } from '../
 import { languageFor } from './language';
 import { REACT_SNIPPETS } from './react-snippets';
 import { JAVA_SNIPPETS } from './java-snippets';
+import { registerColorProvider } from './color-provider';
 
 let registered = false;
 
@@ -569,6 +570,10 @@ export function registerLanguageProviders(monaco: typeof monacoNs): void {
   });
 
   registerInlineCompletions(monaco);
+
+  // Inline color swatches + click-to-edit color picker for code/config literals (hex, rgb, hsl).
+  // CSS/HTML get this from their own workers, so this covers the languages those don't.
+  registerColorProvider(monaco);
 
   registerSnippets(monaco, SELECTOR, REACT_SNIPPETS, '⚛', 'tsx');
   registerSnippets(monaco, ['java'], JAVA_SNIPPETS, '☕', 'java');
