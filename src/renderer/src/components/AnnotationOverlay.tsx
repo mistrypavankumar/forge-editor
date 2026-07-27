@@ -94,6 +94,14 @@ export function AnnotationOverlay(): React.JSX.Element | null {
     return () => window.removeEventListener('keydown', onKey);
   }, [active, textDraft, close]);
 
+  // Clear the pending revert if the overlay unmounts mid-flash.
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    },
+    []
+  );
+
   if (!active || !image || !rect) return null;
 
   const pointFromEvent = (e: React.PointerEvent): { x: number; y: number } => {
@@ -172,11 +180,6 @@ export function AnnotationOverlay(): React.JSX.Element | null {
     if (copiedTimer.current) clearTimeout(copiedTimer.current);
     copiedTimer.current = setTimeout(() => setCopied(false), 1500);
   };
-
-  // Clear the pending revert if the overlay unmounts mid-flash.
-  useEffect(() => () => {
-    if (copiedTimer.current) clearTimeout(copiedTimer.current);
-  }, []);
 
   return createPortal(
     <div className="fixed inset-0 z-[4000] bg-bg/80 backdrop-blur-sm">

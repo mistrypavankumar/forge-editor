@@ -195,7 +195,11 @@ export function TerminalView({
         let m: RegExpExecArray | null;
         while ((m = re.exec(text)) !== null) {
           if (!looksLikePath(m[1])) continue;
-          const full = m[0];
+          // The token is greedy, so prose punctuation trailing the path gets swallowed
+          // (e.g. "…/palette.ts, in the background" → "palette.ts,"). Trim it so the path
+          // resolves and the underlined range doesn't cover the stray character.
+          const full = m[0].replace(/[.,;:`'"}\])]+$/, '');
+          if (!looksLikePath(full)) continue;
           const startX = m.index + 1;
           links.push({
             text: full,

@@ -16,6 +16,7 @@ import type {
 interface Pending {
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
+  timer?: ReturnType<typeof setTimeout>;
 }
 
 interface WorkerReply {
@@ -37,28 +38,53 @@ function ensureWorker(): Worker {
     const p = pending.get(msg.id);
     if (!p) return;
     pending.delete(msg.id);
+    if (p.timer) clearTimeout(p.timer);
     if (msg.ok) p.resolve(msg.result);
     else p.reject(new Error(msg.error ?? 'Language service error'));
   });
   const fail = (err: Error): void => {
-    for (const p of pending.values()) p.reject(err);
+    // A dead worker fires both 'error' and 'exit'; once it has been replaced, its late events must
+    // not reject the new worker's in-flight calls.
+    if (worker !== w) return;
+    for (const p of pending.values()) {
+      if (p.timer) clearTimeout(p.timer);
+      p.reject(err);
+    }
     pending.clear();
     // Drop the handle so the next call spins up a fresh service (recovers from a crash).
     worker = null;
   };
   w.on('error', fail);
-  w.on('exit', (code) => {
-    if (code !== 0) fail(new Error(`Language worker exited with code ${code}`));
-  });
+  // Any exit — clean or not — strands every in-flight call and leaves a handle whose postMessage
+  // silently goes nowhere. Settling and dropping it keeps a dead worker from wedging IntelliSense
+  // (a completion left pending shows as a permanent "Loading…" in the suggest widget).
+  w.on('exit', (code) => fail(new Error(`Language worker exited with code ${code}`)));
   worker = w;
   return w;
 }
+
+/**
+ * Upper bound on how long a query may stay unanswered. A reply that never arrives — a wedged or
+ * silently dead worker — otherwise leaves the renderer's provider promise pending forever, which
+ * Monaco renders as a suggest popup stuck on "Loading…". Timing out turns that into an ordinary
+ * failed Result: the feature comes up empty for one pass and the next keystroke retries.
+ */
+const CALL_TIMEOUT_MS = 30_000;
 
 function call<T>(method: string, args: unknown[]): Promise<T> {
   const w = ensureWorker();
   const id = (seq += 1);
   return new Promise<T>((resolve, reject) => {
-    pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
+    // Project initialization is exempt: building the program for a large monorepo runs long.
+    const timer =
+      method === 'initializeProject'
+        ? undefined
+        : setTimeout(() => {
+            // A late reply is harmless — the message handler ignores ids no longer pending.
+            if (pending.delete(id)) reject(new Error(`Language service timed out: ${method}`));
+          }, CALL_TIMEOUT_MS);
+    timer?.unref?.();
+    pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timer });
     w.postMessage({ id, method, args });
   });
 }
