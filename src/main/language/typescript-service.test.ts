@@ -174,6 +174,59 @@ describe('TypeScript language service — monorepo nested tsconfig', () => {
   });
 });
 
+describe('TypeScript language service — sibling tsconfig.test.json', () => {
+  let app: string;
+  let testFile: string;
+  let srcFile: string;
+
+  // Mirrors apps/scm: tsconfig.json excludes tests; tsconfig.test.json includes them and adds the
+  // test-runner globals (`types: ["vitest/globals"]`) plus a `@tests/*` alias.
+  const BASE = { target: 'ES2022', module: 'ESNext', moduleResolution: 'Bundler', strict: true, baseUrl: '.' };
+  const APP_TSCONFIG = JSON.stringify({
+    compilerOptions: { ...BASE, types: [], paths: { '@/*': ['./src/*'] } },
+    include: ['src'],
+  });
+  const TEST_TSCONFIG = JSON.stringify({
+    extends: './tsconfig.json',
+    compilerOptions: { types: ['fake-globals'], paths: { '@/*': ['./src/*'], '@tests/*': ['./tests/*'] } },
+    include: ['src', 'tests'],
+  });
+  const GLOBALS = 'declare function expect(value: unknown): { toBe(other: unknown): void };\n';
+  const HELPER = 'export const render = (): number => 1;\n';
+  const TEST = "import { render } from '@tests/helpers/render';\nexpect(render()).toBe(1);\n";
+  const SRC = 'export const usesExpect = typeof expect;\n';
+
+  beforeAll(() => {
+    app = mkdtempSync(join(tmpdir(), 'forge-testcfg-'));
+    mkdirSync(join(app, 'src'), { recursive: true });
+    mkdirSync(join(app, 'tests', 'helpers'), { recursive: true });
+    mkdirSync(join(app, 'node_modules', 'fake-globals'), { recursive: true });
+    writeFileSync(join(app, 'tsconfig.json'), APP_TSCONFIG);
+    writeFileSync(join(app, 'tsconfig.test.json'), TEST_TSCONFIG);
+    writeFileSync(join(app, 'node_modules', 'fake-globals', 'index.d.ts'), GLOBALS);
+    writeFileSync(join(app, 'tests', 'helpers', 'render.ts'), HELPER);
+    testFile = join(app, 'tests', 'a.test.ts');
+    srcFile = join(app, 'src', 'b.ts');
+    writeFileSync(testFile, TEST);
+    writeFileSync(srcFile, SRC);
+    languageManager.initializeProject(app);
+    languageManager.openDocument(testFile, TEST);
+    languageManager.openDocument(srcFile, SRC);
+  });
+
+  afterAll(() => rmSync(app, { recursive: true, force: true }));
+
+  it('checks a test file under the config that includes it (globals + @tests alias resolve)', () => {
+    const diags = languageManager.getDiagnostics(testFile);
+    expect(diags.map((d) => d.code)).toEqual([]);
+  });
+
+  it('keeps app sources on tsconfig.json (test globals stay unknown there)', () => {
+    const diags = languageManager.getDiagnostics(srcFile);
+    expect(diags.some((d) => d.code === 2304)).toBe(true);
+  });
+});
+
 describe('TypeScript language service — auto-import', () => {
   let dir: string;
   let cellPath: string;

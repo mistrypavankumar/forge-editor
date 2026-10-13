@@ -7,7 +7,7 @@ import { useNavigatorStore } from '../stores/navigator-store';
 import { newFile } from '../lib/fs-actions';
 import { formatActiveFile, maybeFormatOnSave } from '../lib/format-actions';
 import { saveAllFiles } from '../lib/save-actions';
-import { getActiveEditor } from '../editor/active-editor';
+import { getActiveEditor, getVisibleEditor } from '../editor/active-editor';
 import { goToChange } from '../editor/change-nav';
 import { getMonaco } from '../editor/monaco-setup';
 import { useDiagnosticsStore } from '../stores/diagnostics-store';
@@ -83,8 +83,9 @@ function gotoLine(): void {
 // Open the find widget in the focused editor. Routed through the active-editor tracker
 // (rather than Monaco's native Cmd/Ctrl+F) so it targets the correct pane in split mode —
 // Monaco's standalone keybinding dispatch only reliably reaches one of several editors.
+// Uses the visible editor so a diff tab searches the diff, not the CodeEditor hidden under it.
 function findInEditor(): void {
-  const editor = getActiveEditor();
+  const editor = getVisibleEditor();
   if (!editor) return;
   editor.focus();
   void editor.getAction('actions.find')?.run();

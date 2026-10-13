@@ -186,7 +186,7 @@ export function CodeEditor({ groupId = 'main' }: { groupId?: string }): React.JS
     editorRef.current = instance;
     // Register in the live-editor set so it can serve as the fallback active editor even before
     // it's ever focused (keeps Cmd+F / Go to Line / Format working without clicking in first).
-    registerEditor(instance);
+    registerEditor(instance, groupId);
     // Become the active editor on mount if this is the focused group; thereafter, focus drives it
     // (so commands like save/format/reveal target whichever split pane the user is editing).
     if (useEditorStore.getState().activeGroupId === groupId) setActiveEditor(instance);

@@ -49,23 +49,38 @@ const STD_LIB_DIR = ((): string => {
  */
 export class Project {
   readonly rootPath: string;
+  /** The tsconfig this project was loaded from (may not exist — then fallback options apply). */
+  readonly configPath: string;
   private options: ts.CompilerOptions;
   private rootFiles = new Set<string>();
+  /** Files the tsconfig itself selects (include/files minus exclude), excluding ad-hoc opens. */
+  private configFiles = new Set<string>();
+  /** Project references declared by the tsconfig (absolute paths to referenced tsconfig files). */
+  private references: string[] = [];
   private openDocs = new Map<string, OpenDoc>();
   private diskSnapshots = new Map<string, ts.IScriptSnapshot>();
   private readonly service: ts.LanguageService;
 
-  constructor(rootPath: string, registry: ts.DocumentRegistry) {
+  /**
+   * `configPath` defaults to `<rootPath>/tsconfig.json`; pass a sibling such as
+   * `tsconfig.test.json` to load a project whose options (e.g. `types: ["vitest/globals"]`) only
+   * apply to the files that config includes.
+   */
+  constructor(rootPath: string, registry: ts.DocumentRegistry, configPath?: string) {
     this.rootPath = toTsPath(rootPath);
+    this.configPath = toTsPath(configPath ?? join(rootPath, 'tsconfig.json'));
     const { options, fileNames } = this.loadConfig();
     this.options = options;
-    for (const f of fileNames) this.rootFiles.add(toTsPath(f));
+    for (const f of fileNames) {
+      this.rootFiles.add(toTsPath(f));
+      this.configFiles.add(toTsPath(f));
+    }
     this.service = ts.createLanguageService(this.createHost(), registry);
   }
 
-  /** Read tsconfig.json at the root; fall back to permissive defaults when it's missing. */
+  /** Read the tsconfig; fall back to permissive defaults when it's missing. */
   private loadConfig(): { options: ts.CompilerOptions; fileNames: string[] } {
-    const configPath = join(this.rootPath, 'tsconfig.json');
+    const configPath = this.configPath;
     if (ts.sys.fileExists(configPath)) {
       const read = ts.readConfigFile(configPath, ts.sys.readFile);
       const parsed = ts.parseJsonConfigFileContent(
@@ -75,6 +90,10 @@ export class Project {
         undefined,
         configPath,
       );
+      this.references = (parsed.projectReferences ?? []).map((ref) => {
+        const p = toTsPath(ref.path);
+        return p.endsWith('.json') ? p : `${p}/tsconfig.json`;
+      });
       return {
         options: {
           ...parsed.options,
@@ -140,6 +159,23 @@ export class Project {
       realpath: ts.sys.realpath,
       useCaseSensitiveFileNames: () => ts.sys.useCaseSensitiveFileNames,
     };
+  }
+
+  /** True if the tsconfig's own include/files/exclude selects `file`. */
+  includes(file: string): boolean {
+    return this.configFiles.has(toTsPath(file));
+  }
+
+  /** Referenced tsconfig paths (`references: [{ path }]`), absolute. */
+  getReferences(): string[] {
+    return this.references;
+  }
+
+  /** Re-enumerate the config's files so newly created files on disk are recognized by {@link includes}. */
+  rescanConfigFiles(): void {
+    const { fileNames } = this.loadConfig();
+    this.configFiles = new Set(fileNames.map(toTsPath));
+    for (const f of this.configFiles) this.rootFiles.add(f);
   }
 
   /** Make sure `file` is part of the program (needed for files opened outside the tsconfig set). */

@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { getMonaco } from '../editor/monaco-setup';
 import { languageFor } from '../editor/language';
+import { setOverlayEditor } from '../editor/active-editor';
 
 interface DiffViewProps {
+  /** Editor group this diff covers; registered as its overlay so Find targets the diff. */
+  groupId: string;
   original: string;
   modified: string;
   name: string;
@@ -12,7 +15,7 @@ interface DiffViewProps {
  * Read-only side-by-side diff (HEAD vs staged), used for files opened from the
  * Source Control panel. Theme follows the global Monaco theme set by CodeEditor.
  */
-export function DiffView({ original, modified, name }: DiffViewProps): React.JSX.Element {
+export function DiffView({ groupId, original, modified, name }: DiffViewProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Create the editor and set its model together, recreating the whole thing when the file or its
@@ -45,6 +48,7 @@ export function DiffView({ original, modified, name }: DiffViewProps): React.JSX
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     });
     diff.setModel({ original: originalModel, modified: modifiedModel });
+    setOverlayEditor(groupId, diff.getModifiedEditor());
 
     // 'JetBrains Mono' is a webfont that loads asynchronously. If the editor measured its char/line
     // metrics before the font arrived, the stale line height desyncs the hideUnchangedRegions view
@@ -59,11 +63,12 @@ export function DiffView({ original, modified, name }: DiffViewProps): React.JSX
 
     return () => {
       disposed = true;
+      setOverlayEditor(groupId, null);
       diff.dispose();
       originalModel.dispose();
       modifiedModel.dispose();
     };
-  }, [original, modified, name]);
+  }, [groupId, original, modified, name]);
 
   // Fully opaque background (not the translucent `bg-bg` glass tint): this overlays the
   // always-mounted CodeEditor, so it must occlude it — otherwise the editor and its inline-run

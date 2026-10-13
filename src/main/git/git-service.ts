@@ -132,7 +132,12 @@ export async function getGitChanges(rootPath: string): Promise<GitChange[]> {
   try {
     // `git status` refreshes (and may lock) the index, so it must share the serialized,
     // lock-aware path — otherwise a status refresh races a concurrent commit/stage.
-    const stdout = await execGit(rootPath, ['status', '--porcelain'], 4 * 1024 * 1024);
+    // `-uall` lists each file inside new folders instead of collapsing them to `dir/`.
+    const stdout = await execGit(
+      rootPath,
+      ['status', '--porcelain', '--untracked-files=all'],
+      4 * 1024 * 1024,
+    );
     const changes: GitChange[] = [];
     for (const raw of stdout.split('\n')) {
       if (!raw.trim()) continue;

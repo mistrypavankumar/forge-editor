@@ -67,6 +67,7 @@ export function EditorGroupView({ groupId }: { groupId: string }): React.JSX.Ele
             {showPreview && activeTab ? <MarkdownPreview content={activeTab.content} /> : null}
             {showDiff && activeTab ? (
               <DiffView
+                groupId={groupId}
                 original={activeTab.original ?? ''}
                 modified={activeTab.content}
                 // Use the real file path for language detection — the tab name may carry a "@ hash" suffix.

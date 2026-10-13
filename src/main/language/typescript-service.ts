@@ -1,4 +1,5 @@
 import ts from 'typescript';
+import { readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type {
   LsCompletionDetail,
@@ -14,6 +15,14 @@ import type {
   LsTextEdit,
 } from '@shared/ipc-contract';
 import { Project, fileUnderRoot, toTsPath } from './project-service';
+
+function safeReaddir(dir: string): string[] {
+  try {
+    return readdirSync(dir);
+  } catch {
+    return [];
+  }
+}
 
 /** A single document registry is shared across all projects so common lib files are parsed once. */
 const registry = ts.createDocumentRegistry();
@@ -57,6 +66,10 @@ class LanguageServiceManager {
   private lastRoot: string | null = null;
   /** dir-of-file → nearest tsconfig dir (or null). Avoids re-walking the tree on every request. */
   private configDirCache = new Map<string, string | null>();
+  /** Projects loaded from a non-default config (`tsconfig.test.json`, a reference, …), by config path. */
+  private variantProjects = new Map<string, Project>();
+  /** file → the variant config that owns it, or null when the dir's tsconfig.json does. */
+  private ownerConfigCache = new Map<string, string | null>();
 
   /** Create a project rooted at `rootPath` if one doesn't exist yet. */
   private ensureProject(rootPath: string): string {
@@ -99,13 +112,62 @@ class LanguageServiceManager {
     return result;
   }
 
+  private ensureVariantProject(configPath: string): Project {
+    const key = toTsPath(configPath);
+    let project = this.variantProjects.get(key);
+    if (!project) {
+      project = new Project(dirname(key), registry, key);
+      this.variantProjects.set(key, project);
+    }
+    return project;
+  }
+
+  /**
+   * Which config in `configDir` owns `file`. `tsconfig.json` often excludes tests while a sibling
+   * `tsconfig.test.json` (or a solution-style `references` entry) includes them with extra
+   * `types` like `vitest/globals` — checking a test under tsconfig.json reports `expect` as
+   * unknown (TS2304). Order: tsconfig.json, its references, then sibling `tsconfig.*.json`.
+   * Returns the owning variant config path, or null when tsconfig.json owns it (or nothing does).
+   */
+  private ownerConfig(file: string, configDir: string): string | null {
+    const cached = this.ownerConfigCache.get(file);
+    if (cached !== undefined) return cached;
+    const main = this.projects.get(this.ensureProject(configDir))!;
+    let owner: string | null = null;
+    if (!main.includes(file)) {
+      const siblings = safeReaddir(configDir)
+        .filter((name) => /^tsconfig\..+\.json$/.test(name))
+        .sort()
+        .map((name) => `${configDir}/${name}`);
+      const candidates = [...new Set([...main.getReferences(), ...siblings])].filter(
+        (c) => c !== main.configPath && ts.sys.fileExists(c),
+      );
+      const projects = candidates.map((c) => this.ensureVariantProject(c));
+      let match = projects.find((p) => p.includes(file));
+      if (!match) {
+        // The file may be newer than the cached config enumeration — rescan once before giving up.
+        main.rescanConfigFiles();
+        if (!main.includes(file)) {
+          for (const p of projects) p.rescanConfigFiles();
+          match = projects.find((p) => p.includes(file));
+        }
+      }
+      owner = match?.configPath ?? null;
+    }
+    this.ownerConfigCache.set(file, owner);
+    return owner;
+  }
+
   /** Pick the project that owns `file` (longest matching root), else the most recent, else create. */
   private projectFor(file: string): Project {
     const f = toTsPath(file);
     // Make sure a project rooted at the file's nearest tsconfig exists, so monorepo apps/packages
     // get their own alias-aware program rather than falling back to the workspace-root config.
     const configDir = this.nearestConfigDir(f);
-    if (configDir) this.ensureProject(configDir);
+    if (configDir && !f.includes('/node_modules/')) {
+      const variant = this.ownerConfig(f, configDir);
+      if (variant) return this.ensureVariantProject(variant);
+    }
     let best: Project | null = null;
     for (const project of this.projects.values()) {
       if (fileUnderRoot(f, project.rootPath)) {
